@@ -1,8 +1,25 @@
 {
   "name": "staggi",
   "version": "0.1.0",
-  "description": "",
+  "description": "Next-generation fiduciary AI desktop workspace for multi-asset valuation, real-time market telemetry, and Model Context Protocol (MCP) tool orchestration.",
   "type": "module",
+  "author": "Vieirinha Santana",
+  "homepage": "https://github.com/vieirinhasantana/staggi",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vieirinhasantana/staggi.git"
+  },
+  "keywords": [
+    "tauri",
+    "svelte-5",
+    "financial-intelligence",
+    "wealth-management",
+    "mcp",
+    "model-context-protocol",
+    "desktop-app",
+    "rust",
+    "gemini-api"
+  ],
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",

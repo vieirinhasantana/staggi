@@ -156,6 +156,30 @@ bun run tauri build
 
 ---
 
+## 📦 Releases & Versioning
+
+Staggi adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). For a full history of updates, releases, and architectural improvements, consult the **[CHANGELOG.md](CHANGELOG.md)**.
+
+Platform desktop bundles (.dmg, .app, .deb, .AppImage, .msi) are available under the **[Releases](https://github.com/vieirinhasantana/staggi/releases)** section.
+
+---
+
+## 👥 Contributors & Community
+
+Contributions from the open-source and financial engineering community are warmly welcomed!
+
+- **How to Contribute**: Please review **[CONTRIBUTING.md](CONTRIBUTING.md)** for our development workflow, Svelte 5 Rune conventions, and PR checklist.
+- **Security & Privacy**: Consult **[SECURITY.md](SECURITY.md)** for vulnerability reporting procedures and local-only secret protection.
+- **Issue Tracking**: Submit bug reports and feature proposals using our interactive [Issue Templates](https://github.com/vieirinhasantana/staggi/issues).
+
+<p align="center">
+  <a href="https://github.com/vieirinhasantana/staggi/graphs/contributors">
+    <img src="https://contrib.rocks/image?repo=vieirinhasantana/staggi" alt="Staggi Contributors" />
+  </a>
+</p>
+
+---
+
 ## 🤖 LLMs & Autonomous Agents Guide
 
 For AI coding agents and autonomous workflows exploring or modifying Staggi:

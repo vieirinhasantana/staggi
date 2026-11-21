@@ -1,0 +1,24 @@
+name: Feature Request
+description: Suggest an analytical idea, financial model, or MCP server integration for Staggi
+title: "[FEATURE]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: We appreciate suggestions for improving Staggi's wealth intelligence and analytical capabilities!
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Feature Proposal
+      description: What financial model, visualization card, or MCP tool would you like to see?
+      placeholder: Describe the feature or analytical capability...
+    validations:
+      required: true
+  - type: textarea
+    id: use-case
+    attributes:
+      label: Fiduciary / Investment Use Case
+      description: How does this help investment research, wealth advisory, or portfolio management?
+      placeholder: Explain the practical context...
+    validations:
+      required: true
