@@ -1,49 +1,50 @@
 # 🧠 LLMS.md — Staggi Architecture & Codebase Map
 
-> **Para LLMs, Agentes Autônomos e Engenheiros:**
-> Este arquivo é a fonte canônica da verdade sobre a estrutura, convenções de Clean Architecture, fluxo de dados e padrões de desenvolvimento do **Staggi**.
-> Leia este documento antes de inspecionar ou alterar qualquer parte do projeto.
+> **For LLMs, Autonomous Coding Agents, and Engineers:**
+> This file is the canonical source of truth for the codebase architecture, Clean Architecture conventions, data flows, and development standards of **Staggi**.
+> Read this document thoroughly before inspecting, refactoring, or generating code in this repository.
 
 ---
 
-## 1. Visão Geral do Projeto (Identity & Tech Stack)
+## 1. Project Identity & Tech Stack
 
-- **Nome**: Staggi
-- **Propósito**: Aplicação desktop executiva para consultoria de patrimônio, inteligência de mercado financeiro, orquestração de servidores MCP e automação de rotinas analíticas (Wealth Management & Financial AI).
+- **Name**: Staggi
+- **Purpose**: Executive desktop platform for wealth advisory, financial market intelligence, Model Context Protocol (MCP) tool orchestration, and background analytical automations.
 - **Core Stack**:
   - **Desktop Core**: [Tauri v2.0](https://v2.tauri.app/) (Rust)
-  - **Frontend**: [SvelteKit](https://kit.svelte.dev/) + [Svelte 5](https://svelte.dev/) com Runes (`$state`, `$derived`, `$effect`, `$props`)
-  - **Estilização**: [Tailwind CSS v4](https://tailwindcss.com/)
-  - **Ícones**: `@lucide/svelte`
-  - **Package & Runtime**: [Bun](https://bun.sh/) (comandos devem rodar com `bun run check`, `bun run build`)
-  - **Market Data**: Yahoo Finance API nativa em Rust (HTTP/JSON sem bibliotecas pesadas de scraping) + Protocolo Model Context Protocol (MCP)
+  - **Frontend**: [SvelteKit](https://kit.svelte.dev/) + [Svelte 5](https://svelte.dev/) with Runes (`$state`, `$derived`, `$derived.by`, `$effect`, `$props`)
+  - **Styling**: [Tailwind CSS v4](https://tailwindcss.com/)
+  - **Icons**: `@lucide/svelte`
+  - **Package Manager & Runtime**: [Bun](https://bun.sh/) (always execute commands with `bun run check`, `bun run build`)
+  - **Market Data**: Native Yahoo Finance integration in Rust (clean HTTP/JSON endpoints without fragile scraping) + Model Context Protocol (MCP)
 
 ---
 
-## 2. Mapa de Diretórios (Clean Architecture)
+## 2. Directory Map (Clean Architecture)
 
 ```
 staggi/
-├── LLMS.md                         # Este arquivo (guia canônico para IAs e LLMs)
-├── ARCHITECTURE.md                 # Documento de arquitetura de software e diagramas
-├── src-tauri/                      # [INFRAESTRUTURA BACKEND RUST]
+├── LLMS.md                         # This file (canonical AI & LLM reference)
+├── ARCHITECTURE.md                 # Software design specifications and Mermaid diagrams
+├── README.md                       # Public project presentation & showcase
+├── src-tauri/                      # [INFRASTRUCTURE LAYER - RUST BACKEND]
 │   ├── src/
-│   │   ├── main.rs                 # Ponto de entrada Tauri (app builder e setup)
-│   │   └── lib.rs                  # Comandos IPC Tauri (ask_ai, test_ai_connection, fetch_yahoo_data...)
-│   └── Cargo.toml                  # Dependências Rust (reqwest, serde, tauri)
+│   │   ├── main.rs                 # Tauri application entry point and builder
+│   │   └── lib.rs                  # Native IPC commands (ask_ai, test_ai_connection, fetch_yahoo_data...)
+│   └── Cargo.toml                  # Rust dependencies (reqwest, serde, tauri)
 │
-├── src/                            # [FRONTEND SVELTE 5]
-│   ├── app.css                     # Estilos globais Tailwind CSS e temas escuros
-│   ├── app.html                    # Template HTML base
+├── src/                            # [FRONTEND APPLICATION - SVELTE 5]
+│   ├── app.css                     # Global Tailwind CSS styles and dark fiduciary palette
+│   ├── app.html                    # Base HTML container
 │   │
-│   ├── routes/                     # [CAMADA DE APRESENTAÇÃO - PÁGINAS]
-│   │   ├── +layout.svelte          # Shell raiz da aplicação
-│   │   ├── +layout.ts              # Configuração SSR/prerender para Tauri Desktop (prerender = true)
-│   │   └── +page.svelte            # Tela principal: Chat, Drawer de Sessões, Spotlight e Cards
+│   ├── routes/                     # [PRESENTATION LAYER - PAGES & ROUTES]
+│   │   ├── +layout.svelte          # Root application shell (ToastContainer mounting)
+│   │   ├── +layout.ts              # Static desktop prerender config (prerender = true)
+│   │   └── +page.svelte            # Primary workspace: Chat, Spotlight, Drawer, Floating Cards
 │   │
 │   └── lib/
-│       ├── types/                  # [CAMADA DE DOMÍNIO - TIPOS E CONTRATOS]
-│       │   ├── index.ts            # Re-exportador central e unificado de tipos
+│       ├── types/                  # [DOMAIN LAYER - ENTITIES & CONTRACTS]
+│       │   ├── index.ts            # Central barrel export (Façade for $lib/types)
 │       │   └── domain/
 │       │       ├── ai.ts           # AIProvider, EnforcementLevel, AIModelOption, AIChatMessagePayload
 │       │       ├── chat.ts         # ChatMessage, ChatSession, QuickPrompt, MessageSender
@@ -51,115 +52,128 @@ staggi/
 │       │       ├── plugins.ts      # McpServerItem, SkillDefinition
 │       │       └── tasks.ts        # ScheduledTask, TaskExecutionLog, TaskAlert
 │       │
-│       ├── services/               # [CAMADA DE APLICAÇÃO - STORES E CASOS DE USO]
-│       │   ├── aiProviderState.svelte.ts # Store reativa global da IA (Gemini, OpenAI, Anthropic, Models, Enforcement)
-│       │   ├── pluginsState.svelte.ts    # Store reativa de Servidores MCP e Skills analíticas
-│       │   ├── tasksState.svelte.ts      # Store reativa do Agendador de Tarefas em segundo plano
-│       │   ├── chatSessionService.ts     # Persistência de sessões de chat em LocalStorage
-│       │   ├── geminiService.ts          # Orquestrador de prompt, Tools, MCPs e chamada ao Rust IPC
-│       │   ├── advisorService.ts         # Gerador de prompt inicial e diretivas de Wealth Advisor
-│       │   ├── formatMessage.ts          # Parser de Markdown, extração de cards JSON e formatação de texto
-│       │   ├── yahooFinanceService.ts    # Cliente de cotações em tempo real integrado ao Rust
-│       │   └── updaterService.svelte.ts  # Gerenciador de atualizações de versão do app desktop
+│       ├── services/               # [APPLICATION LAYER - STORES & USE CASES]
+│       │   ├── aiProviderState.svelte.ts # Global reactive store for AI (Gemini, OpenAI, Anthropic, Models)
+│       │   ├── pluginsState.svelte.ts    # Global reactive store for MCP Servers & Analytical Skills
+│       │   ├── tasksState.svelte.ts      # Background Task Scheduler and execution runner
+│       │   ├── toastService.svelte.ts    # Floating Toast notifications store
+│       │   ├── chatSessionService.ts     # LocalStorage persistence for multi-turn chat sessions
+│       │   ├── geminiService.ts          # Orchestrator for prompts, skills, MCP tools, and Rust IPC
+│       │   ├── advisorService.ts         # Initial prompt generator with fiduciary guidelines
+│       │   ├── formatMessage.ts          # Markdown parser, card regex extractors, and visual adapters
+│       │   ├── yahooFinanceService.ts    # Real-time market data client bound to Rust IPC
+│       │   └── updaterService.svelte.ts  # Desktop app update checker
 │       │
-│       ├── utils/                  # [CAMADA DE SUPORTE E UTILITÁRIOS]
-│       │   ├── formatters.ts       # Formatadores puros: formatRelativeTime, formatMinutesLabel, formatCurrency
-│       │   └── index.ts (utils.ts) # Utilitário cn (clsx + tailwind-merge)
+│       ├── hooks/                  # [REUSABLE COMPOSABLE HOOKS]
+│       │   ├── useKeyboardShortcut.ts
+│       │   ├── useDebounce.ts
+│       │   ├── useClickOutside.ts
+│       │   ├── useMediaQuery.ts
+│       │   └── index.ts
 │       │
-│       └── components/             # [CAMADA DE APRESENTAÇÃO - COMPONENTES SVELTE 5]
-│           ├── SpotlightBar.svelte           # Barra de busca rápida global de ativos e skills
-│           ├── ChatMessageItem.svelte        # Renderizador de mensagens (texto, streaming ▌, cards dinâmicos)
-│           ├── ChatHistoryDrawer.svelte      # Painel lateral deslizante com histórico de conversas
-│           ├── SettingsModal.svelte          # Modal orquestrador de configurações
+│       ├── utils/                  # [UTILITIES & FORMATTERS]
+│       │   ├── formatters.ts       # Pure formatters: formatRelativeTime, formatCurrency, etc.
+│       │   └── utils.ts            # cn() class merge helper (clsx + tailwind-merge)
+│       │
+│       └── components/             # [PRESENTATION LAYER - SVELTE 5 COMPONENTS]
+│           ├── SpotlightBar.svelte           # Global command launcher for tickers and skills
+│           ├── ChatMessageItem.svelte        # Message renderer (text, ▌ streaming, interactive cards)
+│           ├── ChatHistoryDrawer.svelte      # Sliding drawer for multi-session navigation
+│           ├── SettingsModal.svelte          # Orchestrator modal for configurations
+│           ├── ToastContainer.svelte         # Floating toast container mounted at root layout
 │           │
-│           ├── settings/                     # [SUBCOMPONENTES MODULARES DE CONFIGURAÇÃO]
-│           │   ├── SettingsAiTab.svelte      # Aba 1: Provedores, Chaves, Modelos e Enforcement
-│           │   ├── SettingsMcpsTab.svelte    # Aba 2: Gestão de Servidores MCP e teste de endpoints
-│           │   ├── SettingsSkillsTab.svelte  # Aba 3: Editor de Prompts Analíticos Especializados (SKILL.md)
-│           │   ├── SettingsTasksTab.svelte   # Aba 4: Agendador de rotinas e tarefas em segundo plano
-│           │   └── TaskResultModal.svelte    # Modal de visualização dos relatórios de execução das tarefas
+│           ├── settings/                     # [MODULAR SETTINGS TABS]
+│           │   ├── SettingsAiTab.svelte      # AI Source, API Key, Model Catalog, Enforcement Levels
+│           │   ├── SettingsMcpsTab.svelte    # MCP Server Management, SSE/stdio, Tool testing
+│           │   ├── SettingsSkillsTab.svelte  # Specialized Analytical Frameworks (SKILL.md)
+│           │   ├── SettingsTasksTab.svelte   # Automated Background Tasks & Cron schedules
+│           │   └── TaskResultModal.svelte    # Execution report inspector modal
 │           │
-│           ├── cards/                        # [CARDS RICOS DE RESPOSTA FINANCEIRA]
-│           │   ├── AssetQuoteCard.svelte     # Card de cotação oficial em tempo real
-│           │   ├── AssetProfileCard.svelte   # Card de perfil fundamentalista, setor e métricas
-│           │   ├── AssetDividendsCard.svelte # Card com histórico de dividendos e yield anual
-│           │   ├── CorporateEventsCard.svelte# Card de fatos relevantes e eventos corporativos
-│           │   ├── ValuationProjectionCard.svelte # Card de modelos de valuation (Graham, Bazin)
-│           │   └── ComparisonTableCard.svelte# Tabela comparativa entre múltiplos tickers
+│           ├── cards/                        # [RICH FINANCIAL RESPONSE CARDS]
+│           │   ├── AssetQuoteCard.svelte     # Real-time ticker price, change, volume
+│           │   ├── AssetProfileCard.svelte   # Fundamental profile, sector, asset class
+│           │   ├── AssetDividendsCard.svelte # Payouts calendar, historical DY, ex-dates
+│           │   ├── CorporateEventsCard.svelte# Material regulatory filings (CVM / SEC)
+│           │   ├── ValuationProjectionCard.svelte # Graham Formula, Bazin Ceiling Price
+│           │   └── ComparisonTableCard.svelte# Sector peer comparison matrix
 │           │
-│           └── ui/                           # Componentes visuais atômicos (Button, Dialog, Badge, Command...)
+│           └── ui/                           # [ATOMIC UI PRIMITIVES]
+│               ├── Card.svelte
+│               ├── Input.svelte
+│               ├── Tooltip.svelte
+│               └── index.ts
 ```
 
 ---
 
-## 3. Fluxo de Dados e Interações
+## 3. Data Flow & Request Lifecycle
 
 ```
-[ Usuário digita mensagem no Chat ou no Spotlight ]
-                     │
-                     ▼
-             [ +page.svelte ]
-                     │
-         (Adiciona bolha "Pensando..." com Brain pulsante)
-                     │
-                     ▼
-          [ geminiService.ts ]
-          ├── Enriquece histórico de conversas
-          ├── Injeta diretivas fiduciárias de Wealth Advisor
-          ├── Identifica e formata Skills (/valuation, /proventos, etc.)
-          └── Prepara ferramentas MCPs ativas
-                     │
-                     ▼
-   [ Rust IPC: invoke("ask_ai" / "ask_gemini") ]
-          ├── Google Gemini / OpenAI / Anthropic
-          ├── Transmite Reasoning Effort (o1/o3/Claude 3.7)
-          └── Executa chamadas nativas de rede
-                     │
-                     ▼
-          [ +page.svelte (Streaming 60fps) ]
-          ├── Divide tokens e renderiza texto suavemente com cursor ▌
-          ├── Conclui streaming
-          └── Extrai blocos visuais via formatMessage.ts
-                     │
-                     ▼
-      [ ChatMessageItem.svelte -> Renderiza Cards Ricos ]
+[ User types prompt in Chat Input or SpotlightBar ]
+                         │
+                         ▼
+                 [ +page.svelte ]
+                         │
+        (Mounts "Thinking... [tool_name]" bubble with pulsing Brain icon)
+                         │
+                         ▼
+              [ geminiService.ts ]
+              ├── Gathers chronological chat history
+              ├── Injects fiduciary Wealth Advisor directives
+              ├── Identifies and resolves Skills (/valuation, /proventos, etc.)
+              └── Prepares active MCP tools schema
+                         │
+                         ▼
+       [ Rust IPC: invoke("ask_ai" / "ask_gemini") ]
+              ├── Google Gemini / OpenAI / Anthropic
+              ├── Injects native Reasoning Effort / Thinking parameters
+              └── Executes direct HTTPS requests via native reqwest
+                         │
+                         ▼
+              [ +page.svelte (Streaming 60fps) ]
+              ├── Splits tokens and streams text smoothly with cursor ▌
+              ├── Concludes streaming
+              └── Extracts structured visual payloads via formatMessage.ts
+                         │
+                         ▼
+          [ ChatMessageItem.svelte -> Mounts Rich Financial Cards ]
 ```
 
 ---
 
-## 4. Regras Absolutas e Diretrizes de Código (Clean Code)
+## 4. Absolute Development Guidelines (Clean Code)
 
-1. **Svelte 5 Runes**:
-   - Utilize sempre `$state`, `$derived`, `$derived.by`, `$effect` e `$props`.
-   - **Nunca** utilize sintaxe legada do Svelte 4 (`export let`, `$: computed`, ou `writable()` stores dentro de componentes).
-2. **Paleta de Cores e Temas**:
-   - **NUNCA** utilize preto puro (`#000000` ou `bg-black`).
-   - Utilize os tons escuros fiduciários estabelecidos: `#181628`, `#1c1a28`, `#141320`, `#1e1c2b`.
-3. **Janela Desktop Tauri**:
-   - Cabeçalhos de painéis e barras superiores utilizam `data-tauri-drag-region` para permitir que o usuário arraste a janela pelo mouse.
-4. **Dados de Mercado Reais (Sem Mocks)**:
-   - Toda cotação, múltiplo ou evento corporativo é obtido em tempo real via Yahoo Finance API nativa (`fetch_yahoo_data` em Rust) ou servidores MCP ativos. Não invente ou insira dados falsos.
-5. **Indicação de Estado de Pensamento**:
-   - Sempre utilize o padrão genérico `Pensando... [nome_da_ferramenta]` acompanhado pelo ícone de cérebro pulsante (`Brain` com `animate-pulse text-amber-400`).
-6. **Formulários Consistentes**:
-   - Botões de cancelamento em formulários devem exibir `"Cancelar"` (evite ícones `X` isolados em cabeçalhos de formulários quando os demais usam texto).
+1. **Svelte 5 Runes Only**:
+   - Always use `$state`, `$derived`, `$derived.by`, `$effect`, and `$props`.
+   - **Never** introduce legacy Svelte 4 syntax (`export let`, `$: computed`, or `writable()` stores inside components).
+2. **Color Palette & Fiduciary Dark Theme**:
+   - **NEVER** use pure black (`#000000` or `bg-black`).
+   - Use the approved dark fiduciary palette: `#181628`, `#1c1a28`, `#141320`, `#1e1c2b`.
+3. **Tauri Desktop Window Standards**:
+   - Modal headers and draggable window bars must include `data-tauri-drag-region`.
+4. **Authentic Market Data (Zero Mocking)**:
+   - All quotes, multiples, and corporate filings are fetched from official Yahoo Finance endpoints (`fetch_yahoo_data` in Rust) or active MCP servers. Never generate or hardcode fictional market numbers.
+5. **Standardized Thinking State**:
+   - Always use the uniform format `Thinking... [tool_name]` (or `Pensando... [ferramenta]`) accompanied by the pulsing brain icon (`Brain` with `animate-pulse text-amber-400`).
+6. **Form & UI Consistency**:
+   - Cancel buttons in modals/forms must display standard text `"Cancelar"` (avoid isolated `X` icons in headers when sibling views use text buttons).
 
 ---
 
-## 5. Como Adicionar Novas Funcionalidades (Guia para IAs)
+## 5. How to Extend the Application (Agent Guide)
 
-### A. Adicionar um Novo Modelo de IA
-1. Abra `src/lib/services/aiProviderState.svelte.ts`.
-2. Adicione a especificação em `AI_MODELS[provider]` com `id`, `name`, `description`, `supportsTools`, `supportsReasoning` e `contextWindow`.
-3. Não crie inputs de texto para digitação manual; o dropdown reflete o catálogo automaticamente.
+### A. Adding a New AI Model
+1. Open `src/lib/services/aiProviderState.svelte.ts`.
+2. Add the specification under `AI_MODELS[provider]` with `id`, `name`, `description`, `supportsTools`, `supportsReasoning`, and `contextWindow`.
+3. Do not create text inputs for model typing; the select dropdown reflects the catalog automatically.
 
-### B. Adicionar uma Nova Ferramenta ou Servidor MCP
-1. Registre as interfaces em `src/lib/types/domain/plugins.ts`.
-2. Defina os padrões iniciais em `src/lib/services/pluginsState.svelte.ts`.
-3. Adicione o despachante de ferramenta em `src/lib/services/geminiService.ts` para que o modelo saiba invocar a tool correspondente.
+### B. Adding a New MCP Tool or Server
+1. Register interfaces in `src/lib/types/domain/plugins.ts`.
+2. Set initial defaults in `src/lib/services/pluginsState.svelte.ts`.
+3. Add tool dispatching in `src/lib/services/geminiService.ts` so the model can invoke the tool schema.
 
-### C. Criar um Novo Card Visual de Chat
-1. Crie o contrato de dados em `src/lib/types/domain/financial.ts`.
-2. Adicione a regex de extração e parser em `src/lib/services/formatMessage.ts`.
-3. Crie o componente visual em `src/lib/components/` (ex: `NovoCard.svelte`).
-4. Conecte a renderização condicional em `src/lib/components/ChatMessageItem.svelte`.
+### C. Creating a New Financial Response Card
+1. Create the data contract in `src/lib/types/domain/financial.ts`.
+2. Add the extraction regex and parser in `src/lib/services/formatMessage.ts`.
+3. Create the Svelte 5 component under `src/lib/components/cards/` (e.g., `NewMetricCard.svelte`).
+4. Wire conditional rendering into `src/lib/components/ChatMessageItem.svelte`.
