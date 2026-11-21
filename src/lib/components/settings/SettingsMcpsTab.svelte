@@ -1,0 +1,382 @@
+<script lang="ts">
+  import {
+    Server,
+    Plus,
+    ChevronDown,
+    ExternalLink,
+    Trash2,
+  } from "@lucide/svelte";
+  import { pluginsStore } from "$lib/services/pluginsState.svelte";
+  import { toastStore } from "$lib/services/toastService.svelte";
+  import { getQuote } from "$lib/services/yahooFinanceService";
+  import type { StockQuote } from "$lib/types";
+
+  let newMcpName = $state("");
+  let newMcpEndpoint = $state("");
+  let newMcpTransport = $state<"stdio" | "sse">("stdio");
+
+  let mcpTickerTest = $state("PETR4.SA");
+  let mcpQuoteResult = $state<StockQuote | null>(null);
+  let isTestingMcpYahoo = $state(false);
+  let isCreatingMcp = $state(false);
+
+  async function testMcpYahooQuote() {
+    isTestingMcpYahoo = true;
+    mcpQuoteResult = null;
+    try {
+      mcpQuoteResult = await getQuote(mcpTickerTest);
+    } catch {
+      // Falha silenciosa de teste
+    } finally {
+      isTestingMcpYahoo = false;
+    }
+  }
+
+  function handleAddMcp() {
+    if (!newMcpName.trim() || !newMcpEndpoint.trim()) return;
+    pluginsStore.addMcp({
+      name: newMcpName.trim(),
+      type: "Custom MCP Server",
+      transport: newMcpTransport,
+      endpoint: newMcpEndpoint.trim(),
+      active: true,
+      desc: "Servidor MCP registrado pelo usuário",
+    });
+    toastStore.success("Servidor MCP Registrado", `${newMcpName.trim()} está ativo e conectado.`);
+    newMcpName = "";
+    newMcpEndpoint = "";
+    isCreatingMcp = false;
+  }
+</script>
+
+<div class="space-y-4">
+  <!-- Botão de Conectar Novo MCP (quando fechado) -->
+  {#if !isCreatingMcp}
+    <button
+      type="button"
+      onclick={() => (isCreatingMcp = true)}
+      class="w-full p-3.5 rounded-2xl bg-gradient-to-r from-emerald-500/15 via-[#232034] to-[#1c1a28] border border-emerald-500/30 hover:border-emerald-500/50 flex items-center justify-between text-left transition-all cursor-pointer group shadow-sm"
+    >
+      <div class="flex items-center gap-3">
+        <div
+          class="h-9 w-9 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-300 group-hover:scale-105 transition-transform"
+        >
+          <Plus class="w-5 h-5 text-emerald-400" />
+        </div>
+        <div>
+          <h5
+            class="text-xs font-semibold text-zinc-100 font-mono flex items-center gap-1.5"
+          >
+            + Conectar Novo Servidor MCP ao Staggi
+          </h5>
+          <p class="text-[11px] text-zinc-400 font-sans">
+            Adicione servidores locais (CLI stdio) ou remotos (HTTP/SSE) com novas ferramentas financeiras.
+          </p>
+        </div>
+      </div>
+      <span
+        class="px-3 py-1.5 rounded-xl bg-emerald-500/20 text-emerald-200 text-xs font-mono font-semibold border border-emerald-500/35 group-hover:bg-emerald-500/30 transition-all shrink-0"
+      >
+        Conectar MCP
+      </span>
+    </button>
+  {/if}
+
+  <!-- Formulário de Criação de Servidor MCP (quando aberto) -->
+  {#if isCreatingMcp}
+    <div
+      class="p-4 rounded-2xl bg-[#1e1c2b]/95 border border-emerald-500/35 shadow-lg space-y-3 animate-fade-in"
+    >
+      <div
+        class="flex items-center justify-between pb-1 border-b border-white/[0.06]"
+      >
+        <span
+          class="text-xs font-mono text-emerald-300 font-semibold flex items-center gap-1.5"
+        >
+          <Plus class="w-3.5 h-3.5 text-emerald-400" /> Conectar Novo Servidor MCP
+        </span>
+        <button
+          type="button"
+          onclick={() => {
+            isCreatingMcp = false;
+            newMcpName = "";
+            newMcpEndpoint = "";
+          }}
+          class="text-zinc-400 hover:text-zinc-100 text-xs font-mono cursor-pointer"
+        >
+          Cancelar
+        </button>
+      </div>
+      <div class="grid grid-cols-2 gap-2 text-xs font-mono">
+        <input
+          type="text"
+          aria-label="Nome do novo servidor MCP"
+          bind:value={newMcpName}
+          placeholder="Nome (ex: mcp-alpaca-trading)"
+          class="rounded-xl bg-[#2a273b] border border-white/[0.1] px-3.5 py-2 text-zinc-100 focus:outline-none focus:border-emerald-500/60"
+        />
+        <div class="relative">
+          <select
+            aria-label="Tipo de transporte do novo servidor MCP"
+            bind:value={newMcpTransport}
+            class="w-full appearance-none rounded-xl bg-[#2a273b] border border-white/[0.1] hover:border-white/[0.2] pl-3 pr-8 py-2 text-zinc-200 focus:outline-none focus:border-emerald-500/60 font-mono transition-colors cursor-pointer"
+          >
+            <option value="stdio" class="bg-[#2a273b] text-zinc-100">Transporte: stdio (CLI)</option>
+            <option value="sse" class="bg-[#2a273b] text-zinc-100">Transporte: sse / http (URL)</option>
+          </select>
+          <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2.5 text-zinc-400">
+            <ChevronDown class="w-3.5 h-3.5" />
+          </div>
+        </div>
+      </div>
+      <input
+        type="text"
+        aria-label="Comando CLI ou Endpoint do servidor MCP"
+        bind:value={newMcpEndpoint}
+        placeholder="Comando CLI (npx -y ...) ou Endpoint (http://localhost:...)"
+        class="w-full rounded-xl bg-[#2a273b] border border-white/[0.1] px-3.5 py-2 text-xs text-zinc-100 font-mono focus:outline-none focus:border-emerald-500/60"
+      />
+      <div class="flex items-center gap-2 pt-1">
+        <button
+          type="button"
+          onclick={() => {
+            isCreatingMcp = false;
+            newMcpName = "";
+            newMcpEndpoint = "";
+          }}
+          class="px-4 py-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] text-zinc-300 text-xs font-mono transition-colors cursor-pointer"
+        >
+          Cancelar
+        </button>
+        <button
+          type="button"
+          onclick={handleAddMcp}
+          disabled={!newMcpName.trim() || !newMcpEndpoint.trim()}
+          class="flex-1 py-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 text-xs font-mono font-semibold transition-all cursor-pointer disabled:opacity-40"
+        >
+          + Registrar Servidor MCP no Staggi
+        </button>
+      </div>
+    </div>
+  {/if}
+
+  <!-- 2. Lista de Servidores MCP Conectados -->
+  <div class="flex items-center justify-between pt-1">
+    <h5 class="text-xs font-semibold text-zinc-300 font-mono">
+      Servidores Instalados & Conectados ({pluginsStore.mcps.length})
+    </h5>
+  </div>
+
+  <div class="space-y-2.5">
+    {#each pluginsStore.mcps as mcp}
+      <div
+        class="p-3.5 rounded-2xl bg-[#1c1a28]/80 border border-white/[0.08] space-y-2 text-xs font-mono"
+      >
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <div
+              class="h-2 w-2 rounded-full {mcp.active
+                ? 'bg-emerald-400 animate-pulse'
+                : 'bg-zinc-600'}"
+            ></div>
+            <span class="font-bold text-zinc-100">{mcp.name}</span>
+            <span
+              class="px-2 py-0.5 rounded text-[10px] bg-white/[0.06] text-zinc-300 border border-white/[0.06]"
+              >{mcp.type}</span
+            >
+          </div>
+
+          <div class="flex items-center gap-2">
+            <span class="text-[10px] text-zinc-500"
+              >{mcp.transport}</span
+            >
+            <button
+              type="button"
+              onclick={() => pluginsStore.toggleMcp(mcp.id)}
+              class="px-2.5 py-1 rounded-lg text-[10px] font-semibold transition-all cursor-pointer {mcp.active
+                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                : 'bg-white/[0.06] text-zinc-400 border border-white/[0.06]'}"
+            >
+              {mcp.active ? "Online" : "Desativado"}
+            </button>
+            {#if !mcp.id.startsWith("mcp-yahoo")}
+              <button
+                type="button"
+                onclick={() => pluginsStore.removeMcp(mcp.id)}
+                aria-label="Remover MCP {mcp.name}"
+                class="text-zinc-500 hover:text-rose-400 p-1 rounded hover:bg-rose-500/10 transition-colors cursor-pointer"
+              >
+                <Trash2 class="w-3.5 h-3.5" />
+              </button>
+            {/if}
+          </div>
+        </div>
+
+        <p
+          class="text-[11px] text-zinc-300 font-sans leading-relaxed"
+        >
+          {mcp.desc}
+        </p>
+
+        <!-- Card especial para o MCP FinanceDatabase (Jeroen Bouma) -->
+        {#if mcp.id === "mcp-financedatabase"}
+          <div class="mt-2 pt-2 border-t border-white/[0.06] space-y-2 text-[11px] font-mono">
+            <div class="flex items-center justify-between text-zinc-300">
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <span class="text-zinc-400">Cobertura:</span>
+                <span class="px-1.5 py-0.5 rounded bg-sky-500/15 text-sky-300 border border-sky-500/25 text-[10px]">300k+ Ativos</span>
+                <span class="px-1.5 py-0.5 rounded bg-teal-500/15 text-teal-300 border border-teal-500/25 text-[10px]">Ações & ETFs</span>
+                <span class="px-1.5 py-0.5 rounded bg-violet-500/15 text-violet-300 border border-violet-500/25 text-[10px]">Fundos & Índices</span>
+              </div>
+              <a
+                href="https://www.jeroenbouma.com/projects/financedatabase/mcp"
+                target="_blank"
+                class="text-[10px] text-sky-400 hover:text-sky-300 hover:underline flex items-center gap-1 shrink-0"
+              >
+                <span>FinanceDatabase Docs</span>
+                <ExternalLink class="w-2.5 h-2.5" />
+              </a>
+            </div>
+          </div>
+        {/if}
+
+        <!-- Card especial para o MCP Equibles ETF Holdings -->
+        {#if mcp.id === "mcp-equibles-etf"}
+          <div class="mt-2 pt-2 border-t border-white/[0.06] space-y-2 text-[11px] font-mono">
+            <div class="flex items-center justify-between text-zinc-300">
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <span class="text-zinc-400">Transparência:</span>
+                <span class="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/25 text-[10px]">Constituintes</span>
+                <span class="px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-300 border border-blue-500/25 text-[10px]">Pesos em Carteira</span>
+                <span class="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/25 text-[10px]">Overlap Analysis</span>
+              </div>
+              <a
+                href="https://equibles.com/etf-holdings-api"
+                target="_blank"
+                class="text-[10px] text-emerald-400 hover:text-emerald-300 hover:underline flex items-center gap-1 shrink-0"
+              >
+                <span>Equibles ETF API</span>
+                <ExternalLink class="w-2.5 h-2.5" />
+              </a>
+            </div>
+          </div>
+        {/if}
+
+        <!-- Card especial para o MCP Bond Intelligence -->
+        {#if mcp.id === "mcp-bonds"}
+          <div class="mt-2 pt-2 border-t border-white/[0.06] space-y-2 text-[11px] font-mono">
+            <div class="flex items-center justify-between text-zinc-300">
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <span class="text-zinc-400">Métricas:</span>
+                <span class="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/25 text-[10px]">Duration Modificada</span>
+                <span class="px-1.5 py-0.5 rounded bg-sky-500/15 text-sky-300 border border-sky-500/25 text-[10px]">YTM</span>
+                <span class="px-1.5 py-0.5 rounded bg-violet-500/15 text-violet-300 border border-violet-500/25 text-[10px]">Rating & Convexidade</span>
+              </div>
+              <a
+                href="https://mcp.so/servers/bond-mcp-server"
+                target="_blank"
+                class="text-[10px] text-amber-400 hover:text-amber-300 hover:underline flex items-center gap-1 shrink-0"
+              >
+                <span>Bond MCP Server</span>
+                <ExternalLink class="w-2.5 h-2.5" />
+              </a>
+            </div>
+          </div>
+        {/if}
+
+        <!-- Card especial para o MCP Treasury Yields -->
+        {#if mcp.id === "mcp-treasury-yields"}
+          <div class="mt-2 pt-2 border-t border-white/[0.06] space-y-2 text-[11px] font-mono">
+            <div class="flex items-center justify-between text-zinc-300">
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <span class="text-zinc-400">Curva US:</span>
+                <span class="px-1.5 py-0.5 rounded bg-teal-500/15 text-teal-300 border border-teal-500/25 text-[10px]">1M a 30Y</span>
+                <span class="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/25 text-[10px]">Spread 10Y-2Y</span>
+                <span class="px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-300 border border-blue-500/25 text-[10px]">Risk-Free Benchmark</span>
+              </div>
+              <a
+                href="https://treasury-yields-rates-today-mcp.lipmichal.workers.dev"
+                target="_blank"
+                class="text-[10px] text-teal-400 hover:text-teal-300 hover:underline flex items-center gap-1 shrink-0"
+              >
+                <span>Treasury Yields MCP</span>
+                <ExternalLink class="w-2.5 h-2.5" />
+              </a>
+            </div>
+          </div>
+        {/if}
+
+        <!-- Card especial para o MCP TickerInside (Insider Trading) -->
+        {#if mcp.id === "mcp-tickerinside"}
+          <div class="mt-2 pt-2 border-t border-white/[0.06] space-y-2 text-[11px] font-mono">
+            <div class="flex items-center justify-between text-zinc-300">
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <span class="text-zinc-400">Smart Money:</span>
+                <span class="px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-300 border border-purple-500/25 text-[10px]">SEC Form 4</span>
+                <span class="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/25 text-[10px]">Compras de Diretores</span>
+                <span class="px-1.5 py-0.5 rounded bg-sky-500/15 text-sky-300 border border-sky-500/25 text-[10px]">Whale Tracking</span>
+              </div>
+              <a
+                href="https://mcpservers.org/pt-BR/servers/tickerinside-com-agent"
+                target="_blank"
+                class="text-[10px] text-purple-400 hover:text-purple-300 hover:underline flex items-center gap-1 shrink-0"
+              >
+                <span>TickerInside MCP</span>
+                <ExternalLink class="w-2.5 h-2.5" />
+              </a>
+            </div>
+          </div>
+        {/if}
+
+        <!-- Card especial para o MCP Yahoo Finance (Teste de Cotação) -->
+        {#if mcp.id === "mcp-yahoo"}
+          <div
+            class="mt-2 pt-2 border-t border-white/[0.06] flex items-center justify-between text-[11px]"
+          >
+            <span class="text-zinc-400"
+              >Teste do MCP Yahoo Finance:</span
+            >
+            <div class="flex items-center gap-2">
+              <input
+                type="text"
+                aria-label="Código do ativo para teste Yahoo Finance"
+                bind:value={mcpTickerTest}
+                class="w-24 px-2 py-1 rounded bg-[#2b273b] border border-white/[0.1] text-zinc-100 uppercase text-center font-mono focus:outline-none"
+              />
+              <button
+                type="button"
+                onclick={testMcpYahooQuote}
+                disabled={isTestingMcpYahoo}
+                class="px-2.5 py-1 rounded bg-sky-500/20 hover:bg-sky-500/30 border border-sky-500/30 text-sky-300 font-mono text-[10px] cursor-pointer"
+              >
+                {isTestingMcpYahoo ? "Buscando..." : "Testar Ticker"}
+              </button>
+            </div>
+          </div>
+          {#if mcpQuoteResult}
+            <div
+              class="mt-1 p-2 rounded-lg bg-[#2b273b]/60 border border-white/[0.06] flex items-center justify-between text-[11px] font-mono text-zinc-200"
+            >
+              <span
+                >{mcpQuoteResult.name} ({mcpQuoteResult.symbol})</span
+              >
+              <span class="font-bold"
+                >{mcpQuoteResult.currency}
+                {mcpQuoteResult.price.toFixed(2)}</span
+              >
+              <span
+                class={mcpQuoteResult.change >= 0
+                  ? "text-emerald-400"
+                  : "text-rose-400"}
+              >
+                {mcpQuoteResult.change >= 0
+                  ? "+"
+                  : ""}{mcpQuoteResult.changePercent.toFixed(2)}%
+              </span>
+            </div>
+          {/if}
+        {/if}
+      </div>
+    {/each}
+  </div>
+</div>
