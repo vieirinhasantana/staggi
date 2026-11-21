@@ -54,7 +54,6 @@
 </script>
 
 <div class="w-full rounded-2xl border border-white/[0.12] bg-[#1d1b2a]/95 backdrop-blur-2xl shadow-xl p-4.5 space-y-3.5 select-text">
-  <!-- Topo do Card de Comparação -->
   <div class="flex items-center justify-between pb-2.5 border-b border-white/[0.08]">
     <div class="flex items-center gap-2.5">
       <div class="h-9 w-9 rounded-xl bg-violet-500/15 border border-violet-500/25 flex items-center justify-center text-violet-400">
@@ -79,7 +78,6 @@
     </div>
   </div>
 
-  <!-- Tabela com Scroll Horizontal Suave e Primeira Coluna Fixa -->
   <div class="relative w-full rounded-xl border border-white/[0.08] bg-[#171524]/70 overflow-x-auto shadow-inner">
     <table class="w-full border-collapse text-left text-xs font-mono">
       <thead>
@@ -101,7 +99,6 @@
       <tbody class="divide-y divide-white/[0.04]">
         {#each data.rows as row}
           <tr class="hover:bg-white/[0.02] transition-colors">
-            <!-- Métrica (Coluna Fixa) -->
             <td class="p-3 font-semibold text-zinc-100 sticky left-0 bg-[#1c1a2b] z-10 border-r border-white/[0.08] text-xs">
               <div class="flex items-center gap-1.5">
                 <span class={getMetricIconColor(row.metric)}>•</span>
@@ -109,7 +106,6 @@
               </div>
             </td>
 
-            <!-- Valores dos Ativos -->
             {#each row.values as val}
               {@const recBadge = getRecommendationBadge(val)}
               <td class="p-3 text-zinc-300 align-top leading-relaxed text-xs">
@@ -142,7 +138,6 @@
     </table>
   </div>
 
-  <!-- Rodapé Institucional com Fonte Auditada -->
   <div class="flex items-center justify-between pt-2 border-t border-white/[0.06] text-[10px] font-mono text-zinc-400 flex-wrap gap-2">
     <div class="flex items-center gap-1.5">
       <ShieldCheck class="w-3.5 h-3.5 text-emerald-400 shrink-0" />

@@ -2,10 +2,6 @@ import type { DividendItem, MarketNewsItem, StockQuote } from "$lib/types";
 export type { StockQuote };
 import { invoke } from "@tauri-apps/api/core";
 
-/**
- * Consulta a cotação oficial em tempo real de qualquer ativo (ISIN, CUSIP ou Ticker)
- * via comando nativo Rust / Yahoo Finance API. Sem dados fictícios ou estáticos.
- */
 export async function getQuote(symbol: string): Promise<StockQuote> {
   const formatted = symbol.toUpperCase().trim();
   if (!formatted) {
@@ -42,7 +38,6 @@ export async function getQuote(symbol: string): Promise<StockQuote> {
       };
     }
   } catch (err) {
-    // Fallback via fetch direto caso executado fora do Tauri em ambiente de testes
     try {
       const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(formatted)}?interval=1d&range=5d`;
       const res = await fetch(url);
@@ -71,11 +66,9 @@ export async function getQuote(symbol: string): Promise<StockQuote> {
         }
       }
     } catch {
-      // Ignora erro de rede secundário
     }
   }
 
-  // Se o ativo não foi localizado nas fontes ao vivo, retorna objeto neutro com preço zerado
   return {
     symbol: formatted,
     name: formatted,
@@ -91,10 +84,6 @@ export async function getQuote(symbol: string): Promise<StockQuote> {
   };
 }
 
-/**
- * Consulta notícias reais de mercado diretamente da internet (Yahoo Finance API).
- * Sem mocks ou dados simulados.
- */
 export async function getMarketNews(query = "market"): Promise<MarketNewsItem[]> {
   try {
     const rawJson = await invoke<string>("fetch_yahoo_news", { query });
@@ -120,7 +109,6 @@ export async function getMarketNews(query = "market"): Promise<MarketNewsItem[]>
       });
     }
   } catch {
-    // Se a consulta falhar, tenta consulta web direta
     try {
       const res = await fetch(`https://query2.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(query)}&newsCount=10`);
       if (res.ok) {
@@ -140,16 +128,12 @@ export async function getMarketNews(query = "market"): Promise<MarketNewsItem[]>
         }
       }
     } catch {
-      // Falha de rede
     }
   }
 
   return [];
 }
 
-/**
- * Consulta de proventos futuros reais (sem dados simulados)
- */
 export async function getUpcomingDividends(): Promise<DividendItem[]> {
   return [];
 }

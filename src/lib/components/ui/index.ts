@@ -1,7 +1,3 @@
-/**
- * Staggi UI Component Primitives
- * Named re-exports to prevent namespace collisions (Root, Content, Description, etc.)
- */
 
 export { Button, buttonVariants } from "./button";
 export { Badge, badgeVariants } from "./badge";

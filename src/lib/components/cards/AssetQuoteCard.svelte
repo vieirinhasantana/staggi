@@ -21,7 +21,6 @@
 </script>
 
 <div class="w-full rounded-2xl border border-white/[0.12] bg-[#1d1b2a]/90 backdrop-blur-xl shadow-lg p-4 space-y-3.5 select-text">
-  <!-- Cabeçalho do Ativo com MCP e Ticker -->
   <div class="flex items-center justify-between pb-2.5 border-b border-white/[0.08]">
     <div class="flex items-center gap-2.5">
       <div class="h-9 w-9 rounded-xl bg-sky-500/15 border border-sky-500/25 flex items-center justify-center text-sky-400 font-bold text-xs font-mono">
@@ -38,7 +37,6 @@
       </div>
     </div>
 
-    <!-- Badge de Fonte Auditada -->
     <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/25 text-emerald-300 text-[10px] font-mono font-semibold">
       <span class="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
       <ShieldCheck class="w-3.5 h-3.5 text-emerald-400" />
@@ -46,7 +44,6 @@
     </div>
   </div>
 
-  <!-- Bloco Principal de Preço e Variação -->
   <div class="flex items-baseline justify-between pt-1">
     <div>
       <div class="text-[10px] uppercase font-mono tracking-wider text-zinc-400">Preço de Mercado</div>
@@ -61,7 +58,6 @@
       {/if}
     </div>
 
-    <!-- Variação com Indicador Visual -->
     <div class="flex flex-col items-end">
       <div class="text-[10px] uppercase font-mono tracking-wider text-zinc-400">Variação Diária</div>
       <div class="flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-mono font-bold mt-1 {quote.isPositive ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-300 border border-rose-500/30'}">
@@ -75,9 +71,7 @@
     </div>
   </div>
 
-  <!-- Grade de Múltiplos e Indicadores (DY, P/L, P/VP) -->
   <div class="grid grid-cols-3 gap-2.5 pt-1">
-    <!-- Dividend Yield -->
     <div class="p-2.5 rounded-xl bg-[#242232]/70 border border-white/[0.06] space-y-1">
       <div class="flex items-center gap-1 text-[10px] font-mono text-zinc-400 uppercase">
         <Coins class="w-3 h-3 text-amber-400" />
@@ -88,7 +82,6 @@
       </div>
     </div>
 
-    <!-- P/L -->
     <div class="p-2.5 rounded-xl bg-[#242232]/70 border border-white/[0.06] space-y-1">
       <div class="flex items-center gap-1 text-[10px] font-mono text-zinc-400 uppercase">
         <BarChart3 class="w-3 h-3 text-sky-400" />
@@ -99,7 +92,6 @@
       </div>
     </div>
 
-    <!-- P/VP -->
     <div class="p-2.5 rounded-xl bg-[#242232]/70 border border-white/[0.06] space-y-1">
       <div class="flex items-center gap-1 text-[10px] font-mono text-zinc-400 uppercase">
         <Layers class="w-3 h-3 text-violet-400" />
@@ -111,7 +103,6 @@
     </div>
   </div>
 
-  <!-- Destaque para Fato Relevante Recente -->
   {#if quote.relevantFact}
     <div class="p-3 rounded-xl bg-amber-500/10 border border-amber-500/25 space-y-1.5 text-xs animate-fade-in">
       <div class="flex items-center gap-1.5 text-amber-300 font-semibold text-[11px] font-mono">

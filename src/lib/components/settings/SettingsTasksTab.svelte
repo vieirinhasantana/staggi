@@ -101,7 +101,6 @@
 </script>
 
 <div class="space-y-4">
-  <!-- 1. Card de Criação de Nova Tarefa (PRIMEIRO ITEM NO TOPO) -->
   {#if !isCreatingTask && !editingTaskId}
     <button
       type="button"
@@ -133,7 +132,6 @@
     </button>
   {/if}
 
-  <!-- Formulário de Criação / Edição de Tarefa -->
   {#if isCreatingTask || editingTaskId}
     <div
       class="rounded-2xl bg-[#242232] border border-sky-500/30 p-4 space-y-3.5 animate-fade-in"
@@ -159,7 +157,6 @@
       </div>
 
       <div class="space-y-3 text-xs font-mono">
-        <!-- Nome da Tarefa -->
         <div class="space-y-1">
           <label for="task-name" class="text-zinc-400">Nome da Tarefa:</label>
           <input
@@ -171,7 +168,6 @@
           />
         </div>
 
-        <!-- Descrição -->
         <div class="space-y-1">
           <label for="task-desc" class="text-zinc-400">Descrição:</label>
           <input
@@ -183,7 +179,6 @@
           />
         </div>
 
-        <!-- Frequência / Intervalo -->
         <div class="space-y-1.5">
           <label for="task-interval" class="text-zinc-400">Frequência de Execução:</label>
           <div class="flex items-center gap-1.5 flex-wrap">
@@ -212,7 +207,6 @@
           </div>
         </div>
 
-        <!-- Prompt Específico -->
         <div class="space-y-1">
           <div class="flex items-center justify-between">
             <label for="task-prompt" class="text-zinc-400">Prompt Específico que será executado:</label>
@@ -227,7 +221,6 @@
           ></textarea>
         </div>
 
-        <!-- Toggle Ativa -->
         <div class="flex items-center gap-2 pt-1">
           <input
             id="task-active"
@@ -240,7 +233,6 @@
           </label>
         </div>
 
-        <!-- Botões de Ação do Form -->
         <div class="flex items-center justify-end gap-2 pt-2 border-t border-white/[0.08]">
           <button
             type="button"
@@ -263,7 +255,6 @@
     </div>
   {/if}
 
-  <!-- 2. Lista de Tarefas Cadastradas -->
   <div class="flex items-center justify-between pt-1">
     <h5 class="text-xs font-semibold text-zinc-300 font-mono">
       Tarefas Cadastradas ({tasksStore.tasks.length})
@@ -354,7 +345,6 @@
             </div>
           </div>
 
-          <!-- Ações Rápidas -->
           <div class="flex items-center gap-1.5 shrink-0">
             <button
               type="button"
@@ -393,7 +383,6 @@
           </div>
         </div>
 
-        <!-- Rodapé do Card com Status de Execução e Botão de Ver Resultado -->
         <div
           class="flex items-center justify-between text-[11px] font-mono text-zinc-400 pt-2 border-t border-white/[0.06]"
         >

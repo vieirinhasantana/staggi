@@ -34,7 +34,6 @@ export type {
 export function parseSingleAssetProfile(rawText: string): ParsedAssetProfile | null {
   if (!rawText) return null;
 
-  // Não conflita com tabelas de comparação, proventos ou eventos corporativos
   if (
     rawText.includes("Proventos Declarados") ||
     rawText.includes("Dividend Yield (DY)") ||
@@ -43,7 +42,6 @@ export function parseSingleAssetProfile(rawText: string): ParsedAssetProfile | n
     return null;
   }
 
-  // Verifica se há campos típicos de ficha cadastral / perfil de ativo
   const fieldRegex =
     /^\s*(\*{0,2}(?:Tipo de Ativo|Gestora|Emissor|Classe de Ativo|Classe|Foco|Estratégia|Estrategia|Domicílio|Domicilio|Distribuição|Distribuicao|ISIN|Ticker|CUSIP|Vencimento|Cupom|Duration|YTM|Rating|Patrimônio|Patrimonio|Taxa de Administração|Taxa|Moeda|Indexador)\*{0,2})\s*:\s*(.+)$/im;
 
@@ -56,7 +54,6 @@ export function parseSingleAssetProfile(rawText: string): ParsedAssetProfile | n
     }
   }
 
-  // Se tem pelo menos 2 campos característicos de perfil/ficha cadastral de ativo
   if (matchCount < 2) {
     return null;
   }
@@ -76,7 +73,6 @@ export function parseSingleAssetProfile(rawText: string): ParsedAssetProfile | n
   const summaryParagraphs: string[] = [];
   let mcpSource: string | undefined;
 
-  // Detecta MCP de origem
   if (/mcp-financedatabase/i.test(rawText)) {
     mcpSource = "FinanceDatabase Global Directory";
   } else if (/mcp-equibles/i.test(rawText)) {
@@ -89,19 +85,16 @@ export function parseSingleAssetProfile(rawText: string): ParsedAssetProfile | n
     mcpSource = "TickerInside Insider Flow";
   }
 
-  // Procura ISIN no texto (ex: LU2451829373, LU3046410299, US912810TL42, BRBBDCACNPR8)
   const isinMatch = rawText.match(/\b([A-Z]{2}[A-Z0-9]{9}\d)\b/);
   if (isinMatch) {
     identifier = isinMatch[1];
   }
 
   for (const line of lines) {
-    // Ignora linhas de prefixo cru como "Consultando o mcp..."
     if (/^(?:Consultando|Acessando|Com base)\s+o\s+(?:servidor\s+)?mcp-/i.test(line)) {
       continue;
     }
 
-    // Identifica linha de título com ISIN/Ticker no início: "LU2451829373: Xtrackers..." ou "### [ISIN]: [Nome]"
     const titleWithIdMatch = line.match(
       /^(?:###?\s*)?(?:\d+\.\s*)?\*?\*?([A-Z0-9.]{3,14})\*?\*?(?:\s*[:\-–—]\s*|\s+–\s+|\s+-\s+)\*?\*?([A-Za-zÀ-ÿ0-9\s/&.\-–—()]+)\*?\*?$/
     );
@@ -111,7 +104,6 @@ export function parseSingleAssetProfile(rawText: string): ParsedAssetProfile | n
       continue;
     }
 
-    // Match de campo "Label: Value"
     const match = line.match(/^\*?\*?([A-Za-zÀ-ÿ\s/()]+)\*?\*?:\s*(.+)$/);
     if (match) {
       const rawLabel = match[1].replace(/\*\*/g, "").trim();
@@ -151,14 +143,12 @@ export function parseSingleAssetProfile(rawText: string): ParsedAssetProfile | n
 
       fields.push({ label: rawLabel, value });
     } else {
-      // Texto descritivo / síntese analítica
       if (line.length > 25 && !line.startsWith("#")) {
         summaryParagraphs.push(line);
       }
     }
   }
 
-  // Se o nome não foi encontrado na primeira linha com dois pontos, tenta pegar a primeira linha limpa
   if (!name) {
     for (const line of lines) {
       if (!line.includes(":") && line.length > 5 && !line.startsWith("Consultando")) {
@@ -196,7 +186,6 @@ export function parseSingleAssetProfile(rawText: string): ParsedAssetProfile | n
 export function parseAssetProfiles(rawText: string): ParsedAssetProfile[] {
   if (!rawText) return [];
 
-  // Não conflita com tabelas de comparação, proventos ou eventos corporativos
   if (
     rawText.includes("Proventos Declarados") ||
     rawText.includes("Dividend Yield (DY)") ||
@@ -205,7 +194,6 @@ export function parseAssetProfiles(rawText: string): ParsedAssetProfile[] {
     return [];
   }
 
-  // Se o texto contém marcadores de múltiplos ISINs (ex: LU3046410299 e LU2451829373)
   const isinBoundaryRegex = /(?=(?:^|\n)(?:###?\s*)?[A-Z]{2}[A-Z0-9]{9}\d(?:\s*[:\-–]|\s*\n))/g;
   const parts = rawText.split(isinBoundaryRegex).filter((p) => p.trim().length > 15);
 
@@ -227,14 +215,10 @@ export function parseAssetProfile(rawText: string): ParsedAssetProfile | null {
   return list.length > 0 ? list[0] : null;
 }
 
-/**
- * Detecta a procedência institucional e fonte oficial auditada dos dados de uma resposta
- */
 export function detectAuditedSource(text: string): string | null {
   if (!text) return null;
   const lower = text.toLowerCase();
 
-  // Curva soberana e taxas de juros americanas
   if (
     lower.includes("treasury") ||
     lower.includes("treasuries") ||
@@ -245,7 +229,6 @@ export function detectAuditedSource(text: string): string | null {
     return "U.S. Department of the Treasury (Daily Yield Curve) • Fed St. Louis";
   }
 
-  // Holdings e composição de ETFs
   if (
     lower.includes("etf") ||
     lower.includes("holdings") ||
@@ -257,7 +240,6 @@ export function detectAuditedSource(text: string): string | null {
     return "Equibles ETF Holdings • SEC N-PORT / Informes CVM";
   }
 
-  // Renda Fixa e Bonds
   if (
     lower.includes("bond") ||
     lower.includes("debenture") ||
@@ -269,7 +251,6 @@ export function detectAuditedSource(text: string): string | null {
     return "Bond Intelligence • FINRA TRACE / Emissores e Escrituradores";
   }
 
-  // Insiders e Smart Money
   if (
     lower.includes("insider") ||
     lower.includes("form 4") ||
@@ -280,12 +261,10 @@ export function detectAuditedSource(text: string): string | null {
     return "SEC EDGAR (Form 4 Insider Transactions) • TickerInside Intelligence";
   }
 
-  // Diretório e Triagem Multi-Ativos
   if (lower.includes("isin") || lower.includes("financedatabase") || lower.includes("300k")) {
     return "FinanceDatabase Global Directory (300k+ Ativos) • Bolsas Globais";
   }
 
-  // Dividendos e proventos
   if (
     lower.includes("provento") ||
     lower.includes("dividendo") ||
@@ -295,7 +274,6 @@ export function detectAuditedSource(text: string): string | null {
     return "B3 / CVM • Informes Oficiais de Escrituração Central";
   }
 
-  // Múltiplos e Valuation
   if (
     lower.includes("graham") ||
     lower.includes("bazin") ||
@@ -311,7 +289,6 @@ export function detectAuditedSource(text: string): string | null {
     return "Demonstrações IFRS / CVM • Consenso Sell-Side • Market Data";
   }
 
-  // Cotações de Mercado
   if (lower.includes("cotação") || lower.includes("cotacao") || lower.includes("preço atual")) {
     return "B3 / NYSE / Nasdaq (Market Data Yahoo Finance)";
   }
@@ -329,14 +306,12 @@ export function parseAssetQuote(rawText: string): ParsedAssetQuote | null {
     return null;
   }
 
-  // Tenta extrair a cotação atual
   const priceMatch = rawText.match(/Cotação\s*Atual:?\*?\*?\s*([R$\w\s\d,.]+?)(?:\s*\(([^)]+)\)|\n|$)/i);
   if (!priceMatch) return null;
 
   const price = priceMatch[1]?.trim() || "";
   const dateInfo = priceMatch[2]?.trim() || "";
 
-  // Ticker e Nome da Empresa - Extração Dinâmica sem Hardcode
   let companyName = "";
   let ticker = "";
 
@@ -355,24 +330,19 @@ export function parseAssetQuote(rawText: string): ParsedAssetQuote | null {
     }
   }
 
-  // Variação Diária
   const changeMatch = rawText.match(/Variação(?:\s+Diária)?:?\*?\*?\s*([+-]?\s*[\d,.]+\s*%)/i);
   const change = changeMatch ? changeMatch[1].trim() : "0,00%";
   const isPositive = !change.startsWith("-");
 
-  // Dividend Yield (LTM)
   const dyMatch = rawText.match(/Dividend\s*Yield(?:\s*\([^)]*\))?:?\*?\*?\s*([\d,.]+\s*%)/i);
   const dividendYield = dyMatch ? dyMatch[1].trim() : undefined;
 
-  // P/L (TTM)
   const plMatch = rawText.match(/P\/L(?:\s*\([^)]*\))?:?\*?\*?\s*([\d,.]+\s*x?)/i);
   const pl = plMatch ? plMatch[1].trim() : undefined;
 
-  // P/VP
   const pvpMatch = rawText.match(/P\/VP:?\*?\*?\s*([\d,.]+\s*x?)/i);
   const pvp = pvpMatch ? pvpMatch[1].trim() : undefined;
 
-  // Fato Relevante Recente
   const factMatch = rawText.match(/Fato\s*Relevante(?:\s*Recente)?:?\*?\*?\s*([\s\S]+?)(?:\n\n[A-Z]|$)/i);
   const relevantFact = factMatch ? factMatch[1].trim().replace(/^\*\s*/, "") : undefined;
 
@@ -394,7 +364,6 @@ function categorizeEvent(title: string, body: string): CorporateEventCategory {
   const t = title.toLowerCase();
   const b = body.toLowerCase();
 
-  // 1. Prioridade no Título
   if (/\b(ai|ia|inteligência|azure|cloud|copilot|software|nuvem)\b/i.test(t)) {
     return "Tecnologia & IA";
   }
@@ -414,7 +383,6 @@ function categorizeEvent(title: string, body: string): CorporateEventCategory {
     return "Preços";
   }
 
-  // 2. Análise do Corpo se o título for genérico
   if (b.includes("receita") || b.includes("lucro") || b.includes("ebitda") || b.includes("margem líquida")) {
     return "Resultados";
   }
@@ -437,7 +405,6 @@ function categorizeEvent(title: string, body: string): CorporateEventCategory {
 function extractKeyMetrics(body: string): EventDetailItem[] {
   const details: EventDetailItem[] = [];
 
-  // 1. Sub-itens explícitos no formato Markdown: * **Data Ex:** 26/04
   const subDetailRegex = /\*\s+\*\*([^*]+?):?\*\*\s*([^\n]+)/g;
   let subMatch: RegExpExecArray | null;
   while ((subMatch = subDetailRegex.exec(body)) !== null) {
@@ -449,7 +416,6 @@ function extractKeyMetrics(body: string): EventDetailItem[] {
 
   if (details.length > 0) return details;
 
-  // 2. Se não houver asteriscos, extrai valores e percentuais de destaque (ex: US$ 92,3 bilhões, 19% A/A)
   const metricRegex = /((?:US\$|R\$|€)\s*[\d,.]+\s*(?:bilh[õo]es|milh[õo]es|bi|mi)?|[+-]?\s*\d+(?:,\d+)?%\s*(?:A\/A|a\.a\.|trimestral)?)/gi;
   const matches = body.match(metricRegex);
   if (matches) {
@@ -468,12 +434,10 @@ function extractKeyMetrics(body: string): EventDetailItem[] {
 export function parseCorporateEvents(rawText: string): ParsedCorporateEvents | null {
   if (!rawText || rawText.trim().length < 20) return null;
 
-  // Se o texto contém tabela markdown (| col | col |), NÃO é lista de eventos corporativos!
   if (/\|[^\n|]+\|[^\n|]+\|/m.test(rawText)) {
     return null;
   }
 
-  // Verifica se o texto é de fato uma resposta sobre fatos relevantes, notícias ou comunicados corporativos
   const isCorporateEventText = 
     /fatos?\s+relevantes?/i.test(rawText) ||
     /eventos?\s+(?:corporativos?|recentes?)/i.test(rawText) ||
@@ -482,11 +446,9 @@ export function parseCorporateEvents(rawText: string): ParsedCorporateEvents | n
 
   if (!isCorporateEventText) return null;
 
-  // 1. Extração Dinâmica de Ticker e Empresa do Contexto (Zero Hardcode)
   let ticker = "";
   let companyName = "";
 
-  // Ex: "sobre a Microsoft (MSFT)" ou "Para Petrobras (PETR4.SA)"
   const companyTickerMatch = rawText.match(/(?:sobre\s+(?:a|o)?\s*|Para\s+)?([A-Za-zÀ-ÿ0-9\s]+?)\s*\(([A-Z0-9.]{1,8})\)/i);
   if (companyTickerMatch) {
     companyName = companyTickerMatch[1]
@@ -495,7 +457,6 @@ export function parseCorporateEvents(rawText: string): ParsedCorporateEvents | n
     ticker = companyTickerMatch[2].trim();
   }
 
-  // Se não achou ticker entre parênteses, procura ticker isolado
   if (!ticker) {
     const rawTickerMatch = rawText.match(/\b([A-Z]{1,5}(?:\.SA)?|[A-Z]{4}\d{1,2}(?:\.SA)?)\b/);
     if (rawTickerMatch) {
@@ -503,7 +464,6 @@ export function parseCorporateEvents(rawText: string): ParsedCorporateEvents | n
     }
   }
 
-  // Se não achou nome de empresa, tenta deduzir do texto de abertura
   if (!companyName) {
     const sobreMatch = rawText.match(/sobre\s+(?:a|o)?\s*([A-Za-zÀ-ÿ0-9\s]+?)(?:\s*\(|:|\n)/i);
     if (sobreMatch) {
@@ -516,7 +476,6 @@ export function parseCorporateEvents(rawText: string): ParsedCorporateEvents | n
     }
   }
 
-  // 2. Extração da Introdução e dos Eventos
   const lines = rawText.split("\n").map(l => l.trim()).filter(Boolean);
   if (lines.length < 2) return null;
 
@@ -532,22 +491,16 @@ export function parseCorporateEvents(rawText: string): ParsedCorporateEvents | n
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
 
-    // Pula a primeira linha se for introdução
     if (i === 0 && (line.endsWith(":") || line.toLowerCase().includes("incluem:"))) {
       continue;
     }
 
-    // Pula se for linha de tabela markdown
     if (line.includes("|")) continue;
 
-    // Pula rodapé ou mensagens de acompanhamento
     if (/^(?:Para\s+uma\s+análise|Caso\s+precise|Se\s+desejar|Em\s+caso\s+de)/i.test(line)) {
       continue;
     }
 
-    // Tenta casar formatos:
-    // A. "1. **Título:** Descrição" ou "* **Título:** Descrição"
-    // B. "Título: Descrição"
     const colonIndex = line.indexOf(":");
     if (colonIndex > 3 && colonIndex < 85) {
       const rawTitle = line.substring(0, colonIndex)
@@ -557,7 +510,6 @@ export function parseCorporateEvents(rawText: string): ParsedCorporateEvents | n
 
       let rawBody = line.substring(colonIndex + 1).trim();
 
-      // Se a próxima linha for continuação ou sub-detalhes, pode incorporar
       while (i + 1 < lines.length && (lines[i + 1].startsWith("*") || lines[i + 1].startsWith("-") || !lines[i + 1].includes(":"))) {
         if (/^(?:Para\s+uma\s+análise|Caso\s+precise|Se\s+desejar)/i.test(lines[i + 1])) break;
         rawBody += "\n" + lines[i + 1];
@@ -568,7 +520,6 @@ export function parseCorporateEvents(rawText: string): ParsedCorporateEvents | n
         const cat = categorizeEvent(rawTitle, rawBody);
         const details = extractKeyMetrics(rawBody);
 
-        // Limpa a descrição se tiver sub-itens em bullet
         let cleanDesc = rawBody;
         const subIndex = rawBody.search(/\n\s*[\*\-]/);
         if (subIndex !== -1) {
@@ -588,7 +539,6 @@ export function parseCorporateEvents(rawText: string): ParsedCorporateEvents | n
 
   if (events.length < 2) return null;
 
-  // Extrai Footer (ex: "Para uma análise aprofundada...")
   const footerMatch = rawText.match(/\n\n?((?:Para\s+uma\s+análise|Caso\s+precise|Se\s+desejar)[\s\S]+)$/i);
   const footer = footerMatch ? footerMatch[1].trim() : undefined;
 
@@ -613,7 +563,6 @@ export function parseValuationProjection(rawText: string): ParsedValuationProjec
 
   if (!hasValuationKeywords) return null;
 
-  // Extração Dinâmica de Ticker e Empresa
   let ticker = "";
   let companyName = "";
 
@@ -631,51 +580,39 @@ export function parseValuationProjection(rawText: string): ParsedValuationProjec
 
   if (!ticker) return null;
 
-  // Cotação Atual
   const priceMatch = rawText.match(/Cotação\s*(?:Atual)?:?\*?\*?\s*([R$\w\s\d,.]+?)(?:\s*\(([^)]+)\)|\n|$)/i);
   const currentPrice = priceMatch ? priceMatch[1].trim() : undefined;
 
-  // Preço Teto Bazin
   const bazinMatch = rawText.match(/Preço\s*Teto(?:\s*\([^)]*\))?:?\*?\*?\s*([R$\w\s\d,.]+?)(?:\n|$)/i);
   const bazinCeilingPrice = bazinMatch ? bazinMatch[1].trim() : undefined;
 
-  // Preço Justo Graham
   const grahamMatch = rawText.match(/Preço\s*Justo(?:\s*\([^)]*\))?:?\*?\*?\s*([R$\w\s\d,.]+?)(?:\n|$)/i);
   const grahamPrice = grahamMatch ? grahamMatch[1].trim() : undefined;
 
-  // Preço-Alvo / Consenso
   const targetMatch = rawText.match(/Preço[\s-]*Alvo(?:\s*Consenso)?:?\*?\*?\s*([R$\w\s\d,.]+?)(?:\n|$)/i);
   const targetPrice = targetMatch ? targetMatch[1].trim() : undefined;
 
-  // Margem de Segurança
   const marginMatch = rawText.match(/Margem\s*de\s*Segurança:?\*?\*?\s*([+-]?\s*[\d,.]+\s*%)/i);
   const safetyMargin = marginMatch ? marginMatch[1].trim() : undefined;
 
-  // ROE
   const roeMatch = rawText.match(/ROE:?\*?\*?\s*([\d,.]+\s*%)/i);
   const roe = roeMatch ? roeMatch[1].trim() : undefined;
 
-  // P/L
   const plMatch = rawText.match(/P\/L:?\*?\*?\s*([\d,.]+\s*x?)/i);
   const pl = plMatch ? plMatch[1].trim() : undefined;
 
-  // P/VP
   const pvpMatch = rawText.match(/P\/VP:?\*?\*?\s*([\d,.]+\s*x?)/i);
   const pvp = pvpMatch ? pvpMatch[1].trim() : undefined;
 
-  // DY Projetado
   const dyMatch = rawText.match(/(?:DY|Dividend\s*Yield)\s*(?:Projetado|Estimado)?:?\*?\*?\s*([\d,.]+\s*%)/i);
   const projectedDy = dyMatch ? dyMatch[1].trim() : undefined;
 
-  // Recomendação
   const recMatch = rawText.match(/Recomendaç[ãa]o:?\*?\*?\s*([A-Za-zÀ-ÿ]+)/i);
   const recommendation = recMatch ? recMatch[1].trim() : "Análise Estratégica";
 
-  // Se não extraiu pelo menos 2 métricas de valuation, não é um card de valuation estruturado
   const metricsCount = [bazinCeilingPrice, grahamPrice, targetPrice, safetyMargin, currentPrice].filter(Boolean).length;
   if (metricsCount < 2) return null;
 
-  // Extrai uma síntese rápida
   const summaryMatch = rawText.match(/(?:Síntese|Conclusão|Racional|Diagnóstico):?\*?\*?\s*([^\n]+)/i);
   const summary = summaryMatch ? summaryMatch[1].trim() : "Projeção fundamentalista consolidada com base em múltiplos históricos e projeções de proventos.";
 
@@ -707,7 +644,6 @@ export function parseAssetDividends(rawText: string): ParsedAssetDividends | nul
 
   if (!hasDividendsKeywords) return null;
 
-  // Extração Dinâmica de Ticker e Empresa
   let ticker = "";
   let companyName = "";
 
@@ -728,7 +664,6 @@ export function parseAssetDividends(rawText: string): ParsedAssetDividends | nul
   const lines = rawText.split("\n").map(l => l.trim()).filter(Boolean);
   if (lines.length < 3) return null;
 
-  // Extração de Introdução (antes das tabelas)
   let intro = "";
   const firstLine = lines[0];
   if (!firstLine.includes("\t") && !firstLine.includes("|") && firstLine.length > 20) {
@@ -758,7 +693,6 @@ export function parseAssetDividends(rawText: string): ParsedAssetDividends | nul
       continue;
     }
 
-    // Tenta separar por tab ou por múltiplos espaços ou por pipe (|)
     let parts: string[] = [];
     if (line.includes("\t")) {
       parts = line.split("\t").map(p => p.trim());
@@ -786,7 +720,6 @@ export function parseAssetDividends(rawText: string): ParsedAssetDividends | nul
       const col0 = parts[0].toLowerCase();
       if (col0.includes("ano") || col0.includes("---")) continue;
 
-      // Confirma que col0 é um ano numérico (ex: 2026, 2025, 2024, etc.)
       if (!/^\d{4}$/.test(parts[0])) continue;
 
       annualHistory.push({
@@ -798,7 +731,6 @@ export function parseAssetDividends(rawText: string): ParsedAssetDividends | nul
     }
   }
 
-  // Se não extraiu pagamentos nem histórico anual, não é o card
   if (payouts.length === 0 && annualHistory.length === 0) {
     return null;
   }
@@ -833,11 +765,9 @@ function guessCompanyNameFromColumn(colValues: string[], index: number): string 
 export function parseComparisonTable(rawText: string): ParsedComparisonTable | null {
   if (!rawText || rawText.length < 30) return null;
 
-  // 1. Normaliza quebras concatenadas com | | (ex: ... satélites, IA | | **Status no Mercado** | ...)
   const normalized = rawText.replace(/\|\s*\|\s*(?=[A-Za-z0-9\*\_\#])/g, "|\n|");
   const rawLines = normalized.split("\n").map(l => l.trim()).filter(Boolean);
 
-  // 2. Acumula linhas de tabela que foram quebradas no meio de uma célula
   const tableLines: string[] = [];
   let curr = "";
 
@@ -855,27 +785,24 @@ export function parseComparisonTable(rawText: string): ParsedComparisonTable | n
     }
   }
 
-  // Precisa ter pelo menos 2 linhas de tabela
   if (tableLines.length < 2) return null;
 
-  // Extrai linhas limpas e filtra divisores markdown (---)
   const parsedRows: { metric: string; values: string[] }[] = [];
   let explicitHeaders: string[] | null = null;
 
   for (let i = 0; i < tableLines.length; i++) {
     const line = tableLines[i];
-    if (line.includes("---")) continue; // Pula linha separadora markdown
+    if (line.includes("---")) continue;
 
     const cells = line
       .split("|")
       .map(c => c.trim())
       .filter((_, idx, arr) => idx > 0 && idx < arr.length - 1);
 
-    if (cells.length < 3) continue; // Pelo menos 1 métrica + 2 ativos comparados
+    if (cells.length < 3) continue;
 
     const col0Clean = cells[0].replace(/\*\*/g, "").replace(/^#+\s*/, "").trim();
 
-    // Se a primeira linha contiver cabeçalhos explícitos
     if (i === 0 && (col0Clean.toLowerCase().includes("métrica") || col0Clean.toLowerCase().includes("aspecto") || col0Clean.toLowerCase().includes("indicador") || col0Clean.toLowerCase().includes("empresa") || col0Clean.toLowerCase().includes("ativo"))) {
       explicitHeaders = cells.map(c => c.replace(/\*\*/g, "").trim());
       continue;
@@ -887,13 +814,11 @@ export function parseComparisonTable(rawText: string): ParsedComparisonTable | n
     });
   }
 
-  // Se não encontrou pelo menos 2 linhas de métricas comparativas
   if (parsedRows.length < 2) return null;
 
   const numCols = parsedRows[0].values.length;
   if (numCols < 2) return null;
 
-  // Se não houver cabeçalhos explícitos, deduz os nomes das colunas
   let headers: string[] = [];
   if (explicitHeaders && explicitHeaders.length === numCols + 1) {
     headers = explicitHeaders;
@@ -919,15 +844,12 @@ export function renderMarkdown(content: string): string {
   try {
     let processed = content;
 
-    // Remove prefixos crus ou feios de chamadas internas de MCP
     processed = processed.replace(/^Consultando\s+o\s+mcp-[a-z0-9_-]+[^\n]*:?\s*\n?/gim, "");
     processed = processed.replace(/^Acessando\s+o\s+servidor\s+mcp-[a-z0-9_-]+[^\n]*:?\s*\n?/gim, "");
     processed = processed.replace(/^Com\s+base\s+no\s+mcp-[a-z0-9_-]+[^\n]*:?\s*\n?/gim, "");
 
-    // 1. Corrige tabelas com linhas concatenadas por | |
     processed = processed.replace(/\|\s*\|\s*(?=[A-Za-z0-9\*\_\#])/g, "|\n|");
 
-    // 2. Corrige quebras de linha acidentais dentro de células de tabelas
     const rawLines = processed.split("\n");
     const mergedLines: string[] = [];
     let accumulator = "";
@@ -962,7 +884,6 @@ export function renderMarkdown(content: string): string {
     }
     processed = mergedLines.join("\n");
 
-    // 3. Converte automaticamente tabelas separadas por tabulação (\t) em tabelas GFM válidas
     if (processed.includes("\t")) {
       const lines = processed.split("\n");
       const convertedLines: string[] = [];
@@ -987,7 +908,6 @@ export function renderMarkdown(content: string): string {
       processed = convertedLines.join("\n");
     }
 
-    // 4. Auto-insere o divisor | --- | --- | se a tabela markdown não possuir
     const lines = processed.split("\n");
     const fixedLines: string[] = [];
     for (let i = 0; i < lines.length; i++) {

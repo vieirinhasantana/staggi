@@ -33,13 +33,11 @@
     }
   }
 
-  // Detecta se é estrutura UCITS (Luxemburgo ou Irlanda) para destacar blindagem fiscal
   let isUcits = $derived.by(() => {
     const text = `${data.domicile || ""} ${data.name || ""} ${data.assetType || ""}`.toLowerCase();
     return text.includes("ucits") || text.includes("luxemburgo") || text.includes("irlanda");
   });
 
-  // Detecta se é ETF, Bond ou Ação para definir o ícone temático
   let isEtf = $derived.by(() => {
     const text = `${data.assetType || ""} ${data.name || ""}`.toLowerCase();
     return text.includes("etf") || text.includes("fundo");
@@ -54,10 +52,8 @@
 <div
   class="w-full rounded-2xl border border-white/[0.12] bg-[#1d1b2a]/95 backdrop-blur-2xl shadow-xl p-5 space-y-4 select-text animate-fade-in"
 >
-  <!-- Cabeçalho do Ativo / Ficha Cadastral -->
   <div class="flex items-start justify-between pb-3.5 border-b border-white/[0.08] flex-wrap gap-3">
     <div class="flex items-start gap-3">
-      <!-- Ícone Temático Dinâmico -->
       <div
         class="h-10 w-10 rounded-xl flex items-center justify-center shrink-0 border {isEtf
           ? 'bg-teal-500/15 border-teal-500/30 text-teal-300'
@@ -76,7 +72,6 @@
 
       <div class="space-y-1">
         <div class="flex items-center gap-2 flex-wrap">
-          <!-- Identificador (ISIN / Ticker) com Botão de Cópia -->
           <button
             type="button"
             onclick={copyIdentifier}
@@ -91,7 +86,6 @@
             {/if}
           </button>
 
-          <!-- Badges de Classificação -->
           {#if data.assetType}
             <span
               class="px-2 py-0.5 rounded-md bg-white/[0.06] text-zinc-300 font-mono text-[11px] border border-white/[0.08]"
@@ -130,7 +124,6 @@
       </div>
     </div>
 
-    <!-- Badge de Origem da Base de Dados -->
     {#if data.mcpSource}
       <span
         class="px-2.5 py-1 rounded-lg bg-white/[0.04] border border-white/[0.08] text-[10px] font-mono text-zinc-400 flex items-center gap-1.5 shrink-0"
@@ -141,7 +134,6 @@
     {/if}
   </div>
 
-  <!-- Destaque de Cotação Atual / NAV e Moeda (Valor Oficial do Ativo) -->
   {#if data.price}
     <div
       class="p-3.5 rounded-xl bg-gradient-to-r from-emerald-500/[0.12] via-teal-500/[0.08] to-transparent border border-emerald-500/30 flex items-center justify-between flex-wrap gap-3"
@@ -177,7 +169,6 @@
     </div>
   {/if}
 
-  <!-- Grade de Atributos Estruturados em Cards Elegantes -->
   {#if data.fields.length > 0}
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
       {#each data.fields as field}
@@ -195,7 +186,6 @@
     </div>
   {/if}
 
-  <!-- Box Especial de Alerta Fiscal / US Estate Tax para UCITS -->
   {#if isUcits}
     <div
       class="p-3 rounded-xl bg-emerald-500/[0.08] border border-emerald-500/25 flex items-start gap-2.5 text-xs text-zinc-300 leading-relaxed font-sans"
@@ -210,7 +200,6 @@
     </div>
   {/if}
 
-  <!-- Resumo da Tese / Síntese Analítica -->
   {#if data.summary}
     <div
       class="p-3.5 rounded-xl bg-[#161522] border border-white/[0.06] space-y-1.5 text-xs text-zinc-300 font-sans leading-relaxed"
@@ -225,7 +214,6 @@
     </div>
   {/if}
 
-  <!-- Rodapé Institucional com Fonte Auditada -->
   <div class="flex items-center justify-between pt-2 border-t border-white/[0.06] text-[10px] font-mono text-zinc-400 flex-wrap gap-2">
     <div class="flex items-center gap-1.5">
       <ShieldCheck class="w-3.5 h-3.5 text-emerald-400 shrink-0" />

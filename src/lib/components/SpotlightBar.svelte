@@ -39,7 +39,6 @@
   let textareaEl = $state<HTMLTextAreaElement | null>(null);
   let activePopover = $state<"none" | "mcp" | "skills" | "tasks">("none");
 
-  // Estado do Menu Slash Command "/"
   let selectedSlashIndex = $state(0);
   let dismissSlashMenu = $state(false);
 
@@ -140,7 +139,6 @@
       const win = getCurrentWindow();
       await win.startDragging();
     } catch {
-      // preview web
     }
   }
 
@@ -149,14 +147,12 @@
   }
 </script>
 
-<!-- Card Spotlight com contorno fiel e sombra multi-layer que abraça a curvatura -->
 <div 
   role="presentation"
   data-tauri-drag-region
   onmousedown={handleMouseDown}
   class="relative z-30 w-full rounded-[28px] border border-white/[0.14] ring-1 ring-white/[0.06] bg-[#24222f]/98 shadow-[0_2px_10px_rgba(0,0,0,0.35),0_12px_32px_-4px_rgba(0,0,0,0.55),0_24px_50px_-6px_rgba(0,0,0,0.65),inset_0_1px_0_0_rgba(255,255,255,0.15)] backdrop-blur-2xl transition-all duration-200 select-none cursor-grab active:cursor-grabbing"
 >
-  <!-- Área de Input Multilinha com Quebra de Linha Automática -->
   <div data-tauri-drag-region class="px-5 pt-4 pb-2 flex items-center">
     <textarea
       bind:this={textareaEl}
@@ -170,11 +166,8 @@
     ></textarea>
   </div>
 
-  <!-- Linha Inferior: Toolbar de MCPs, Skills, Conexão e Botão Circular de Envio -->
   <div data-tauri-drag-region class="flex items-center justify-between px-4 pt-1 pb-3">
-    <!-- Indicadores de MCPs e Skills à Esquerda (Só renderizam se > 0 ativos) -->
     <div class="flex items-center gap-2">
-      <!-- Badge de MCPs Habilitados (Só mostra se houver pelo menos 1 MCP ativo) -->
       {#if pluginsStore.activeMcpsCount > 0}
         <button 
           type="button"
@@ -187,7 +180,6 @@
         </button>
       {/if}
 
-      <!-- Badge de Skills Habilitadas (Só mostra se houver pelo menos 1 Skill ativa) -->
       {#if pluginsStore.activeSkillsCount > 0}
         <button 
           type="button"
@@ -200,7 +192,6 @@
         </button>
       {/if}
 
-      <!-- Badge de Tasks / Tarefas Agendadas -->
       {#if tasksStore.totalCount > 0 || tasksStore.isRunningAny || tasksStore.activeAlert}
         <button 
           type="button"
@@ -218,7 +209,6 @@
         </button>
       {/if}
 
-      <!-- Badge de Nova Atualização Disponível ou Pronta (Botão que Clica e Baixa na Hora) -->
       {#if updaterStore.status === "available" || updaterStore.status === "downloaded" || updaterStore.status === "downloading"}
         <button
           type="button"
@@ -246,9 +236,7 @@
       {/if}
     </div>
 
-    <!-- Botões da Direita: Indicador do Modelo de IA Ativo, Configurações e Envio -->
     <div class="flex items-center gap-2">
-      <!-- Badge de Modelo de IA Selecionado (Tools & Function Calling) -->
       <button
         type="button"
         onclick={() => onOpenSettings("ai")}
@@ -281,7 +269,6 @@
     </div>
   </div>
 
-  <!-- Menu Flutuante Autocomplete de Skills ao digitar "/" no Spotlight -->
   {#if isSlashCommandActive && matchingSkills.length > 0}
     <div
       class="absolute left-3 right-3 top-[102%] z-50 rounded-2xl border border-violet-500/35 bg-[#181628]/98 p-2.5 shadow-[0_16px_40px_rgba(0,0,0,0.7)] backdrop-blur-2xl space-y-1.5 animate-fade-in text-xs font-mono select-none"
@@ -338,7 +325,6 @@
     </div>
   {/if}
 
-  <!-- Popover Flutuante de Detalhes dos MCPs Ativos -->
   {#if activePopover === "mcp" && pluginsStore.activeMcpsCount > 0}
     <div class="absolute left-4 top-[102%] z-50 w-72 rounded-xl border border-white/[0.12] bg-[#1a1926]/95 p-3 shadow-[0_12px_32px_rgba(0,0,0,0.6)] backdrop-blur-2xl space-y-2 animate-fade-in">
       <div class="flex items-center justify-between pb-1.5 border-b border-white/[0.08] text-[11px] font-mono text-zinc-300">
@@ -373,7 +359,6 @@
     </div>
   {/if}
 
-  <!-- Popover Flutuante de Detalhes das Skills Ativas -->
   {#if activePopover === "skills" && pluginsStore.activeSkillsCount > 0}
     <div class="absolute left-24 top-[102%] z-50 w-80 rounded-xl border border-white/[0.12] bg-[#1a1926]/95 p-3 shadow-[0_12px_32px_rgba(0,0,0,0.6)] backdrop-blur-2xl space-y-2 animate-fade-in">
       <div class="flex items-center justify-between pb-1.5 border-b border-white/[0.08] text-[11px] font-mono text-zinc-300">
@@ -403,7 +388,6 @@
     </div>
   {/if}
 
-  <!-- Popover Flutuante de Detalhes das Tasks -->
   {#if activePopover === "tasks"}
     <div class="absolute left-40 top-[102%] z-50 w-96 rounded-xl border border-white/[0.12] bg-[#1a1926]/95 p-3 shadow-[0_12px_32px_rgba(0,0,0,0.6)] backdrop-blur-2xl space-y-2 animate-fade-in">
       <div class="flex items-center justify-between pb-1.5 border-b border-white/[0.08] text-[11px] font-mono text-zinc-300">
@@ -450,7 +434,6 @@
                 {/if}
               </div>
 
-              <!-- Ações da Tarefa: Rodar Agora e Ver Resultado -->
               <div class="flex items-center justify-end gap-1.5 pt-1 border-t border-white/[0.04]">
                 {#if task.lastResult}
                   <button

@@ -220,7 +220,6 @@ export const AI_MODELS: Record<AIProvider, AIModelOption[]> = {
   ]
 };
 
-// Mantido para compatibilidade
 export const TOOL_SUPPORTED_MODELS = AI_MODELS;
 
 const PROVIDER_STORAGE = "staggi_ai_provider";
@@ -284,7 +283,6 @@ export class AIProviderStore {
     getStorage(ANTHROPIC_VALIDATED_STORAGE, "false") === "true" || !!getStorage(ANTHROPIC_KEY_STORAGE, "")
   );
 
-  // Propriedades computadas para o provedor ativo
   apiKey = $derived.by(() => {
     switch (this.provider) {
       case "openai": return this.openaiApiKey;
@@ -311,10 +309,8 @@ export class AIProviderStore {
     }
   });
 
-  // Permite selecionar e alternar livremente entre os modelos oficiais catalogados
   canSelectModel = $derived(true);
 
-  // Lista completa de modelos disponíveis para o provedor ativo
   availableModels = $derived.by(() => {
     const list = AI_MODELS[this.provider] || [];
     return list.map(m => m.id);
@@ -408,7 +404,6 @@ export class AIProviderStore {
   }
 
   setAvailableModels(_models: string[]) {
-    // Modelos dinâmicos adicionais mantendo filtro estrito de tools
   }
 
   save() {

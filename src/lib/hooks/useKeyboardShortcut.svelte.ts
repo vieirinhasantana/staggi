@@ -1,7 +1,3 @@
-/**
- * Svelte 5 Desktop Keyboard Shortcut Hook
- * Handles key combinations (e.g., 'Escape', 'Enter', 'k' with ctrl/meta) gracefully.
- */
 export interface ShortcutOptions {
   ctrl?: boolean;
   meta?: boolean;

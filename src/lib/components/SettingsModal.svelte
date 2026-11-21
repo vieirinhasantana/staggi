@@ -55,7 +55,6 @@
   <div
     class="w-full h-full rounded-[24px] border border-white/[0.14] ring-1 ring-white/[0.05] bg-[#1a1926]/98 backdrop-blur-2xl shadow-[0_4px_20px_rgba(0,0,0,0.35),0_16px_40px_-6px_rgba(0,0,0,0.55),inset_0_1px_0_0_rgba(255,255,255,0.08)] overflow-hidden flex flex-col animate-fade-in relative z-30 select-none"
   >
-    <!-- Header do Painel com suporte a arrastar a janela (data-tauri-drag-region) -->
     <div
       data-tauri-drag-region
       class="flex items-center justify-between px-6 py-3.5 border-b border-white/[0.08] bg-[#141320]/85 shrink-0 cursor-move"
@@ -85,7 +84,6 @@
       </button>
     </div>
 
-    <!-- Abas de Navegação -->
     <div
       data-tauri-drag-region
       class="flex items-center justify-between px-5 py-2 border-b border-white/[0.06] bg-[#141320]/75 text-[12px] font-mono shrink-0 gap-2 overflow-x-auto scrollbar-none cursor-move"
@@ -143,7 +141,6 @@
         </button>
       </div>
 
-      <!-- Botão de Atualização Integrado -->
       <div class="shrink-0 flex items-center">
         {#if updaterStore.status === "available"}
           <button
@@ -189,7 +186,6 @@
       </div>
     </div>
 
-    <!-- Área de Conteúdo da Aba Ativa -->
     <div class="flex-1 overflow-y-auto p-6 space-y-4">
       {#if activeTab === "ai" || activeTab === "gemini"}
         <SettingsAiTab />
@@ -203,7 +199,6 @@
     </div>
   </div>
 
-  <!-- Modal Secundário para Visualizar Resultados de Tarefas -->
   <TaskResultModal
     task={viewingResultTask}
     onClose={() => (viewingResultTask = null)}

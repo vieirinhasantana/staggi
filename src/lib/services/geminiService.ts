@@ -55,11 +55,9 @@ export async function queryGemini(
     };
   }
 
-  // Todas as Skills e MCPs ativos disponíveis para o Staggi
   const activeSkills = pluginsStore.activeSkills;
   const activeMcps = pluginsStore.activeMcps;
 
-  // Detecção de Slash Command /<skill> no prompt (ex: /valuation, /proventos, /screening)
   let cleanPrompt = prompt.trim();
   let explicitSkillDirective = "";
   const slashMatch = cleanPrompt.match(/^\/([a-zA-Z0-9_-]+)(?:\s+(.*))?$/s);
@@ -88,7 +86,6 @@ ${targetSkill.systemPrompt}`;
     onProgress?.("Pensando...");
   }
 
-  // Contexto da conversa (pergunta atual + últimos turnos)
   const searchContext = [
     cleanPrompt,
     ...(history || []).slice(-3).map(h => h.text)
@@ -105,7 +102,6 @@ ${targetSkill.systemPrompt}`;
     searchContext.includes("codigo") || 
     searchContext.includes("ativo");
 
-  // Procura códigos de ativos (ISINs, CUSIPs ou Tickers conhecidos) no prompt para buscar cotação real
   const isinMatches = prompt.match(/\b[A-Z]{2}[A-Z0-9]{9}\d\b/gi) || [];
   const tickerMatches = prompt.match(/\b[A-Z]{4,5}\d{1,2}\b/gi) || [];
   const commonTickers = prompt.match(/\b(?:AAPL|NVDA|MSFT|SPY|IVV|QQQ|TSLA|AMZN|GOOGL|META)\b/gi) || [];
@@ -122,9 +118,7 @@ ${targetSkill.systemPrompt}`;
           const formattedPrice = `${q.currency} ${q.price.toFixed(q.currency === "BRL" ? 2 : 4)}`;
           return `- ${id} (${q.name}): Cotação Atual / NAV: ${formattedPrice} (Variação: ${formattedChange})`;
         }
-      } catch {
-        // fallback silencioso
-      }
+      } catch {}
       return null;
     });
 
@@ -136,7 +130,6 @@ ${targetSkill.systemPrompt}`;
     }
   }
 
-  // Detecta se a consulta é sobre notícias, fatos relevantes ou panorama de mercado
   const isNewsQuery = 
     /\b(not[ií]cia|not[ií]cias|fatos? relevantes?|manchetes?|acontecendo no mercado|cen[aá]rio de hoje|news|notici[aá]rio|panorama)\b/i.test(searchContext) ||
     (searchContext.includes("mercado") && (searchContext.includes("hoje") || searchContext.includes("principal") || searchContext.includes("principais") || searchContext.includes("dia")));
@@ -163,12 +156,9 @@ Estruture a resposta de forma executiva para o investidor:
 - **Rodapé de Auditoria**: "Fonte Auditada: Yahoo Finance News Feeds • Global Real-Time Financial Wire"
 NUNCA diga que não tem dados em tempo real ou que não tem acesso a notícias recentes, pois as notícias de hoje estão explicitadas acima.`;
       }
-    } catch {
-      // fallback silencioso
-    }
+    } catch {}
   }
 
-  // A LLM decide autonomamente quais skills e ferramentas aplicar com base no contexto semântico
   let skillsInstructions = "";
   if (activeSkills.length > 0) {
     skillsInstructions = "\n\nSkills Especializadas Ativas no Staggi (Você tem total autonomia para orquestrar e aplicar as diretrizes de cada uma conforme a pergunta do usuário):\n" + 
@@ -288,7 +278,6 @@ Equilibre profundidade técnica, dados reais auditados e contextualização exec
       isConfigured: true
     };
   } catch (err: any) {
-    // Fallback via fetch caso o ambiente web seja usado fora do Tauri
     try {
       if (provider === "openai") {
         const res = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -336,7 +325,6 @@ Equilibre profundidade técnica, dados reais auditados e contextualização exec
           if (text) return { text, success: true, isConfigured: true };
         }
       } else {
-        // Gemini fallback
         const cleanModel = model.trim().replace(/^models\//, "");
         const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${cleanModel}:generateContent?key=${apiKey.trim()}`;
         const contentsPayload = [

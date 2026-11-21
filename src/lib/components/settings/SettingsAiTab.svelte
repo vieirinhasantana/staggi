@@ -54,13 +54,11 @@
 </script>
 
 <div class="space-y-4">
-  <!-- Seletor de Provedor / Source (Cards Interativos) -->
   <div class="space-y-2">
     <span class="text-xs font-mono text-zinc-300 block font-medium">
       Selecione o Provedor de IA (Source):
     </span>
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 font-mono text-xs">
-      <!-- 1. Google Gemini -->
       <button
         type="button"
         onclick={() => aiStore.setProvider("gemini")}
@@ -78,7 +76,6 @@
         {/if}
       </button>
 
-      <!-- 2. OpenAI (GPT) -->
       <button
         type="button"
         onclick={() => aiStore.setProvider("openai")}
@@ -96,7 +93,6 @@
         {/if}
       </button>
 
-      <!-- 3. Anthropic (Claude) -->
       <button
         type="button"
         onclick={() => aiStore.setProvider("anthropic")}
@@ -116,7 +112,6 @@
     </div>
   </div>
 
-  <!-- Campo de Chave de API com Botão Rápido de Teste -->
   <div class="space-y-2">
     <div
       class="flex items-center justify-between text-xs font-mono text-zinc-300"
@@ -183,7 +178,6 @@
     </div>
   </div>
 
-  <!-- Seletor de Modelo de Inteligência Artificial -->
   <div class="space-y-2">
     <div
       class="flex items-center justify-between text-xs font-mono text-zinc-300"
@@ -226,7 +220,6 @@
     </div>
   </div>
 
-  <!-- Nível de Enforcement & Raciocínio (LOW, MEDIUM, HIGH) -->
   <div class="space-y-2 pt-2 border-t border-white/[0.08]">
     <div class="flex items-center justify-between text-xs font-mono text-zinc-300">
       <span class="flex items-center gap-1.5 font-medium">
@@ -238,7 +231,6 @@
       </span>
     </div>
 
-    <!-- Seletor em Pills (LOW, MEDIUM, HIGH) -->
     <div class="grid grid-cols-3 gap-2 font-mono text-xs">
       <button
         type="button"
@@ -275,7 +267,6 @@
     </div>
   </div>
 
-  <!-- Botão Salvar Configuração -->
   <div class="flex items-center justify-end pt-2">
     <button
       type="button"

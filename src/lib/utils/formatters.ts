@@ -1,6 +1,3 @@
-/**
- * Reusable formatting utilities for dates, times, currency, and intervals.
- */
 
 export function formatRelativeTime(isoString?: string): string {
   if (!isoString) return "Nunca executado";

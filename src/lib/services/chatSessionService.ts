@@ -13,7 +13,6 @@ function getFormattedDate(): string {
 
 function cleanTitle(prompt: string): string {
   let title = prompt.trim();
-  // Remove pontos de interrogação ou introduções longas
   title = title.replace(/^(qual|quais|como|apresentar|gerar|mostrar|ver)\s+/i, "");
   title = title.replace(/[?!.]+$/, "");
   if (title.length > 38) {
@@ -38,7 +37,6 @@ export function saveAllSessions(sessions: ChatSession[]): void {
   try {
     localStorage.setItem(SESSIONS_STORAGE_KEY, JSON.stringify(sessions));
   } catch {
-    // Ignore storage quota
   }
 }
 
@@ -82,7 +80,6 @@ export function persistSessionMessages(sessionId: string, messages: ChatMessage[
     session.updatedAt = getFormattedTime();
     session.timestamp = now;
 
-    // Se o título ainda for "Nova Conversa" e tivermos o prompt, atualiza
     if ((session.title === "Nova Conversa" || !session.title) && firstPrompt) {
       session.title = cleanTitle(firstPrompt);
     }
@@ -91,7 +88,6 @@ export function persistSessionMessages(sessionId: string, messages: ChatMessage[
     saveAllSessions(sessions);
     return sessions;
   } else {
-    // Cria sessão se não existia
     const newSession: ChatSession = {
       id: sessionId,
       title: firstPrompt ? cleanTitle(firstPrompt) : "Conversa Consultiva",

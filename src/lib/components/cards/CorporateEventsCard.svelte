@@ -60,7 +60,6 @@
 </script>
 
 <div class="w-full rounded-2xl border border-white/[0.12] bg-[#1d1b2a]/95 backdrop-blur-2xl shadow-xl p-4.5 space-y-3.5 select-text">
-  <!-- Cabeçalho do Radar Corporativo -->
   <div class="flex items-center justify-between pb-2.5 border-b border-white/[0.08]">
     <div class="flex items-center gap-2.5">
       <div class="h-9 w-9 rounded-xl bg-amber-500/15 border border-amber-500/25 flex items-center justify-center text-amber-400 font-bold text-xs font-mono">
@@ -77,7 +76,6 @@
       </div>
     </div>
 
-    <!-- Badge de Fonte Auditada -->
     <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/25 text-emerald-300 text-[10px] font-mono font-semibold">
       <span class="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
       <ShieldCheck class="w-3.5 h-3.5 text-emerald-400" />
@@ -85,11 +83,9 @@
     </div>
   </div>
 
-  <!-- Lista de Eventos Corporativos Estruturados em Container Unificado (Sem Múltiplos Boxes) -->
   <div class="rounded-xl bg-[#171524]/70 border border-white/[0.06] divide-y divide-white/[0.06] overflow-hidden">
     {#each eventsData.events as item}
       <div class="p-3.5 space-y-2 hover:bg-white/[0.02] transition-colors">
-        <!-- Topo do Card de Evento -->
         <div class="flex items-center justify-between flex-wrap gap-2">
           <div class="flex items-center gap-2">
             <span class="flex h-5 w-5 items-center justify-center rounded-md bg-white/[0.08] text-zinc-200 font-mono text-xs font-bold border border-white/[0.06] shrink-0">
@@ -98,18 +94,15 @@
             <span class="font-semibold text-xs text-zinc-100">{item.title}</span>
           </div>
 
-          <!-- Tag da Categoria -->
           <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-semibold border {getCategoryBadge(item.category)}">
             {item.category}
           </span>
         </div>
 
-        <!-- Descrição Principal do Evento -->
         <p class="text-xs text-zinc-200 leading-relaxed font-sans pl-7">
           {item.description}
         </p>
 
-        <!-- Sub-detalhes Chave em Chips Sutis -->
         {#if item.details.length > 0}
           <div class="flex items-center gap-2 flex-wrap pl-7 pt-1">
             {#each item.details as detail}
@@ -126,7 +119,6 @@
     {/each}
   </div>
 
-  <!-- Rodapé / Follow-up Consultivo -->
   {#if eventsData.footer}
     <div class="p-3 rounded-xl bg-violet-500/[0.08] border border-violet-500/20 flex items-start gap-2.5 text-xs text-zinc-300">
       <Info class="w-4 h-4 text-violet-400 shrink-0 mt-0.5" />

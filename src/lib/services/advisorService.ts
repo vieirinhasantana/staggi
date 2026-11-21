@@ -1,6 +1,5 @@
 import type { ChatMessage, QuickPrompt, MessageType } from "$lib/types";
 
-// Pílulas de acesso rápido no Spotlight
 export const quickPrompts: QuickPrompt[] = [
   { id: "dividends", label: "💰 Proventos & JCP", prompt: "Qual o fluxo de dividendos e proventos previstos?" },
   { id: "news", label: "🔔 Notícias & Yahoo Finance", prompt: "Quais as notícias e fatos relevantes de hoje com análise Gemini?" },
@@ -50,7 +49,6 @@ export function detectMessageType(userPrompt: string): MessageType | undefined {
   return undefined;
 }
 
-// Fallback caso a API do Gemini não esteja configurada
 export function generateAdvisorResponse(userPrompt: string): ChatMessage {
   const time = new Date().toLocaleTimeString().slice(0, 5);
   const id = String(Date.now());

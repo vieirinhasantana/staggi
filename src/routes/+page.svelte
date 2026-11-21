@@ -72,14 +72,11 @@
     const trimmed = userPrompt.trim();
     if (!trimmed) return;
 
-    // Se não tiver sessão ativa, cria uma
     if (!currentSessionId) {
       const newSession = createNewSession();
       currentSessionId = newSession.id;
     }
 
-    // Extrai o histórico prévio completo (turnos passados em ordem cronológica)
-    // Mantém o contexto de conversas anteriores para Gemini entender pronomes e perguntas subsequentes
     const historyTurns: ChatHistoryTurn[] = messages
       .filter(m => !m.isLoading && m.text.trim().length > 0)
       .slice(0, 10)
@@ -111,26 +108,21 @@
       isLoading: true
     };
 
-    // Insere a mensagem do usuário e o status de consulta no topo
     messages = [pendingBotMessage, userMessage, ...messages];
     sessions = persistSessionMessages(currentSessionId, messages, trimmed);
     scrollToTop();
 
-    // Callback de atualização de status em tempo real (Pensando... [ferramenta])
     const onProgress = (statusText: string) => {
       messages = messages.map(m => m.id === pendingBotId ? { ...m, text: statusText } : m);
     };
 
-    // Consulta ao provedor de IA com histórico cronológico de contexto multi-turn e tracking de ferramentas
     const geminiResult = await queryGemini(trimmed, historyTurns, onProgress);
     const fullText = geminiResult.text || "";
 
-    // Streaming progressivo da resposta para visualização fluida e natural
     if (geminiResult.success && fullText.length > 0) {
       const tokens = fullText.match(/\S+|\s+/g) || [fullText];
       let accumulated = "";
 
-      // Transiciona de isLoading para isStreaming
       messages = messages.map(m => m.id === pendingBotId ? {
         ...m,
         isLoading: false,
@@ -138,7 +130,6 @@
         text: ""
       } : m);
 
-      // Emite em blocos de palavras a 60fps (~16ms)
       const chunkSize = 3;
       for (let i = 0; i < tokens.length; i += chunkSize) {
         accumulated += tokens.slice(i, i + chunkSize).join("");
@@ -161,7 +152,6 @@
       isStreaming: false
     };
 
-    // Substitui pela resposta consolidada e persiste a sessão
     messages = messages.map(m => m.id === pendingBotId ? finalBotMessage : m);
     sessions = persistSessionMessages(currentSessionId, messages);
     scrollToTop();
@@ -240,15 +230,12 @@
   }
 
   onMount(() => {
-    // Inicia agendador de tarefas em segundo plano
     tasksStore.startScheduler();
 
-    // Verificação automática de atualizações em segundo plano
     if (updaterStore.autoCheckEnabled) {
       updaterStore.checkForUpdates(true);
     }
 
-    // Ouve disparo de verificação e download originado do menu da barra de tarefas / bandeja
     let unlistenUpdates: (() => void) | null = null;
     listen("trigger-check-updates", async () => {
       await updaterStore.checkForUpdates(false);
@@ -259,7 +246,6 @@
       unlistenUpdates = unlisten;
     }).catch(() => {});
 
-    // Carrega sessões salvas
     const savedSessions = loadAllSessions();
     sessions = savedSessions;
 
@@ -278,7 +264,6 @@
       messages = savedSessions[0].messages || [];
     }
 
-    // Atalho Esc fecha/oculta o Spotlight e preserva a conversa
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         if (isSettingsOpen) {
@@ -301,25 +286,19 @@
   });
 </script>
 
-<!-- Container com tamanho calibrado e respiro perimetral para contorno e sombra 360° -->
 <main
   class="relative w-[800px] h-[600px] flex flex-col items-center justify-start bg-transparent p-4 sm:p-5 m-0 overflow-hidden select-none"
 >
   {#if isSettingsOpen}
-    <!-- Painel de Configurações ocupa a janela com foco total (sem Spotlight no fundo) e permite arrastar livremente -->
     <SettingsModal open={isSettingsOpen} initialTab={settingsInitialTab} onClose={() => isSettingsOpen = false} />
   {:else}
-    <!-- O SPOTLIGHT ENCAIXADO NO TOPO COM RESPIRO PERFEITO PARA A SOMBRA NÃO CORTAR -->
     <div class="w-full shrink-0 relative z-30">
       <SpotlightBar onSend={handleSend} onOpenSettings={handleOpenSettings} />
     </div>
 
-    <!-- O CHAT DENTRO DE UM BACKGROUND CONTAINER DEDICADO -->
     {#if messages.length > 0 || showHistoryDrawer}
       <div class="w-full flex-1 flex flex-col mt-3.5 rounded-[24px] border border-white/[0.12] ring-1 ring-white/[0.05] bg-[#1a1926]/95 backdrop-blur-2xl shadow-[0_4px_20px_rgba(0,0,0,0.35),0_16px_40px_-6px_rgba(0,0,0,0.55),inset_0_1px_0_0_rgba(255,255,255,0.08)] overflow-hidden transition-all animate-fade-in relative z-10">
-      <!-- Barra superior do Diálogo com Histórico e Botão Novo Chat -->
       <div class="w-full flex items-center justify-between px-4 py-2.5 bg-[#141320]/75 border-b border-white/[0.06] text-[11px] font-mono shrink-0">
-        <!-- Seletor de Histórico -->
         <button
           type="button"
           onclick={() => showHistoryDrawer = !showHistoryDrawer}
@@ -334,7 +313,6 @@
           <ChevronDown class="w-3 h-3 text-zinc-400 transition-transform {showHistoryDrawer ? 'rotate-180' : ''}" />
         </button>
 
-        <!-- Botão Novo Chat -->
         <button
           type="button"
           onclick={handleNewChat}
@@ -346,7 +324,6 @@
         </button>
       </div>
 
-      <!-- Painel Dedicado e Enriquecido de Histórico de Conversas (Full Overlay com Busca e Agrupamento) -->
       <ChatHistoryDrawer
         open={showHistoryDrawer}
         {sessions}
@@ -370,7 +347,6 @@
         onClose={() => showHistoryDrawer = false}
       />
 
-      <!-- Área de mensagens e gráficos com rolagem interna -->
       <div
         bind:this={chatScrollArea}
         class="w-full flex-1 overflow-y-auto p-4 space-y-3.5 scroll-smooth"
@@ -383,7 +359,6 @@
   {/if}
 {/if}
 
-  <!-- BANNER FLUTUANTE DE ALERTA DE EXECUÇÃO DE TAREFA -->
   {#if tasksStore.activeAlert}
     <div
       class="fixed top-3 left-1/2 -translate-x-1/2 z-50 w-[92%] max-w-[620px] rounded-2xl border p-3 shadow-2xl backdrop-blur-2xl flex items-center justify-between gap-3 animate-fade-in font-sans {tasksStore.activeAlert.status === 'success' ? 'bg-[#182124]/95 border-emerald-500/40 text-emerald-200 shadow-[0_8px_30px_rgba(16,185,129,0.2)]' : 'bg-[#25171e]/95 border-rose-500/40 text-rose-200 shadow-[0_8px_30px_rgba(244,63,94,0.2)]'}"
@@ -432,7 +407,6 @@
     </div>
   {/if}
 
-  <!-- MODAL GLOBAL DE VISUALIZAÇÃO DE RESULTADO DE TAREFA -->
   {#if tasksStore.viewingTaskResult}
     <div
       class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in"
@@ -463,14 +437,12 @@
           </button>
         </div>
 
-        <!-- Conteúdo Formatado com Marked -->
         <div
           class="flex-1 overflow-y-auto pr-1 text-sm text-zinc-200 leading-relaxed select-text space-y-2.5 [&_p]:my-1.5 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-2 [&_li]:my-1 [&_strong]:text-zinc-100 [&_strong]:font-semibold [&_h1]:text-base [&_h2]:text-sm [&_h3]:text-xs [&_h1]:font-bold [&_h2]:font-bold [&_code]:bg-white/[0.08] [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:font-mono [&_code]:text-xs [&_pre]:bg-[#141320] [&_pre]:p-3 [&_pre]:rounded-xl [&_pre]:overflow-x-auto"
         >
           {@html renderMarkdown(tasksStore.viewingTaskResult.lastResult || "Nenhum resultado registrado.")}
         </div>
 
-        <!-- Rodapé do Modal com Ações: Inserir no Chat, Copiar e Fechar -->
         <div class="flex items-center justify-between pt-3 border-t border-white/[0.08] font-mono text-xs">
           <div class="flex items-center gap-2">
             <button

@@ -22,7 +22,6 @@
 
   let activeView = $state<"history" | "payouts">("history");
 
-  // Ordena cronologicamente os anos (da esquerda para a direita: mais antigo para o mais recente)
   let sortedHistory = $derived.by(() => {
     const list = [...data.annualHistory];
     const allNumeric = list.every((item) => /^\d{4}$/.test(item.year.trim()));
@@ -32,7 +31,6 @@
     return list;
   });
 
-  // Encontra o maior DY para dimensionar as barras do gráfico com margem de respiro no topo
   let maxDyValue = $derived.by(() => {
     let max = 0;
     for (const h of data.annualHistory) {
@@ -42,7 +40,6 @@
     return max > 0 ? max * 1.15 : 12;
   });
 
-  // Identifica o ano de pico de Dividend Yield
   let peakItem = $derived.by(() => {
     let peak: { year: string; dy: string; num: number } | null = null;
     for (const h of data.annualHistory) {
@@ -54,7 +51,6 @@
     return peak;
   });
 
-  // Média anual de Dividend Yield
   let avgDyText = $derived.by(() => {
     let sum = 0;
     let count = 0;
@@ -68,7 +64,6 @@
     return count > 0 ? `${(sum / count).toFixed(2).replace(".", ",")}% a.a.` : null;
   });
 
-  // Total de proventos pagos recentemente somados
   let totalRecentSum = $derived.by(() => {
     let sum = 0;
     for (const p of data.payouts.slice(0, 8)) {
@@ -81,7 +76,6 @@
 </script>
 
 <div class="w-full rounded-2xl border border-white/[0.12] bg-[#1d1b2a]/95 backdrop-blur-2xl shadow-xl p-4.5 space-y-4 select-text animate-fade-in">
-  <!-- Cabeçalho Institucional de Proventos -->
   <div class="flex items-center justify-between pb-3 border-b border-white/[0.08] flex-wrap gap-2">
     <div class="flex items-center gap-2.5">
       <div class="h-9 w-9 rounded-xl bg-teal-500/15 border border-teal-500/25 flex items-center justify-center text-teal-400 font-bold text-xs font-mono">
@@ -98,7 +92,6 @@
       </div>
     </div>
 
-    <!-- Seletor de Visão (Gráfico Anual vs Tabela de Pagamentos) -->
     <div class="flex items-center gap-1 p-1 rounded-xl bg-[#141320] border border-white/[0.06] text-xs font-mono">
       <button
         type="button"
@@ -121,17 +114,14 @@
     </div>
   </div>
 
-  <!-- Introdução com Contexto e Diretrizes -->
   {#if data.intro}
     <div class="p-3 rounded-xl bg-[#242232]/60 border border-white/[0.06] text-xs text-zinc-300 font-sans leading-relaxed">
       {data.intro}
     </div>
   {/if}
 
-  <!-- 1. VISÃO DE EVOLUÇÃO ANUAL DO DIVIDEND YIELD (GRÁFICO VERTICAL UNIFICADO) -->
   {#if activeView === "history" && data.annualHistory.length > 0}
     <div class="space-y-3">
-      <!-- Cabeçalho de Métricas e Destaques Rápidos -->
       <div class="flex items-center justify-between text-xs font-mono text-zinc-400 flex-wrap gap-2">
         <span class="flex items-center gap-1.5 text-teal-300 font-semibold">
           <BarChart3 class="w-3.5 h-3.5 text-teal-400" /> Histórico de Dividend Yield (DY) Anual
@@ -150,17 +140,14 @@
         </div>
       </div>
 
-      <!-- Card do Gráfico Vertical: Todos os anos lado a lado em colunas (sem scroll) -->
       <div class="p-4 rounded-2xl bg-[#161522]/90 border border-white/[0.08] relative overflow-hidden space-y-2">
         
-        <!-- Linhas de Referência Horizontais (Gridlines Sutis) -->
         <div class="absolute inset-x-4 top-10 bottom-20 flex flex-col justify-between pointer-events-none opacity-15">
           <div class="border-b border-dashed border-white"></div>
           <div class="border-b border-dashed border-white"></div>
           <div class="border-b border-dashed border-white"></div>
         </div>
 
-        <!-- Grade de Barras Verticais lado a lado -->
         <div class="flex items-end justify-between gap-2 sm:gap-3 h-52 pt-6 pb-2 px-1 relative z-10">
           {#each sortedHistory as item}
             {@const dyNumber = parseFloat(item.dy.replace("%", "").replace(",", ".")) || 0}
@@ -170,7 +157,6 @@
 
             <div class="flex-1 flex flex-col items-center justify-end h-full group cursor-pointer transition-all">
               
-              <!-- Valor Percentual de DY no Topo da Coluna -->
               <div class="mb-2 flex flex-col items-center transition-transform group-hover:-translate-y-1">
                 {#if isDestaque}
                   <span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 mb-0.5 whitespace-nowrap">
@@ -182,7 +168,6 @@
                 </span>
               </div>
 
-              <!-- A Coluna / Barra Vertical Proporcional -->
               <div class="w-full max-w-[48px] sm:max-w-[56px] h-32 flex items-end">
                 <div
                   style="height: {barHeightPercent}%"
@@ -195,12 +180,10 @@
                   }"
                   title="{item.year}: DY {item.dy} | Total: {item.totalPaid}{item.avgPrice && item.avgPrice !== 'N/D' ? ` | Cotação Média: ${item.avgPrice}` : ''}"
                 >
-                  <!-- Brilho sutil no topo da coluna -->
                   <div class="absolute inset-x-0 top-0 h-1 bg-white/40"></div>
                 </div>
               </div>
 
-              <!-- Eixo X: Ano e Proventos Totais -->
               <div class="w-full pt-2.5 mt-1 border-t border-white/[0.1] text-center flex flex-col items-center gap-0.5">
                 <span class="font-mono font-bold text-xs sm:text-sm text-zinc-100 group-hover:text-teal-300 transition-colors">
                   {item.year}
@@ -219,7 +202,6 @@
           {/each}
         </div>
 
-        <!-- Rodapé do Gráfico com Legenda das Cores -->
         <div class="flex items-center justify-between pt-3 mt-1 border-t border-white/[0.06] text-[10px] font-mono text-zinc-400">
           <div class="flex items-center gap-3">
             <span class="flex items-center gap-1.5">
@@ -236,7 +218,6 @@
     </div>
   {/if}
 
-  <!-- 2. VISÃO DE TABELA DE PAGAMENTOS DECLARADOS -->
   {#if activeView === "payouts" || data.annualHistory.length === 0}
     <div class="space-y-2.5">
       <div class="flex items-center justify-between text-xs font-mono text-zinc-400">
@@ -250,7 +231,6 @@
         {/if}
       </div>
 
-      <!-- Tabela Estilizada com Scroll Suave -->
       <div class="rounded-xl border border-white/[0.08] bg-[#161522] overflow-hidden">
         <div class="max-h-64 overflow-y-auto pr-1">
           <table class="w-full text-left border-collapse text-xs font-mono">
@@ -294,7 +274,6 @@
     </div>
   {/if}
 
-  <!-- Box de Tributação e Isenções Fiscais -->
   <div class="p-3 rounded-xl bg-violet-500/[0.08] border border-violet-500/20 flex items-start gap-2.5 text-xs text-zinc-300 font-sans leading-relaxed">
     <Scale class="w-4 h-4 text-violet-400 shrink-0 mt-0.5" />
     <div>
@@ -303,14 +282,12 @@
     </div>
   </div>
 
-  <!-- Nota de Rodapé / Metodologia -->
   {#if data.footer}
     <div class="text-[10px] text-zinc-500 font-mono leading-tight">
       {data.footer}
     </div>
   {/if}
 
-  <!-- Rodapé Institucional com Fonte Auditada -->
   <div class="flex items-center justify-between pt-2 border-t border-white/[0.06] text-[10px] font-mono text-zinc-400 flex-wrap gap-2">
     <div class="flex items-center gap-1.5">
       <ShieldCheck class="w-3.5 h-3.5 text-emerald-400 shrink-0" />

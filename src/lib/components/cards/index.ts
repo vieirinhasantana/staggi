@@ -1,7 +1,3 @@
-/**
- * Staggi Financial Response Cards
- * Reusable visual cards parsed from LLM analysis.
- */
 
 export { default as AssetQuoteCard } from "./AssetQuoteCard.svelte";
 export { default as AssetProfileCard } from "./AssetProfileCard.svelte";

@@ -62,7 +62,6 @@ export interface StockQuote {
   source: "mcp-yahoo-finance";
 }
 
-// Modelos visuais e estruturas extraídas dos cards de chat
 export interface ParsedAssetQuote {
   companyName: string;
   ticker: string;

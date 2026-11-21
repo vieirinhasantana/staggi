@@ -44,7 +44,6 @@ class UpdaterService {
       }
       this.lastChecked = localStorage.getItem(STORAGE_KEY_LAST_CHECKED);
     } catch {
-      // Ignore local storage errors
     }
   }
 
@@ -53,7 +52,6 @@ class UpdaterService {
       const v = await getVersion();
       if (v) this.currentVersion = v;
     } catch {
-      // Keep default "0.1.0" in dev or web mode
     }
   }
 
@@ -62,7 +60,6 @@ class UpdaterService {
     try {
       localStorage.setItem(STORAGE_KEY_AUTO_CHECK, String(this.autoCheckEnabled));
     } catch {
-      //
     }
   }
 
@@ -75,7 +72,6 @@ class UpdaterService {
       try {
         await this.activeUpdate.close();
       } catch {
-        // ignore
       }
       this.activeUpdate = null;
     }
@@ -93,7 +89,6 @@ class UpdaterService {
       try {
         localStorage.setItem(STORAGE_KEY_LAST_CHECKED, nowStr);
       } catch {
-        //
       }
 
       if (update) {
@@ -157,7 +152,6 @@ class UpdaterService {
       await invoke("restart_app");
     } catch (err: any) {
       console.error("[Updater] Falha ao reiniciar aplicativo:", err);
-      // Fallback
       window.location.reload();
     }
   }

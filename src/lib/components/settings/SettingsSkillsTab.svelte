@@ -84,7 +84,6 @@ Você é o assistente especializado do Staggi.
 </script>
 
 <div class="space-y-4">
-  <!-- 1. Card de Criação de Nova Skill (PRIMEIRO ITEM NO TOPO) -->
   {#if !editingSkillId && !isCreatingSkill}
     <button
       type="button"
@@ -116,7 +115,6 @@ Você é o assistente especializado do Staggi.
     </button>
   {/if}
 
-  <!-- Formulário de Edição / Criação de Skill -->
   {#if editingSkillId || isCreatingSkill}
     <div
       class="p-4 rounded-2xl bg-[#1e1c2b] border border-violet-500/30 space-y-3 text-xs font-mono animate-fade-in shadow-lg"
@@ -206,7 +204,6 @@ Você é o assistente especializado do Staggi.
     </div>
   {/if}
 
-  <!-- 2. Lista de Skills Existentes da Store Centralizada -->
   <div class="flex items-center justify-between pt-1">
     <h5 class="text-xs font-semibold text-zinc-300 font-mono">
       Skills Instaladas & Prontas ({pluginsStore.skills.length})

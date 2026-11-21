@@ -203,7 +203,6 @@ function loadStoredMcps(): McpServerItem[] {
     const parsed: McpServerItem[] = JSON.parse(raw);
     if (Array.isArray(parsed) && parsed.length > 0) {
       let changed = false;
-      // Remove qualquer resquício de servidores descontinuados (ex: bloomberg, investidor10, custodia-offshore)
       let current = parsed.filter(
         (m) =>
           m.id !== "mcp-bloomberg" &&
@@ -216,7 +215,6 @@ function loadStoredMcps(): McpServerItem[] {
       if (current.length !== parsed.length) {
         changed = true;
       }
-      // Auto-migração: garante que todos os novos MCPs padrão estejam presentes
       for (const def of DEFAULT_MCPS) {
         if (!current.some((m) => m.id === def.id || m.name === def.name)) {
           current.push(def);
@@ -242,7 +240,6 @@ function loadStoredSkills(): SkillDefinition[] {
     const parsed: SkillDefinition[] = JSON.parse(raw);
     if (Array.isArray(parsed) && parsed.length > 0) {
       let changed = false;
-      // Remove qualquer resquício de skills descontinuadas e remove chave triggers obsoleta
       let current = parsed.filter(
         (s) =>
           s.id !== "skill-bloomberg" &&
@@ -259,7 +256,6 @@ function loadStoredSkills(): SkillDefinition[] {
           changed = true;
         }
       }
-      // Auto-migração: garante que todas as novas Skills padrão estejam presentes
       for (const def of DEFAULT_SKILLS) {
         if (!current.some((s) => s.id === def.id || s.name === def.name)) {
           current.push(def);

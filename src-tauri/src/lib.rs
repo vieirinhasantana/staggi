@@ -38,7 +38,6 @@ async fn fetch_yahoo_data(symbol: String) -> Result<String, String> {
         .build()
         .map_err(|e| e.to_string())?;
 
-    // Função interna para buscar o chart de um símbolo
     async fn fetch_chart(client: &reqwest::Client, sym: &str) -> Option<String> {
         let url = format!(
             "https://query1.finance.yahoo.com/v8/finance/chart/{}?interval=1d&range=5d",
@@ -58,7 +57,6 @@ async fn fetch_yahoo_data(symbol: String) -> Result<String, String> {
         None
     }
 
-    // Função interna para resolver ISIN, CUSIP ou termo de busca para o símbolo do Yahoo
     async fn resolve_symbol(client: &reqwest::Client, query: &str) -> Option<String> {
         let url = format!(
             "https://query1.finance.yahoo.com/v1/finance/search?q={}&quotesCount=5&newsCount=0",
@@ -85,7 +83,6 @@ async fn fetch_yahoo_data(symbol: String) -> Result<String, String> {
     let is_isin = clean.len() == 12 && clean.chars().take(2).all(|c| c.is_ascii_alphabetic());
     let is_cusip = clean.len() == 9 && clean.chars().all(|c| c.is_ascii_alphanumeric());
 
-    // Se for ISIN ou CUSIP, resolve via search primeiro
     if is_isin || is_cusip {
         if let Some(resolved) = resolve_symbol(&client, &clean).await {
             if let Some(chart_json) = fetch_chart(&client, &resolved).await {
@@ -94,12 +91,10 @@ async fn fetch_yahoo_data(symbol: String) -> Result<String, String> {
         }
     }
 
-    // Tenta consulta direta com o símbolo informado
     if let Some(chart_json) = fetch_chart(&client, &clean).await {
         return Ok(chart_json);
     }
 
-    // Se for ticker brasileiro (ex: PETR4, VALE3, HGLG11), tenta com sufixo .SA
     if !clean.contains('.') && (clean.ends_with('3') || clean.ends_with('4') || clean.ends_with("11") || clean.ends_with('5') || clean.ends_with('6')) {
         let sa_symbol = format!("{}.SA", clean);
         if let Some(chart_json) = fetch_chart(&client, &sa_symbol).await {
@@ -107,7 +102,6 @@ async fn fetch_yahoo_data(symbol: String) -> Result<String, String> {
         }
     }
 
-    // Como último recurso, busca no Yahoo Finance Search para resolver qualquer nome ou código
     if let Some(resolved) = resolve_symbol(&client, &clean).await {
         if resolved != clean {
             if let Some(chart_json) = fetch_chart(&client, &resolved).await {
@@ -143,7 +137,6 @@ async fn fetch_yahoo_news(query: Option<String>) -> Result<String, String> {
         .build()
         .map_err(|e| e.to_string())?;
 
-    // Determina os símbolos a consultar no RSS feed de notícias em tempo real
     let symbols = if q.is_empty() || q.eq_ignore_ascii_case("market") || q.eq_ignore_ascii_case("noticias") || q.eq_ignore_ascii_case("mercado") {
         "%5EBVSP,BRL=X,CL=F,GC=F,%5EGSPC,%5EIXIC,PETR4.SA,VALE3.SA,ITUB4.SA,AAPL,NVDA,MSFT".to_string()
     } else {
@@ -164,7 +157,6 @@ async fn fetch_yahoo_news(query: Option<String>) -> Result<String, String> {
         }
     };
 
-    // 1. Tenta consulta ao feed RSS oficial do Yahoo Finance
     let rss_url = format!("https://feeds.finance.yahoo.com/rss/2.0/headline?s={}", symbols);
     if let Ok(res) = client.get(&rss_url).send().await {
         if res.status().is_success() {
@@ -197,7 +189,6 @@ async fn fetch_yahoo_news(query: Option<String>) -> Result<String, String> {
         }
     }
 
-    // 2. Fallback secundário via endpoint search query2
     let search_url = format!("https://query2.finance.yahoo.com/v1/finance/search?q={}&newsCount=10", q);
     if let Ok(res2) = client.get(&search_url).send().await {
         if res2.status().is_success() {
@@ -336,14 +327,12 @@ async fn ask_gemini(
     let client = reqwest::Client::new();
     let use_search = enable_search.unwrap_or(true);
 
-    // Monta o histórico cronológico garantindo estrita alternância (user -> model -> user -> model -> user)
     let mut normalized_turns: Vec<(String, String)> = Vec::new();
 
     if let Some(past_turns) = history {
         for turn in past_turns {
             let role = if turn.role == "user" { "user" } else { "model" };
             let clean = turn.text.trim();
-            // Ignora mensagens vazias ou mensagens de erro JSON brutas
             if clean.is_empty() || (clean.starts_with('{') && clean.contains("\"candidates\"")) {
                 continue;
             }
@@ -361,7 +350,6 @@ async fn ask_gemini(
         }
     }
 
-    // O último turno da conversa é sempre o prompt atual do usuário
     if let Some(last) = normalized_turns.last_mut() {
         if last.0 == "user" {
             last.1.push_str("\n\n");
@@ -393,7 +381,6 @@ async fn ask_gemini(
         }
     }
 
-    // Habilita busca em tempo real na internet via Google Search Grounding (schema oficial REST: google_search)
     if use_search {
         payload["tools"] = serde_json::json!([{ "google_search": {} }]);
     }
@@ -429,7 +416,6 @@ async fn ask_gemini(
         .await
         .map_err(|e| format!("Erro ao processar resposta do Gemini: {}", e))?;
 
-    // Se o modelo especificado não existir (404 Not Found), faz fallback transparente para gemini-2.0-flash
     let mut current_url = url;
     if status == reqwest::StatusCode::NOT_FOUND && clean_model != "gemini-2.0-flash" {
         current_url = format!(
@@ -456,7 +442,6 @@ async fn ask_gemini(
         }
     }
 
-    // Função auxiliar para extrair o texto acumulado de todas as partes do candidate 0
     let extract_text = |body_str: &str| -> Option<String> {
         let json: serde_json::Value = serde_json::from_str(body_str).ok()?;
         let candidate = json.get("candidates")?.get(0)?;
@@ -477,14 +462,12 @@ async fn ask_gemini(
         }
     };
 
-    // 1. Tenta extrair o texto da resposta inicial
     if status.is_success() {
         if let Some(text) = extract_text(&body) {
             return Ok(text);
         }
     }
 
-    // 2. Se falhou e use_search estava ativo, tenta com a sintaxe alternativa camelCase "googleSearch"
     if use_search {
         if let Some(obj) = payload.as_object_mut() {
             obj.insert("tools".to_string(), serde_json::json!([{ "googleSearch": {} }]));
@@ -505,7 +488,6 @@ async fn ask_gemini(
                 }
             }
         }
-        // Se ambos falharem, remove tools e tenta sem grounding
         if let Some(obj) = payload.as_object_mut() {
             obj.remove("tools");
         }
@@ -527,7 +509,6 @@ async fn ask_gemini(
         }
     }
 
-    // 3. Fallback 2: se ainda assim retornou vazio, retenta apenas com o prompt isolado do usuário
     let fallback_payload = serde_json::json!({
         "contents": [{
             "role": "user",
@@ -557,7 +538,6 @@ async fn ask_gemini(
         return Err(format!("Google Gemini API retornou erro (Status {}): {}", status, body));
     }
 
-    // Se o Gemini retornou STOP mas sem texto legível em nenhuma tentativa
     Err("O modelo concluiu a consulta sem gerar texto de resposta. Tente reenviar ou reformular sua pergunta.".to_string())
 }
 
@@ -576,7 +556,6 @@ async fn test_ai_connection(
     match prov.as_str() {
         "openai" => {
             let client = reqwest::Client::new();
-            // Teste de autenticação oficial via lista de modelos (zero custo de tokens e imune a saldo para geração)
             let res = client
                 .get("https://api.openai.com/v1/models")
                 .header("Authorization", format!("Bearer {}", key))
@@ -592,7 +571,6 @@ async fn test_ai_connection(
         }
         "anthropic" => {
             let client = reqwest::Client::new();
-            // Tenta validação via GET /v1/models
             let res = client
                 .get("https://api.anthropic.com/v1/models")
                 .header("x-api-key", key)
@@ -605,7 +583,6 @@ async fn test_ai_connection(
                 return Ok("CONEXAO_OK".to_string());
             }
 
-            // Fallback para ping de mensagem caso GET /v1/models não esteja liberado para o tier da chave
             let chosen_model = model.filter(|m| !m.trim().is_empty()).unwrap_or_else(|| "claude-3-5-haiku-latest".to_string());
             let payload = serde_json::json!({
                 "model": chosen_model,
@@ -691,7 +668,6 @@ async fn ask_ai(
             });
 
             if is_reasoning_model {
-                // OpenAI o1 e o3-mini suportam o parâmetro reasoning_effort ("low" | "medium" | "high")
                 let effort = match enf.as_str() {
                     "low" => "low",
                     "high" => "high",
@@ -786,7 +762,6 @@ async fn ask_ai(
             });
 
             if is_claude_37 {
-                // Claude 3.7 Sonnet suporta Extended Thinking via parâmetro thinking e budget_tokens
                 let budget = match enf.as_str() {
                     "low" => 2048,
                     "high" => 16384,
@@ -861,13 +836,11 @@ pub fn run() {
             ask_ai
         ])
         .setup(|app| {
-            // Menu da Bandeja (botão direito no ícone da barra de tarefas / menu bar)
             let show_i = MenuItem::with_id(app, "toggle", "Exibir / Ocultar Staggi", true, None::<&str>)?;
             let check_updates_i = MenuItem::with_id(app, "check_updates", "Verificar e Baixar Atualização...", true, None::<&str>)?;
             let quit_i = MenuItem::with_id(app, "quit", "Sair do Staggi", true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&show_i, &check_updates_i, &quit_i])?;
 
-            // Configuração do Tray Icon (Barra de tarefas / Menu bar)
             let _tray = TrayIconBuilder::new()
                 .icon(app.default_window_icon().unwrap().clone())
                 .tooltip("Staggi — AI Wealth Launcher (Ctrl+Espaço)")
@@ -901,7 +874,6 @@ pub fn run() {
                 })
                 .build(app)?;
 
-            // Registra atalho global Control+Space e CommandOrControl+Space
             for shortcut_str in ["Control+Space", "CommandOrControl+Space"] {
                 if let Ok(shortcut) = shortcut_str.parse::<Shortcut>() {
                     let _ = app.global_shortcut().on_shortcut(shortcut, |app, _shortcut, event| {
@@ -912,7 +884,6 @@ pub fn run() {
                 }
             }
 
-            // Oculta a janela ao invés de matar o app ao fechar
             if let Some(window) = app.get_webview_window("main") {
                 let window_clone = window.clone();
                 window.on_window_event(move |event| {

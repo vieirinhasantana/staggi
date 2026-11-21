@@ -21,7 +21,6 @@
 </script>
 
 <div class="w-full rounded-2xl border border-white/[0.12] bg-[#1d1b2a]/95 backdrop-blur-2xl shadow-xl p-4.5 space-y-4 select-text animate-fade-in">
-  <!-- Cabeçalho de Projeção & Valuation -->
   <div class="flex items-center justify-between pb-3 border-b border-white/[0.08]">
     <div class="flex items-center gap-2.5">
       <div class="h-9 w-9 rounded-xl bg-emerald-500/15 border border-emerald-500/25 flex items-center justify-center text-emerald-400 font-bold text-xs font-mono">
@@ -46,9 +45,7 @@
     {/if}
   </div>
 
-  <!-- Métricas Chave em Grid 2x2 ou 4 colunas -->
   <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs font-mono">
-    <!-- Cotação Atual -->
     {#if data.currentPrice}
       <div class="p-2.5 rounded-xl bg-[#242232]/80 border border-white/[0.06] space-y-1">
         <span class="text-[10px] text-zinc-400 uppercase tracking-wider block">Cotação Atual</span>
@@ -56,7 +53,6 @@
       </div>
     {/if}
 
-    <!-- Preço Teto (Bazin) -->
     {#if data.bazinCeilingPrice}
       <div class="p-2.5 rounded-xl bg-[#242232]/80 border border-emerald-500/20 space-y-1">
         <div class="flex items-center justify-between">
@@ -67,7 +63,6 @@
       </div>
     {/if}
 
-    <!-- Preço Justo (Graham) -->
     {#if data.grahamPrice}
       <div class="p-2.5 rounded-xl bg-[#242232]/80 border border-sky-500/20 space-y-1">
         <div class="flex items-center justify-between">
@@ -78,7 +73,6 @@
       </div>
     {/if}
 
-    <!-- Margem de Segurança / Preço Alvo -->
     {#if data.safetyMargin || data.targetPrice}
       <div class="p-2.5 rounded-xl bg-[#242232]/80 border border-amber-500/20 space-y-1">
         <div class="flex items-center justify-between">
@@ -90,7 +84,6 @@
     {/if}
   </div>
 
-  <!-- Indicadores Fundamentalistas Rápidos -->
   {#if data.pl || data.pvp || data.roe || data.projectedDy}
     <div class="flex items-center justify-between p-3 rounded-xl bg-[#161522] border border-white/[0.05] text-[11px] font-mono flex-wrap gap-2">
       {#if data.pl}
@@ -120,14 +113,12 @@
     </div>
   {/if}
 
-  <!-- Racional & Síntese da Projeção -->
   {#if data.summary}
     <p class="text-xs text-zinc-300 font-sans leading-relaxed border-l-2 border-emerald-500/50 pl-3 my-1">
       {data.summary}
     </p>
   {/if}
 
-  <!-- Rodapé com Fonte Auditada -->
   <div class="flex items-center justify-between pt-2.5 border-t border-white/[0.06] text-[10px] font-mono text-zinc-400 flex-wrap gap-2">
     <div class="flex items-center gap-1.5">
       <ShieldCheck class="w-3.5 h-3.5 text-emerald-400 shrink-0" />

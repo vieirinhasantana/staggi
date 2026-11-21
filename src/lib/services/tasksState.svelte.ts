@@ -4,10 +4,8 @@ export type { TaskExecutionLog, ScheduledTask, TaskAlert };
 
 const STORAGE_KEY = "staggi_scheduled_tasks_v1";
 
-// Lista limpa sem tarefas forçadas pré-configuradas que não fazem sentido ao usuário
 const DEFAULT_TASKS: ScheduledTask[] = [];
 
-// IDs de tarefas pré-configuradas antigas a serem purgadas do localStorage
 const LEGACY_TASK_IDS = [
   "task-consenso-bloomberg",
   "task-auditoria-fundamentalista",
@@ -58,7 +56,6 @@ class TasksStore {
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed)) {
-          // Purga tarefas legadas ou pré-configuradas indesejadas
           const cleaned = parsed.filter(t => !LEGACY_TASK_IDS.includes(t.id));
           if (cleaned.length !== parsed.length) {
             this.tasks = cleaned;
@@ -71,7 +68,6 @@ class TasksStore {
         }
       }
     } catch {
-      //
     }
 
     this.tasks = DEFAULT_TASKS;
@@ -84,7 +80,6 @@ class TasksStore {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(this.tasks));
     } catch {
-      //
     }
   }
 
@@ -174,7 +169,6 @@ class TasksStore {
     if (!task) return false;
     if (task.lastStatus === "running") return false;
 
-    // Atualiza status para rodando
     this.runningTaskId = id;
     this.tasks = this.tasks.map(t => t.id === id ? { ...t, lastStatus: "running", lastError: undefined } : t);
     this.saveToStorage();
@@ -182,8 +176,6 @@ class TasksStore {
     const startTime = Date.now();
 
     try {
-      // Dispara a consulta com o prompt específico configurado na task
-      // O queryGemini utiliza automaticamente os MCPs e Skills ativas do Staggi
       const result = await queryGemini(task.prompt);
       const durationMs = Date.now() - startTime;
       const nowIso = new Date().toISOString();
@@ -219,7 +211,6 @@ class TasksStore {
         this.runningTaskId = null;
         this.saveToStorage();
 
-        // Alerta o usuário visualmente na interface com o resultado obtido
         const summarySnippet = result.text.replace(/\s+/g, " ").trim().slice(0, 160) + (result.text.length > 160 ? "..." : "");
         this.activeAlert = {
           id: `alert-${Date.now()}`,
@@ -232,12 +223,10 @@ class TasksStore {
           durationMs
         };
 
-        // Atualiza a visualização caso o modal esteja aberto
         if (this.viewingTaskResult?.id === id && updatedTask) {
           this.viewingTaskResult = updatedTask;
         }
 
-        // Emite notificação nativa do sistema se o usuário permitiu
         if (typeof window !== "undefined" && "Notification" in window) {
           try {
             if (Notification.permission === "granted") {
@@ -248,7 +237,6 @@ class TasksStore {
               Notification.requestPermission().catch(() => {});
             }
           } catch {
-            //
           }
         }
 
@@ -279,7 +267,6 @@ class TasksStore {
         this.runningTaskId = null;
         this.saveToStorage();
 
-        // Alerta de erro na interface
         this.activeAlert = {
           id: `alert-${Date.now()}`,
           taskId: task.id,
@@ -342,7 +329,6 @@ class TasksStore {
       clearInterval(this.schedulerInterval);
     }
 
-    // Intervalo de verificação em segundo plano a cada 30 segundos
     this.schedulerInterval = setInterval(() => {
       this.checkAndRunPendingTasks();
     }, 30000);
@@ -357,7 +343,6 @@ class TasksStore {
       let shouldRun = false;
 
       if (!task.lastRun) {
-        // Se nunca rodou, agenda para rodar ou roda se já passou 1 minuto da criação
         const createdTime = new Date(task.createdAt).getTime();
         if (now - createdTime >= 60000) {
           shouldRun = true;
@@ -371,7 +356,6 @@ class TasksStore {
       }
 
       if (shouldRun) {
-        // Roda em segundo plano sem bloquear a iteração
         this.runTaskNow(task.id);
       }
     }

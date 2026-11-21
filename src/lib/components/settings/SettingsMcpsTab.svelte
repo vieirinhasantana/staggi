@@ -26,7 +26,6 @@
     try {
       mcpQuoteResult = await getQuote(mcpTickerTest);
     } catch {
-      // Falha silenciosa de teste
     } finally {
       isTestingMcpYahoo = false;
     }
@@ -50,7 +49,6 @@
 </script>
 
 <div class="space-y-4">
-  <!-- Botão de Conectar Novo MCP (quando fechado) -->
   {#if !isCreatingMcp}
     <button
       type="button"
@@ -82,7 +80,6 @@
     </button>
   {/if}
 
-  <!-- Formulário de Criação de Servidor MCP (quando aberto) -->
   {#if isCreatingMcp}
     <div
       class="p-4 rounded-2xl bg-[#1e1c2b]/95 border border-emerald-500/35 shadow-lg space-y-3 animate-fade-in"
@@ -160,7 +157,6 @@
     </div>
   {/if}
 
-  <!-- 2. Lista de Servidores MCP Conectados -->
   <div class="flex items-center justify-between pt-1">
     <h5 class="text-xs font-semibold text-zinc-300 font-mono">
       Servidores Instalados & Conectados ({pluginsStore.mcps.length})
@@ -218,7 +214,6 @@
           {mcp.desc}
         </p>
 
-        <!-- Card especial para o MCP FinanceDatabase (Jeroen Bouma) -->
         {#if mcp.id === "mcp-financedatabase"}
           <div class="mt-2 pt-2 border-t border-white/[0.06] space-y-2 text-[11px] font-mono">
             <div class="flex items-center justify-between text-zinc-300">
@@ -240,7 +235,6 @@
           </div>
         {/if}
 
-        <!-- Card especial para o MCP Equibles ETF Holdings -->
         {#if mcp.id === "mcp-equibles-etf"}
           <div class="mt-2 pt-2 border-t border-white/[0.06] space-y-2 text-[11px] font-mono">
             <div class="flex items-center justify-between text-zinc-300">
@@ -262,7 +256,6 @@
           </div>
         {/if}
 
-        <!-- Card especial para o MCP Bond Intelligence -->
         {#if mcp.id === "mcp-bonds"}
           <div class="mt-2 pt-2 border-t border-white/[0.06] space-y-2 text-[11px] font-mono">
             <div class="flex items-center justify-between text-zinc-300">
@@ -284,7 +277,6 @@
           </div>
         {/if}
 
-        <!-- Card especial para o MCP Treasury Yields -->
         {#if mcp.id === "mcp-treasury-yields"}
           <div class="mt-2 pt-2 border-t border-white/[0.06] space-y-2 text-[11px] font-mono">
             <div class="flex items-center justify-between text-zinc-300">
@@ -306,7 +298,6 @@
           </div>
         {/if}
 
-        <!-- Card especial para o MCP TickerInside (Insider Trading) -->
         {#if mcp.id === "mcp-tickerinside"}
           <div class="mt-2 pt-2 border-t border-white/[0.06] space-y-2 text-[11px] font-mono">
             <div class="flex items-center justify-between text-zinc-300">
@@ -328,7 +319,6 @@
           </div>
         {/if}
 
-        <!-- Card especial para o MCP Yahoo Finance (Teste de Cotação) -->
         {#if mcp.id === "mcp-yahoo"}
           <div
             class="mt-2 pt-2 border-t border-white/[0.06] flex items-center justify-between text-[11px]"

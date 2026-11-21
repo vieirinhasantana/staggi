@@ -53,7 +53,6 @@
         </button>
       </div>
 
-      <!-- Conteúdo Formatado com Marked -->
       <div
         class="flex-1 overflow-y-auto pr-1 text-sm text-zinc-200 leading-relaxed font-normal select-text space-y-2.5 [&_p]:my-1.5 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-2 [&_li]:my-1 [&_strong]:text-zinc-100 [&_strong]:font-semibold [&_h1]:text-base [&_h2]:text-sm [&_h3]:text-xs [&_h1]:font-bold [&_h2]:font-bold [&_code]:bg-white/[0.08] [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:font-mono [&_code]:text-xs [&_pre]:bg-[#161522] [&_pre]:p-3 [&_pre]:rounded-xl [&_pre]:overflow-x-auto"
       >

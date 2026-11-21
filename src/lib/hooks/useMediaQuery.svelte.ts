@@ -1,6 +1,3 @@
-/**
- * Svelte 5 Reactive Media Query Hook
- */
 export function useMediaQuery(query: string): () => boolean {
   let matches = $state(false);
 

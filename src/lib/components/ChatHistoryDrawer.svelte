@@ -39,7 +39,6 @@
   let searchQuery = $state("");
   let confirmClearAll = $state(false);
 
-  // Filtra as conversas em tempo real por título, data ou trecho de mensagens
   let filteredSessions = $derived.by(() => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return sessions;
@@ -50,7 +49,6 @@
     });
   });
 
-  // Agrupamento temporal inteligente
   interface GroupedSessions {
     label: string;
     items: ChatSession[];
@@ -77,14 +75,12 @@
     const olderItems: ChatSession[] = [];
 
     for (const session of filteredSessions) {
-      // Tenta obter timestamp numérico da sessão ou pelo id
       let ts = session.timestamp;
       if (!ts && session.id && session.id.startsWith("session-")) {
         const parsed = parseInt(session.id.replace("session-", ""), 10);
         if (!isNaN(parsed)) ts = parsed;
       }
       if (!ts) {
-        // Fallback para Hoje
         todayItems.push(session);
         continue;
       }
@@ -106,7 +102,6 @@
     if (thisWeekItems.length > 0) groups.push({ label: "Últimos 7 dias", items: thisWeekItems });
     if (olderItems.length > 0) groups.push({ label: "Mais antigas", items: olderItems });
 
-    // Fallback se não encaixou em nenhum grupo
     if (groups.length === 0 && filteredSessions.length > 0) {
       groups.push({ label: "Todas as Conversas", items: filteredSessions });
     }
@@ -143,7 +138,6 @@
   <div
     class="absolute inset-0 z-40 bg-[#161424]/98 backdrop-blur-2xl flex flex-col rounded-[24px] overflow-hidden animate-fade-in text-zinc-100"
   >
-    <!-- Cabeçalho do Histórico -->
     <div
       class="flex items-center justify-between px-5 py-3.5 border-b border-white/[0.08] bg-[#12101e]/80 shrink-0 font-mono"
     >
@@ -172,7 +166,6 @@
       </div>
 
       <div class="flex items-center gap-2 shrink-0">
-        <!-- Botão Novo Chat -->
         <button
           type="button"
           onclick={handleStartNew}
@@ -182,7 +175,6 @@
           <span>Nova Conversa</span>
         </button>
 
-        <!-- Botão Fechar -->
         <button
           type="button"
           onclick={onClose}
@@ -194,7 +186,6 @@
       </div>
     </div>
 
-    <!-- Barra de Pesquisa Instantânea -->
     <div class="px-5 py-3 border-b border-white/[0.06] bg-[#1a1829]/60 shrink-0">
       <div class="relative flex items-center">
         <Search class="w-4 h-4 text-zinc-400 absolute left-3 pointer-events-none" />
@@ -216,7 +207,6 @@
       </div>
     </div>
 
-    <!-- Lista de Conversas Agrupadas com Rolagem Suave -->
     <div class="flex-1 overflow-y-auto px-5 py-3 space-y-4 font-sans">
       {#if filteredSessions.length === 0}
         <div class="py-12 flex flex-col items-center justify-center text-center space-y-2 font-mono">
@@ -244,14 +234,12 @@
       {:else}
         {#each groupedSessions as group}
           <div class="space-y-2">
-            <!-- Label do Grupo Cronológico -->
             <div class="flex items-center gap-2 px-1 text-[11px] font-mono text-zinc-400 font-semibold tracking-wider uppercase">
               <Calendar class="w-3 h-3 text-sky-400/80" />
               <span>{group.label}</span>
               <span class="text-zinc-600 text-[10px]">({group.items.length})</span>
             </div>
 
-            <!-- Cards de Sessão -->
             <div class="grid grid-cols-1 gap-2">
               {#each group.items as s (s.id)}
                 <div
@@ -278,7 +266,6 @@
                       </div>
 
                       <div class="min-w-0 flex-1 space-y-1">
-                        <!-- Título da Conversa e Badges -->
                         <div class="flex items-center gap-2 flex-wrap">
                           <span
                             class="text-xs font-semibold truncate {s.id ===
@@ -298,12 +285,10 @@
                           {/if}
                         </div>
 
-                        <!-- Prévia da Última Mensagem -->
                         <p class="text-[11px] text-zinc-400 line-clamp-2 leading-relaxed">
                           {getLastPreview(s)}
                         </p>
 
-                        <!-- Metadados (Data, Hora e Total de Mensagens) -->
                         <div
                           class="flex items-center gap-3 text-[10px] text-zinc-500 font-mono pt-0.5"
                         >
@@ -317,7 +302,6 @@
                       </div>
                     </div>
 
-                    <!-- Botão de Excluir Conversa -->
                     <button
                       type="button"
                       onclick={(e) => {
@@ -338,7 +322,6 @@
       {/if}
     </div>
 
-    <!-- Rodapé com Ação de Limpeza de Histórico -->
     <div
       class="px-5 py-3 border-t border-white/[0.08] bg-[#12101e]/90 flex items-center justify-between text-xs font-mono shrink-0"
     >
