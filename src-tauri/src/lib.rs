@@ -268,33 +268,22 @@ async fn list_gemini_models(api_key: String) -> Result<Vec<String>, String> {
 }
 
 #[tauri::command]
-async fn test_gemini_connection(api_key: String, model: Option<String>) -> Result<String, String> {
+async fn test_gemini_connection(api_key: String, _model: Option<String>) -> Result<String, String> {
     let key = api_key.trim();
     if key.is_empty() {
         return Err("Chave da API do Gemini não informada".to_string());
     }
 
-    let chosen_model = model
-        .filter(|m| !m.trim().is_empty())
-        .unwrap_or_else(|| "gemini-1.5-flash".to_string());
-
-    let clean_model = chosen_model.strip_prefix("models/").unwrap_or(&chosen_model);
-
     let url = format!(
-        "https://generativelanguage.googleapis.com/v1beta/models/{}:generateContent?key={}",
-        clean_model, key
+        "https://generativelanguage.googleapis.com/v1beta/models?key={}",
+        key
     );
 
     let client = reqwest::Client::new();
-    let payload = serde_json::json!({
-        "contents": [{
-            "parts": [{ "text": "Responda apenas 'CONEXAO_OK' em uma palavra para validar a chave de API." }]
-        }]
-    });
-
     let res = client
-        .post(&url)
-        .json(&payload)
+        .get(&url)
+        .header("x-goog-api-key", key)
+        .header("Content-Type", "application/json")
         .send()
         .await
         .map_err(|e| format!("Erro de rede ao conectar na Google Gemini API: {}", e))?;
@@ -303,22 +292,9 @@ async fn test_gemini_connection(api_key: String, model: Option<String>) -> Resul
     let body = res
         .text()
         .await
-        .map_err(|e| format!("Erro ao processar resposta: {}", e))?;
+        .unwrap_or_default();
 
     if !status.is_success() {
-        // Fallback gracioso: se o modelo selecionado for experimental ou não estiver disponível para a chave,
-        // testa a chave via gemini-2.0-flash para validar a autenticidade da chave
-        if clean_model != "gemini-2.0-flash" && clean_model != "gemini-1.5-flash" {
-            let fallback_url = format!(
-                "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={}",
-                key
-            );
-            if let Ok(fallback_res) = client.post(&fallback_url).json(&payload).send().await {
-                if fallback_res.status().is_success() {
-                    return Ok("CONEXAO_OK".to_string());
-                }
-            }
-        }
         return Err(format!("Google Gemini API retornou erro (Status {}): {}", status, body));
     }
 
@@ -348,7 +324,7 @@ async fn ask_gemini(
 
     let chosen_model = model
         .filter(|m| !m.trim().is_empty())
-        .unwrap_or_else(|| "gemini-1.5-flash".to_string());
+        .unwrap_or_else(|| "gemini-2.0-flash".to_string());
 
     let clean_model = chosen_model.strip_prefix("models/").unwrap_or(&chosen_model);
 
@@ -440,16 +416,45 @@ async fn ask_gemini(
 
     let res = client
         .post(&url)
+        .header("x-goog-api-key", key)
+        .header("Content-Type", "application/json")
         .json(&payload)
         .send()
         .await
         .map_err(|e| format!("Erro de rede ao conectar no Google Gemini: {}", e))?;
 
-    let status = res.status();
-    let body = res
+    let mut status = res.status();
+    let mut body = res
         .text()
         .await
         .map_err(|e| format!("Erro ao processar resposta do Gemini: {}", e))?;
+
+    // Se o modelo especificado não existir (404 Not Found), faz fallback transparente para gemini-2.0-flash
+    let mut current_url = url;
+    if status == reqwest::StatusCode::NOT_FOUND && clean_model != "gemini-2.0-flash" {
+        current_url = format!(
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={}",
+            key
+        );
+        if let Some(gc) = payload.get_mut("generationConfig") {
+            if let Some(obj) = gc.as_object_mut() {
+                obj.remove("thinkingConfig");
+            }
+        }
+        if let Ok(fallback_res) = client
+            .post(&current_url)
+            .header("x-goog-api-key", key)
+            .header("Content-Type", "application/json")
+            .json(&payload)
+            .send()
+            .await
+        {
+            status = fallback_res.status();
+            if let Ok(fb_body) = fallback_res.text().await {
+                body = fb_body;
+            }
+        }
+    }
 
     // Função auxiliar para extrair o texto acumulado de todas as partes do candidate 0
     let extract_text = |body_str: &str| -> Option<String> {
@@ -484,7 +489,14 @@ async fn ask_gemini(
         if let Some(obj) = payload.as_object_mut() {
             obj.insert("tools".to_string(), serde_json::json!([{ "googleSearch": {} }]));
         }
-        if let Ok(res_alt) = client.post(&url).json(&payload).send().await {
+        if let Ok(res_alt) = client
+            .post(&current_url)
+            .header("x-goog-api-key", key)
+            .header("Content-Type", "application/json")
+            .json(&payload)
+            .send()
+            .await
+        {
             if res_alt.status().is_success() {
                 if let Ok(body_alt) = res_alt.text().await {
                     if let Some(text_alt) = extract_text(&body_alt) {
@@ -497,7 +509,14 @@ async fn ask_gemini(
         if let Some(obj) = payload.as_object_mut() {
             obj.remove("tools");
         }
-        if let Ok(res2) = client.post(&url).json(&payload).send().await {
+        if let Ok(res2) = client
+            .post(&current_url)
+            .header("x-goog-api-key", key)
+            .header("Content-Type", "application/json")
+            .json(&payload)
+            .send()
+            .await
+        {
             if res2.status().is_success() {
                 if let Ok(body2) = res2.text().await {
                     if let Some(text2) = extract_text(&body2) {
@@ -517,7 +536,14 @@ async fn ask_gemini(
         "system_instruction": payload.get("system_instruction").cloned()
     });
 
-    if let Ok(res3) = client.post(&url).json(&fallback_payload).send().await {
+    if let Ok(res3) = client
+        .post(&current_url)
+        .header("x-goog-api-key", key)
+        .header("Content-Type", "application/json")
+        .json(&fallback_payload)
+        .send()
+        .await
+    {
         if res3.status().is_success() {
             if let Ok(body3) = res3.text().await {
                 if let Some(text3) = extract_text(&body3) {
@@ -549,18 +575,11 @@ async fn test_ai_connection(
     let prov = provider.to_lowercase();
     match prov.as_str() {
         "openai" => {
-            let chosen_model = model.filter(|m| !m.trim().is_empty()).unwrap_or_else(|| "gpt-4o".to_string());
-            let url = "https://api.openai.com/v1/chat/completions";
-            let payload = serde_json::json!({
-                "model": chosen_model,
-                "messages": [{ "role": "user", "content": "Ping" }],
-                "max_tokens": 5
-            });
             let client = reqwest::Client::new();
-            let res = client.post(url)
+            // Teste de autenticação oficial via lista de modelos (zero custo de tokens e imune a saldo para geração)
+            let res = client
+                .get("https://api.openai.com/v1/models")
                 .header("Authorization", format!("Bearer {}", key))
-                .header("Content-Type", "application/json")
-                .json(&payload)
                 .send()
                 .await
                 .map_err(|e| format!("Erro de rede ao conectar na OpenAI: {}", e))?;
@@ -572,15 +591,29 @@ async fn test_ai_connection(
             Ok("CONEXAO_OK".to_string())
         }
         "anthropic" => {
-            let chosen_model = model.filter(|m| !m.trim().is_empty()).unwrap_or_else(|| "claude-3-7-sonnet-latest".to_string());
-            let url = "https://api.anthropic.com/v1/messages";
+            let client = reqwest::Client::new();
+            // Tenta validação via GET /v1/models
+            let res = client
+                .get("https://api.anthropic.com/v1/models")
+                .header("x-api-key", key)
+                .header("anthropic-version", "2023-06-01")
+                .send()
+                .await
+                .map_err(|e| format!("Erro de rede ao conectar na Anthropic: {}", e))?;
+            let status = res.status();
+            if status.is_success() {
+                return Ok("CONEXAO_OK".to_string());
+            }
+
+            // Fallback para ping de mensagem caso GET /v1/models não esteja liberado para o tier da chave
+            let chosen_model = model.filter(|m| !m.trim().is_empty()).unwrap_or_else(|| "claude-3-5-haiku-latest".to_string());
             let payload = serde_json::json!({
                 "model": chosen_model,
                 "max_tokens": 5,
                 "messages": [{ "role": "user", "content": "Ping" }]
             });
-            let client = reqwest::Client::new();
-            let res = client.post(url)
+            let res_post = client
+                .post("https://api.anthropic.com/v1/messages")
                 .header("x-api-key", key)
                 .header("anthropic-version", "2023-06-01")
                 .header("Content-Type", "application/json")
@@ -588,10 +621,10 @@ async fn test_ai_connection(
                 .send()
                 .await
                 .map_err(|e| format!("Erro de rede ao conectar na Anthropic: {}", e))?;
-            let status = res.status();
-            let body = res.text().await.unwrap_or_default();
-            if !status.is_success() {
-                return Err(format!("Anthropic retornou erro (Status {}): {}", status, body));
+            let post_status = res_post.status();
+            let post_body = res_post.text().await.unwrap_or_default();
+            if !post_status.is_success() {
+                return Err(format!("Anthropic retornou erro (Status {}): {}", post_status, post_body));
             }
             Ok("CONEXAO_OK".to_string())
         }

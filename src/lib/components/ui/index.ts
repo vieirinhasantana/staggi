@@ -1,13 +1,20 @@
 /**
  * Staggi UI Component Primitives
- * Re-exports atomic design primitives (Buttons, Cards, Inputs, Dialogs, Badges, etc.)
+ * Named re-exports to prevent namespace collisions (Root, Content, Description, etc.)
  */
 
-export * from "./button";
-export * from "./badge";
-export * from "./card";
-export * from "./input";
-export * from "./dialog";
-export * from "./command";
-export * from "./separator";
-export * from "./tooltip";
+export { Button, buttonVariants } from "./button";
+export { Badge, badgeVariants } from "./badge";
+export {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter,
+} from "./card";
+export { Input } from "./input";
+export { Separator } from "./separator";
+export { Tooltip } from "./tooltip";
+export * as Dialog from "./dialog";
+export * as Command from "./command";

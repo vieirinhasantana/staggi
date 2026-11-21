@@ -4,38 +4,20 @@ export type { AIProvider, EnforcementLevel, AIModelOption };
 export const AI_MODELS: Record<AIProvider, AIModelOption[]> = {
   gemini: [
     {
-      id: "gemini-2.5-pro",
-      name: "Gemini 2.5 Pro (Flagship)",
-      provider: "gemini",
-      description: "Estado da Arte • Máxima capacidade de raciocínio, codificação e análise",
-      supportsTools: true,
-      supportsReasoning: true,
-      isRecommended: true,
-      contextWindow: "2M tokens"
-    },
-    {
-      id: "gemini-2.5-flash",
-      name: "Gemini 2.5 Flash",
-      provider: "gemini",
-      description: "Nova Geração • Velocidade extrema com raciocínio avançado",
-      supportsTools: true,
-      supportsReasoning: false,
-      contextWindow: "1M tokens"
-    },
-    {
       id: "gemini-2.0-flash",
-      name: "Gemini 2.0 Flash",
+      name: "Gemini 2.0 Flash (Flagship)",
       provider: "gemini",
-      description: "Ultra Rápido • Function Calling nativo e Google Search Grounding",
+      description: "Recomendado • Ultra Rápido, Function Calling nativo e Google Search Grounding",
       supportsTools: true,
       supportsReasoning: false,
+      isRecommended: true,
       contextWindow: "1M tokens"
     },
     {
       id: "gemini-2.0-flash-thinking-exp-01-21",
       name: "Gemini 2.0 Flash Thinking (Exp)",
       provider: "gemini",
-      description: "Raciocínio Profundo • Pensamento passo a passo pré-resposta",
+      description: "Raciocínio Profundo • Pensamento passo a passo com raciocínio transparente",
       supportsTools: true,
       supportsReasoning: true,
       contextWindow: "1M tokens"
@@ -44,7 +26,7 @@ export const AI_MODELS: Record<AIProvider, AIModelOption[]> = {
       id: "gemini-2.0-pro-exp-02-05",
       name: "Gemini 2.0 Pro (Experimental)",
       provider: "gemini",
-      description: "Alta Capacidade Cognitiva • Excelente para matemática e finanças",
+      description: "Alta Capacidade Cognitiva • Excelente para matemática, quant e finanças",
       supportsTools: true,
       supportsReasoning: false,
       contextWindow: "2M tokens"
@@ -53,7 +35,7 @@ export const AI_MODELS: Record<AIProvider, AIModelOption[]> = {
       id: "gemini-2.0-flash-lite",
       name: "Gemini 2.0 Flash-Lite",
       provider: "gemini",
-      description: "Leve e Econômico • Menor latência e eficiência de custos",
+      description: "Leve e Econômico • Menor latência e eficiência máxima de custos",
       supportsTools: true,
       supportsReasoning: false,
       contextWindow: "1M tokens"
@@ -266,6 +248,15 @@ function setStorage(key: string, value: string) {
   }
 }
 
+function getInitialGeminiModel(): string {
+  const stored = getStorage(GEMINI_MODEL_STORAGE, "gemini-2.0-flash");
+  if (stored.startsWith("gemini-2.5") || !AI_MODELS.gemini.some(m => m.id === stored)) {
+    setStorage(GEMINI_MODEL_STORAGE, "gemini-2.0-flash");
+    return "gemini-2.0-flash";
+  }
+  return stored;
+}
+
 export class AIProviderStore {
   provider = $state<AIProvider>(
     (getStorage(PROVIDER_STORAGE, "gemini") as AIProvider) || "gemini"
@@ -275,7 +266,7 @@ export class AIProviderStore {
   openaiApiKey = $state<string>(getStorage(OPENAI_KEY_STORAGE, ""));
   anthropicApiKey = $state<string>(getStorage(ANTHROPIC_KEY_STORAGE, ""));
 
-  geminiModel = $state<string>(getStorage(GEMINI_MODEL_STORAGE, "gemini-2.0-flash"));
+  geminiModel = $state<string>(getInitialGeminiModel());
   openaiModel = $state<string>(getStorage(OPENAI_MODEL_STORAGE, "gpt-4o"));
   anthropicModel = $state<string>(getStorage(ANTHROPIC_MODEL_STORAGE, "claude-3-7-sonnet-latest"));
 
@@ -439,7 +430,12 @@ export class AIProviderStore {
     this.geminiApiKey = getStorage(GEMINI_KEY_STORAGE, "");
     this.openaiApiKey = getStorage(OPENAI_KEY_STORAGE, "");
     this.anthropicApiKey = getStorage(ANTHROPIC_KEY_STORAGE, "");
-    this.geminiModel = getStorage(GEMINI_MODEL_STORAGE, "gemini-2.0-flash");
+    let storedGemini = getStorage(GEMINI_MODEL_STORAGE, "gemini-2.0-flash");
+    if (storedGemini.startsWith("gemini-2.5") || !AI_MODELS.gemini.some(m => m.id === storedGemini)) {
+      storedGemini = "gemini-2.0-flash";
+      setStorage(GEMINI_MODEL_STORAGE, storedGemini);
+    }
+    this.geminiModel = storedGemini;
     this.openaiModel = getStorage(OPENAI_MODEL_STORAGE, "gpt-4o");
     this.anthropicModel = getStorage(ANTHROPIC_MODEL_STORAGE, "claude-3-7-sonnet-latest");
     this.enforcementLevel = (getStorage(ENFORCEMENT_STORAGE, "medium") as EnforcementLevel) || "medium";
