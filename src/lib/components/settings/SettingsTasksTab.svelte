@@ -13,6 +13,7 @@
   import { toastStore } from "$lib/services/toastService.svelte";
   import type { ScheduledTask } from "$lib/types";
   import { formatRelativeTime, formatMinutesLabel } from "$lib/utils/formatters";
+  import { t } from "$lib/i18n";
 
   interface Props {
     onViewResult: (task: ScheduledTask) => void;
@@ -51,25 +52,32 @@
 
   function handleSaveTask() {
     if (!taskFormName.trim() || !taskFormPrompt.trim()) return;
+    const name = taskFormName.trim();
 
     if (isCreatingTask) {
       tasksStore.addTask({
-        name: taskFormName.trim(),
-        description: taskFormDesc.trim() || "Tarefa automatizada",
+        name,
+        description: taskFormDesc.trim() || "Automated scheduled routine",
         prompt: taskFormPrompt.trim(),
         intervalMinutes: Math.max(1, Number(taskFormInterval) || 60),
         active: taskFormActive,
       });
-      toastStore.success("Tarefa Agendada", `Rotina "${taskFormName.trim()}" ativada.`);
+      toastStore.success(
+        t("toasts.taskScheduledTitle"),
+        t("toasts.taskScheduledDesc", { name })
+      );
     } else if (editingTaskId) {
       tasksStore.updateTask(editingTaskId, {
-        name: taskFormName.trim(),
+        name,
         description: taskFormDesc.trim(),
         prompt: taskFormPrompt.trim(),
         intervalMinutes: Math.max(1, Number(taskFormInterval) || 60),
         active: taskFormActive,
       });
-      toastStore.success("Tarefa Atualizada", `Configurações de "${taskFormName.trim()}" salvas.`);
+      toastStore.success(
+        t("toasts.taskUpdatedTitle"),
+        t("toasts.taskUpdatedDesc", { name })
+      );
     }
 
     isCreatingTask = false;
@@ -88,14 +96,24 @@
 
   async function handleRunTaskNow(id: string) {
     const task = tasksStore.tasks.find((t) => t.id === id);
-    toastStore.info("Executando Tarefa...", task ? `Rodando "${task.name}"...` : "Processando em segundo plano.");
+    const name = task ? task.name : "Routine";
+    toastStore.info(
+      t("toasts.taskRunningTitle"),
+      t("toasts.taskRunningDesc", { name })
+    );
     await tasksStore.runTaskNow(id);
     const updated = tasksStore.tasks.find((t) => t.id === id);
     if (updated && updated.lastResult) {
-      toastStore.success("Execução Concluída", `"${updated.name}" finalizou com sucesso.`);
+      toastStore.success(
+        t("toasts.taskSuccessTitle"),
+        t("toasts.taskSuccessDesc", { name: updated.name })
+      );
       onViewResult(updated);
     } else if (updated && updated.lastStatus === "error") {
-      toastStore.error("Falha na Execução", updated.lastError || "Erro ao executar tarefa.");
+      toastStore.error(
+        t("toasts.taskErrorTitle"),
+        updated.lastError || "Error executing automated task."
+      );
     }
   }
 </script>
@@ -117,17 +135,17 @@
           <h5
             class="text-xs font-semibold text-zinc-100 font-mono flex items-center gap-1.5"
           >
-            + Agendar Nova Tarefa Automática em Segundo Plano
+            {t("settings.tasks.createNew")}
           </h5>
           <p class="text-[11px] text-zinc-400 font-sans">
-            Configure um prompt periódico que roda silenciosamente usando seus MCPs e Skills.
+            {t("settings.tasks.createNewDesc")}
           </p>
         </div>
       </div>
       <span
         class="px-3 py-1.5 rounded-xl bg-sky-500/20 text-sky-200 text-xs font-mono font-semibold border border-sky-500/35 group-hover:bg-sky-500/30 transition-all shrink-0"
       >
-        Agendar Tarefa
+        {t("settings.tasks.scheduleBtn")}
       </span>
     </button>
   {/if}
@@ -144,43 +162,43 @@
         >
           <Clock class="w-4 h-4 text-sky-400" />
           {isCreatingTask
-            ? "Criar Nova Tarefa Agendada"
-            : "Editar Tarefa Agendada"}
+            ? t("settings.tasks.modalTitleCreate")
+            : t("settings.tasks.modalTitleEdit")}
         </span>
         <button
           type="button"
           onclick={handleCancelTask}
           class="text-zinc-400 hover:text-zinc-100 text-xs font-mono cursor-pointer"
         >
-          Cancelar
+          {t("common.cancel")}
         </button>
       </div>
 
       <div class="space-y-3 text-xs font-mono">
         <div class="space-y-1">
-          <label for="task-name" class="text-zinc-400">Nome da Tarefa:</label>
+          <label for="task-name" class="text-zinc-400">{t("settings.tasks.taskNameLabel")}</label>
           <input
             id="task-name"
             type="text"
             bind:value={taskFormName}
-            placeholder="Ex: Radar Noturno de Proventos B3"
+            placeholder={t("settings.tasks.taskNamePlaceholder")}
             class="w-full bg-[#181622] border border-white/[0.1] rounded-xl px-3 py-2 text-zinc-100 text-xs placeholder:text-zinc-500 focus:outline-none focus:border-sky-500/50"
           />
         </div>
 
         <div class="space-y-1">
-          <label for="task-desc" class="text-zinc-400">Descrição:</label>
+          <label for="task-desc" class="text-zinc-400">{t("settings.tasks.taskDescLabel")}</label>
           <input
             id="task-desc"
             type="text"
             bind:value={taskFormDesc}
-            placeholder="Ex: Monitora datas-com de ativos da carteira e notifica oportunidades"
+            placeholder={t("settings.tasks.taskDescPlaceholder")}
             class="w-full bg-[#181622] border border-white/[0.1] rounded-xl px-3 py-2 text-zinc-100 text-xs placeholder:text-zinc-500 focus:outline-none focus:border-sky-500/50"
           />
         </div>
 
         <div class="space-y-1.5">
-          <label for="task-interval" class="text-zinc-400">Frequência de Execução:</label>
+          <label for="task-interval" class="text-zinc-400">{t("settings.tasks.intervalLabel")}</label>
           <div class="flex items-center gap-1.5 flex-wrap">
             {#each [15, 30, 60, 240, 720, 1440] as preset}
               <button
@@ -195,7 +213,7 @@
             {/each}
           </div>
           <div class="flex items-center gap-2 pt-1">
-            <span class="text-[11px] text-zinc-400">Ou definir minutos:</span>
+            <span class="text-[11px] text-zinc-400">{t("settings.tasks.orDefineMinutes")}</span>
             <input
               id="task-interval"
               type="number"
@@ -203,20 +221,20 @@
               bind:value={taskFormInterval}
               class="w-24 bg-[#181622] border border-white/[0.1] rounded-lg px-2.5 py-1 text-zinc-100 text-xs font-mono focus:outline-none focus:border-sky-500/50"
             />
-            <span class="text-[11px] text-zinc-400">minutos ({formatMinutesLabel(taskFormInterval)})</span>
+            <span class="text-[11px] text-zinc-400">{t("settings.tasks.minutes", { label: formatMinutesLabel(taskFormInterval) })}</span>
           </div>
         </div>
 
         <div class="space-y-1">
           <div class="flex items-center justify-between">
-            <label for="task-prompt" class="text-zinc-400">Prompt Específico que será executado:</label>
-            <span class="text-[10px] text-sky-400">Pode citar ferramentas dos MCPs e Skills</span>
+            <label for="task-prompt" class="text-zinc-400">{t("settings.tasks.promptLabel")}</label>
+            <span class="text-[10px] text-sky-400">{t("settings.tasks.promptHint")}</span>
           </div>
           <textarea
             id="task-prompt"
             rows={4}
             bind:value={taskFormPrompt}
-            placeholder="Ex: Consulte o mcp-yahoo-finance e mcp-financedatabase para ativos e múltiplos..."
+            placeholder={t("settings.tasks.promptPlaceholder")}
             class="w-full bg-[#181622] border border-white/[0.1] rounded-xl p-3 text-zinc-100 text-xs font-mono placeholder:text-zinc-500 focus:outline-none focus:border-sky-500/50 resize-y leading-relaxed"
           ></textarea>
         </div>
@@ -229,7 +247,7 @@
             class="rounded bg-[#181622] border-white/20 text-sky-500 focus:ring-0 cursor-pointer"
           />
           <label for="task-active" class="text-xs text-zinc-300 font-sans cursor-pointer">
-            Ativar agendamento imediatamente
+            {t("settings.tasks.activateImmediately")}
           </label>
         </div>
 
@@ -239,7 +257,7 @@
             onclick={handleCancelTask}
             class="px-3.5 py-1.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] text-zinc-300 text-xs font-mono transition-colors cursor-pointer"
           >
-            Cancelar
+            {t("common.cancel")}
           </button>
           <button
             type="button"
@@ -248,7 +266,7 @@
             class="flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-sky-500 text-white font-semibold text-xs font-mono hover:bg-sky-400 transition-all disabled:opacity-40 cursor-pointer shadow-sm"
           >
             <Save class="w-3.5 h-3.5" />
-            <span>{isCreatingTask ? "Salvar e Agendar" : "Atualizar Tarefa"}</span>
+            <span>{isCreatingTask ? t("settings.tasks.saveSchedule") : t("settings.tasks.updateTask")}</span>
           </button>
         </div>
       </div>
@@ -257,10 +275,10 @@
 
   <div class="flex items-center justify-between pt-1">
     <h5 class="text-xs font-semibold text-zinc-300 font-mono">
-      Tarefas Cadastradas ({tasksStore.tasks.length})
+      {t("settings.tasks.scheduledTasks", { count: tasksStore.tasks.length })}
     </h5>
     <span class="text-[10px] text-zinc-400 font-mono">
-      {tasksStore.activeCount} ativas
+      {t("settings.tasks.activeTasksCount", { count: tasksStore.activeCount })}
     </span>
   </div>
 
@@ -276,10 +294,10 @@
         </div>
         <div class="space-y-1">
           <h5 class="text-sm font-semibold text-zinc-200">
-            Nenhuma tarefa agendada
+            {t("settings.tasks.noTasksTitle")}
           </h5>
           <p class="text-xs text-zinc-400 max-w-sm mx-auto">
-            Crie rotinas automatizadas com prompts para monitorar ativos, proventos ou notícias no intervalo desejado.
+            {t("settings.tasks.noTasksDesc")}
           </p>
         </div>
         <button
@@ -288,7 +306,7 @@
           class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-white font-medium text-xs shadow-md shadow-sky-500/20 transition-all cursor-pointer"
         >
           <Plus class="w-3.5 h-3.5" />
-          <span>Criar Primeira Tarefa</span>
+          <span>{t("settings.tasks.createFirstTask")}</span>
         </button>
       </div>
     {/if}
@@ -315,25 +333,25 @@
                 <span
                   class="px-2 py-0.5 rounded-md text-[10px] font-mono bg-white/[0.06] text-sky-300 border border-sky-500/25"
                 >
-                  a cada {formatMinutesLabel(task.intervalMinutes)}
+                  {t("settings.tasks.every", { label: formatMinutesLabel(task.intervalMinutes) })}
                 </span>
                 {#if task.lastStatus === "running"}
                   <span
                     class="px-2 py-0.5 rounded-md text-[10px] font-mono bg-amber-500/20 text-amber-300 border border-amber-500/30 animate-pulse"
                   >
-                    Executando...
+                    {t("common.running")}
                   </span>
                 {:else if task.lastStatus === "success"}
                   <span
                     class="px-1.5 py-0.5 rounded text-[10px] font-mono text-emerald-400 flex items-center gap-1"
                   >
-                    <CheckCircle2 class="w-3 h-3" /> Sucesso
+                    <CheckCircle2 class="w-3 h-3" /> {t("common.success")}
                   </span>
                 {:else if task.lastStatus === "error"}
                   <span
                     class="px-1.5 py-0.5 rounded text-[10px] font-mono text-rose-400 flex items-center gap-1"
                   >
-                    <AlertCircle class="w-3 h-3" /> Falha
+                    <AlertCircle class="w-3 h-3" /> {t("common.failed")}
                   </span>
                 {/if}
               </div>
@@ -351,10 +369,10 @@
               onclick={() => handleRunTaskNow(task.id)}
               disabled={task.lastStatus === "running"}
               class="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-500/35 text-xs font-mono font-medium transition-all cursor-pointer disabled:opacity-40"
-              title="Executar tarefa imediatamente"
+              title="Run task immediately"
             >
               <Play class="w-3 h-3" />
-              <span>Rodar</span>
+              <span>{t("settings.tasks.run")}</span>
             </button>
             <button
               type="button"
@@ -363,19 +381,19 @@
                 ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
                 : 'bg-white/[0.06] text-zinc-500 border border-white/[0.06]'}"
             >
-              {task.active ? "Ativa" : "Pausada"}
+              {task.active ? t("common.active") : t("common.paused")}
             </button>
             <button
               type="button"
               onclick={() => startEditTask(task)}
               class="px-2 py-1 rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.06] text-xs font-mono cursor-pointer"
             >
-              Editar
+              {t("common.edit")}
             </button>
             <button
               type="button"
               onclick={() => handleDeleteTask(task.id)}
-              aria-label="Excluir tarefa {task.name}"
+              aria-label={`${t("common.delete")} ${task.name}`}
               class="text-zinc-500 hover:text-rose-400 p-1.5 rounded-lg hover:bg-rose-500/10 transition-colors cursor-pointer"
             >
               <Trash2 class="w-3.5 h-3.5" />
@@ -387,9 +405,9 @@
           class="flex items-center justify-between text-[11px] font-mono text-zinc-400 pt-2 border-t border-white/[0.06]"
         >
           <div class="flex items-center gap-3">
-            <span>Última: {formatRelativeTime(task.lastRun)}</span>
+            <span>{t("settings.tasks.lastRun", { time: formatRelativeTime(task.lastRun) })}</span>
             {#if task.active && task.nextRun}
-              <span class="text-zinc-500">Próxima: {formatRelativeTime(task.nextRun)}</span>
+              <span class="text-zinc-500">{t("settings.tasks.nextRun", { time: formatRelativeTime(task.nextRun) })}</span>
             {/if}
           </div>
           {#if task.lastResult}
@@ -399,7 +417,7 @@
               class="text-sky-400 hover:text-sky-300 text-xs font-mono flex items-center gap-1 cursor-pointer hover:underline"
             >
               <FileText class="w-3 h-3" />
-              <span>Ver Resultado</span>
+              <span>{t("settings.tasks.viewResult")}</span>
             </button>
           {/if}
         </div>

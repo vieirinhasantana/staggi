@@ -61,20 +61,20 @@
       </div>
       <div>
         <div class="flex items-center gap-2">
-          <span class="text-sm font-semibold text-zinc-100">Quadro Comparativo & Benchmarking</span>
+          <span class="text-sm font-semibold text-zinc-100">Peer Benchmarking & Comparison Matrix</span>
           <span class="px-2 py-0.5 rounded-md bg-violet-500/15 text-violet-300 font-mono text-[11px] font-bold border border-violet-500/30">
-            {data.headers.length - 1} Ativos
+            {data.headers.length - 1} Assets
           </span>
         </div>
         <div class="text-[11px] text-zinc-400 font-mono">
-          Comparação estruturada de modelos de negócio, valuation e projeções
+          Structured comparison of business models, valuation multiples, and projections
         </div>
       </div>
     </div>
 
     <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/[0.04] border border-white/[0.06] text-[10px] font-mono text-zinc-400">
       <Layers class="w-3 h-3 text-violet-400" />
-      <span>Multiativos</span>
+      <span>Multi-Asset</span>
     </div>
   </div>
 
@@ -141,9 +141,9 @@
   <div class="flex items-center justify-between pt-2 border-t border-white/[0.06] text-[10px] font-mono text-zinc-400 flex-wrap gap-2">
     <div class="flex items-center gap-1.5">
       <ShieldCheck class="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-      <span class="text-zinc-400">Fonte Auditada:</span>
-      <span class="text-zinc-200 font-medium">B3 • SEC EDGAR • Consenso de Mercado & Relatórios de RI</span>
+      <span class="text-zinc-400">Audited Source:</span>
+      <span class="text-zinc-200 font-medium">B3 • SEC EDGAR • Market Consensus & IR Disclosures</span>
     </div>
-    <span class="text-zinc-500">Benchmarking Multi-Ativos</span>
+    <span class="text-zinc-500">Multi-Asset Benchmarking</span>
   </div>
 </div>

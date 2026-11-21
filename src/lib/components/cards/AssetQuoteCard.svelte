@@ -33,20 +33,20 @@
             {quote.ticker}
           </span>
         </div>
-        <div class="text-[11px] text-zinc-400 font-mono">Cotação & Indicadores de Mercado</div>
+        <div class="text-[11px] text-zinc-400 font-mono">Market Quote & Multiples</div>
       </div>
     </div>
 
     <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/25 text-emerald-300 text-[10px] font-mono font-semibold">
       <span class="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
       <ShieldCheck class="w-3.5 h-3.5 text-emerald-400" />
-      <span>Fonte: B3 / NYSE (Yahoo Finance)</span>
+      <span>Source: B3 / NYSE (Yahoo Finance)</span>
     </div>
   </div>
 
   <div class="flex items-baseline justify-between pt-1">
     <div>
-      <div class="text-[10px] uppercase font-mono tracking-wider text-zinc-400">Preço de Mercado</div>
+      <div class="text-[10px] uppercase font-mono tracking-wider text-zinc-400">Market Price</div>
       <div class="text-2xl font-bold font-mono text-zinc-100 tracking-tight">
         {quote.price}
       </div>
@@ -59,7 +59,7 @@
     </div>
 
     <div class="flex flex-col items-end">
-      <div class="text-[10px] uppercase font-mono tracking-wider text-zinc-400">Variação Diária</div>
+      <div class="text-[10px] uppercase font-mono tracking-wider text-zinc-400">Daily Change</div>
       <div class="flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-mono font-bold mt-1 {quote.isPositive ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-300 border border-rose-500/30'}">
         {#if quote.isPositive}
           <TrendingUp class="w-3.5 h-3.5 text-emerald-400" />
@@ -85,7 +85,7 @@
     <div class="p-2.5 rounded-xl bg-[#242232]/70 border border-white/[0.06] space-y-1">
       <div class="flex items-center gap-1 text-[10px] font-mono text-zinc-400 uppercase">
         <BarChart3 class="w-3 h-3 text-sky-400" />
-        <span>P/L (TTM)</span>
+        <span>P/E (TTM)</span>
       </div>
       <div class="text-sm font-bold font-mono text-zinc-200">
         {quote.pl || '—'}
@@ -95,7 +95,7 @@
     <div class="p-2.5 rounded-xl bg-[#242232]/70 border border-white/[0.06] space-y-1">
       <div class="flex items-center gap-1 text-[10px] font-mono text-zinc-400 uppercase">
         <Layers class="w-3 h-3 text-violet-400" />
-        <span>P/VP</span>
+        <span>P/B</span>
       </div>
       <div class="text-sm font-bold font-mono text-zinc-200">
         {quote.pvp || '—'}
@@ -107,7 +107,7 @@
     <div class="p-3 rounded-xl bg-amber-500/10 border border-amber-500/25 space-y-1.5 text-xs animate-fade-in">
       <div class="flex items-center gap-1.5 text-amber-300 font-semibold text-[11px] font-mono">
         <Megaphone class="w-3.5 h-3.5 text-amber-400" />
-        <span>Fato Relevante & Proventos Recentes</span>
+        <span>Recent Corporate Notice & Highlights</span>
       </div>
       <p class="text-zinc-200 leading-relaxed font-sans text-xs">
         {quote.relevantFact}

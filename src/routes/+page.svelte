@@ -18,6 +18,7 @@
   import { tasksStore, type ScheduledTask } from "$lib/services/tasksState.svelte";
   import { updaterStore } from "$lib/services/updaterService.svelte";
   import { renderMarkdown } from "$lib/services/formatMessage";
+  import { t } from "$lib/i18n";
   import { onMount } from "svelte";
   import { invoke } from "@tauri-apps/api/core";
   import { listen } from "@tauri-apps/api/event";
@@ -54,7 +55,7 @@
   );
 
   let currentSessionTitle = $derived(
-    currentSession?.title || "Conversa Ativa"
+    currentSession?.title || t("chat.activeSession")
   );
 
   function scrollToTop() {
@@ -94,10 +95,10 @@
     };
 
     const pendingBotId = String(Date.now() + 1);
-    let initialStatus = "Pensando...";
+    let initialStatus = t("chat.thinking");
     const slashMatch = trimmed.match(/^\/([a-zA-Z0-9_-]+)/);
     if (slashMatch) {
-      initialStatus = `Pensando... [/${slashMatch[1]}]`;
+      initialStatus = t("chat.thinkingWithTool", { tool: `/${slashMatch[1]}` });
     }
 
     const pendingBotMessage: ChatMessage = {
@@ -211,7 +212,7 @@
     const promptMsg: ChatMessage = {
       id: String(Date.now()),
       sender: "user",
-      text: `[Resultado da Execução: ${task.name}]`,
+      text: `[Execution Result: ${task.name}]`,
       time: new Date().toLocaleTimeString().slice(0, 5),
     };
     const resultMsg: ChatMessage = {
@@ -302,7 +303,7 @@
         <button
           type="button"
           onclick={() => showHistoryDrawer = !showHistoryDrawer}
-          title="Abrir painel completo de histórico de conversas (busca e agrupamento temporal)"
+          title="Open conversation history panel"
           class="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-white/[0.05] hover:bg-white/[0.09] border border-white/[0.08] text-zinc-200 transition-colors cursor-pointer"
         >
           <History class="w-3.5 h-3.5 text-sky-400" />
@@ -316,11 +317,11 @@
         <button
           type="button"
           onclick={handleNewChat}
-          title="Iniciar nova conversa mantendo o histórico salvo"
+          title="Start new conversation while keeping history saved"
           class="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 font-semibold transition-all cursor-pointer shadow-sm text-[11px]"
         >
           <Plus class="w-3.5 h-3.5" />
-          <span>Novo Chat</span>
+          <span>{t("chat.newChat")}</span>
         </button>
       </div>
 
@@ -392,14 +393,14 @@
             class="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-medium cursor-pointer transition-colors"
           >
             <Eye class="w-3.5 h-3.5" />
-            <span>Ver Resultado</span>
+            <span>{t("common.viewResult")}</span>
           </button>
         {/if}
         <button
           type="button"
           onclick={() => tasksStore.dismissAlert()}
           class="h-7 w-7 rounded-lg hover:bg-white/10 flex items-center justify-center text-zinc-400 hover:text-zinc-100 cursor-pointer"
-          title="Fechar alerta"
+          title={t("common.close")}
         >
           <X class="w-4 h-4" />
         </button>
@@ -424,13 +425,14 @@
                 {tasksStore.viewingTaskResult.name}
               </h4>
               <span class="text-[11px] text-zinc-400 font-mono">
-                Executado em {tasksStore.viewingTaskResult.lastRun ? new Date(tasksStore.viewingTaskResult.lastRun).toLocaleString('pt-BR') : 'Nunca'} • Intervalo: {tasksStore.viewingTaskResult.intervalMinutes} min
+                Executed at {tasksStore.viewingTaskResult.lastRun ? new Date(tasksStore.viewingTaskResult.lastRun).toLocaleString('en-US') : t("settings.tasks.never")} • Interval: {tasksStore.viewingTaskResult.intervalMinutes} min
               </span>
             </div>
           </div>
           <button
             type="button"
             onclick={() => tasksStore.closeTaskResult()}
+            aria-label={t("common.close")}
             class="h-8 w-8 rounded-xl hover:bg-white/[0.08] flex items-center justify-center text-zinc-400 hover:text-zinc-100 cursor-pointer"
           >
             <X class="w-4 h-4" />
@@ -440,7 +442,7 @@
         <div
           class="flex-1 overflow-y-auto pr-1 text-sm text-zinc-200 leading-relaxed select-text space-y-2.5 [&_p]:my-1.5 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-2 [&_li]:my-1 [&_strong]:text-zinc-100 [&_strong]:font-semibold [&_h1]:text-base [&_h2]:text-sm [&_h3]:text-xs [&_h1]:font-bold [&_h2]:font-bold [&_code]:bg-white/[0.08] [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:font-mono [&_code]:text-xs [&_pre]:bg-[#141320] [&_pre]:p-3 [&_pre]:rounded-xl [&_pre]:overflow-x-auto"
         >
-          {@html renderMarkdown(tasksStore.viewingTaskResult.lastResult || "Nenhum resultado registrado.")}
+          {@html renderMarkdown(tasksStore.viewingTaskResult.lastResult || t("settings.tasks.noResultRecorded"))}
         </div>
 
         <div class="flex items-center justify-between pt-3 border-t border-white/[0.08] font-mono text-xs">
@@ -449,10 +451,10 @@
               type="button"
               onclick={() => handleInjectTaskResultIntoChat(tasksStore.viewingTaskResult!)}
               class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 cursor-pointer transition-colors"
-              title="Inserir esta análise no chat atual para continuar a conversa"
+              title="Insert this analysis into active chat"
             >
               <Send class="w-3.5 h-3.5" />
-              <span>Inserir na Conversa</span>
+              <span>{t("common.insertIntoChat")}</span>
             </button>
 
             <button
@@ -462,10 +464,10 @@
             >
               {#if copySuccess}
                 <Check class="w-3.5 h-3.5 text-emerald-400" />
-                <span class="text-emerald-400">Copiado!</span>
+                <span class="text-emerald-400">{t("common.copied")}</span>
               {:else}
                 <Copy class="w-3.5 h-3.5" />
-                <span>Copiar</span>
+                <span>{t("common.copy")}</span>
               {/if}
             </button>
           </div>
@@ -478,7 +480,7 @@
               class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-500/30 cursor-pointer disabled:opacity-40"
             >
               <RefreshCw class="w-3 h-3 {tasksStore.viewingTaskResult.lastStatus === 'running' ? 'animate-spin text-amber-400' : ''}" />
-              <span>{tasksStore.viewingTaskResult.lastStatus === 'running' ? 'Rodando...' : 'Re-executar'}</span>
+              <span>{tasksStore.viewingTaskResult.lastStatus === 'running' ? t("common.running") : t("common.reRun")}</span>
             </button>
 
             <button
@@ -486,7 +488,7 @@
               onclick={() => tasksStore.closeTaskResult()}
               class="px-3.5 py-1.5 rounded-xl bg-white/[0.08] hover:bg-white/[0.14] text-zinc-200 cursor-pointer transition-colors"
             >
-              Fechar
+              {t("common.close")}
             </button>
           </div>
         </div>

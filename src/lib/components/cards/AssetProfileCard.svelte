@@ -75,7 +75,7 @@
           <button
             type="button"
             onclick={copyIdentifier}
-            title="Clique para copiar o identificador"
+            title="Click to copy identifier"
             class="px-2 py-0.5 rounded-md bg-teal-500/20 text-teal-300 font-mono text-xs font-bold border border-teal-500/35 hover:bg-teal-500/30 transition-all flex items-center gap-1.5 cursor-pointer"
           >
             <span>{data.identifier}</span>
@@ -192,10 +192,8 @@
     >
       <ShieldCheck class="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
       <div>
-        <strong class="text-emerald-200 font-semibold">Vantagem Tributária Offshore (UCITS):</strong>
-        Estruturas domiciliadas na Europa (Luxemburgo/Irlanda) são isentas do imposto sucessório americano
-        (<em>US Estate Tax</em> - limite de US$ 60.000 do IRS) e contam com eficiência fiscal na retenção de dividendos
-        para investidores não-residentes fiscais dos EUA.
+        <strong class="text-emerald-200 font-semibold">Offshore Tax Efficiency (UCITS):</strong>
+        European-domiciled structures (Luxembourg/Ireland) are exempt from US Estate Tax ($60,000 IRS threshold) and offer withholding tax advantages on dividends for non-US investors.
       </div>
     </div>
   {/if}
@@ -206,7 +204,7 @@
     >
       <div class="flex items-center gap-1.5 text-teal-300 font-semibold font-mono text-xs">
         <Sparkles class="w-3.5 h-3.5 text-teal-400" />
-        <span>Tese & Foco Estratégico</span>
+        <span>Investment Thesis & Strategy</span>
       </div>
       <p class="text-zinc-200">
         {data.summary}
@@ -217,9 +215,9 @@
   <div class="flex items-center justify-between pt-2 border-t border-white/[0.06] text-[10px] font-mono text-zinc-400 flex-wrap gap-2">
     <div class="flex items-center gap-1.5">
       <ShieldCheck class="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-      <span class="text-zinc-400">Fonte Auditada:</span>
-      <span class="text-zinc-200 font-medium">{data.mcpSource || "FinanceDatabase Global Directory (300k+ Ativos)"} • Registros Oficiais de Emissão</span>
+      <span class="text-zinc-400">Audited Source:</span>
+      <span class="text-zinc-200 font-medium">{data.mcpSource || "FinanceDatabase Global Directory (300k+ Assets)"} • Official Registry</span>
     </div>
-    <span class="text-zinc-500">Cadastro Multi-Ativos</span>
+    <span class="text-zinc-500">Multi-Asset Factsheet</span>
   </div>
 </div>

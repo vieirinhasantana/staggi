@@ -1,14 +1,12 @@
 import type { ChatMessage, QuickPrompt, MessageType } from "$lib/types";
 
 export const quickPrompts: QuickPrompt[] = [
-  { id: "dividends", label: "💰 Proventos & JCP", prompt: "Qual o fluxo de dividendos e proventos previstos?" },
-  { id: "news", label: "🔔 Notícias & Yahoo Finance", prompt: "Quais as notícias e fatos relevantes de hoje com análise Gemini?" },
-  { id: "statement", label: "📑 Extrato & Retenções", prompt: "Apresentar o extrato consolidado e retenções de IR" },
-  { id: "report", label: "📋 Relatório Executivo Gemini", prompt: "Gerar parecer e relatório executivo da carteira" },
-  { id: "allocation", label: "📊 Alocação de Ativos", prompt: "Qual a alocação consolidada da carteira?" },
-  { id: "liquidity", label: "💧 Liquidez & Resgates", prompt: "Qual a liquidez imediata disponível?" },
-  { id: "maturity", label: "⏳ Próximos Vencimentos", prompt: "Quais os títulos e vencimentos nos próximos 30 dias?" },
-  { id: "tax", label: "🌐 Offshore & US Tax", prompt: "Como está a blindagem do US Estate Tax?" }
+  { id: "dividends", label: "💰 Dividends & Yield", prompt: "What is the projected dividend schedule and 5-year yield history for PETR4 / BBAS3?" },
+  { id: "news", label: "🔔 Market Wire & News", prompt: "What are today's top market news and macroeconomic highlights?" },
+  { id: "valuation", label: "📈 Valuation & Graham", prompt: "Provide an analytical valuation of BBAS3 with Graham model and Bazin ceiling price." },
+  { id: "allocation", label: "📊 Asset Allocation", prompt: "What is the recommended multi-asset fiduciary allocation for a conservative wealth portfolio?" },
+  { id: "etfs", label: "🌐 Global ETFs & Holdings", prompt: "Show top holdings, sector weightings, and expense ratios of ETF IVVB11 / SPY." },
+  { id: "rates", label: "⚡ Treasury Yields", prompt: "What are the current US Treasury yield curve rates across all maturities today?" }
 ];
 
 export function detectMessageType(userPrompt: string): MessageType | undefined {
@@ -56,7 +54,7 @@ export function generateAdvisorResponse(userPrompt: string): ChatMessage {
   return {
     id,
     sender: "staggi",
-    text: `⚠️ Chave do Google Gemini não configurada.\n\nPara consultar dados em tempo real sobre "${userPrompt}" cruzando servidores MCP e cotações de mercado ao vivo, adicione sua chave de API nas Configurações (⚙).`,
+    text: `⚠️ AI API Key not configured.\n\nTo query real-time market data, run valuation models, and invoke MCP tools for "${userPrompt}", please add and validate your API key in Settings (⚙).`,
     time,
     type: "text"
   };

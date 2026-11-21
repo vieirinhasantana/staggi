@@ -24,16 +24,16 @@ const DEFAULT_MCPS: McpServerItem[] = [
     transport: "Rust Native / HTTP", 
     endpoint: "query1.finance.yahoo.com", 
     active: true, 
-    desc: "Streaming de cotações B3/NYSE, dividend yield, múltiplos e fatos relevantes"
+    desc: "Real-time quotes from Yahoo Finance, multiples (P/E, P/B), volume, and declared dividends"
   },
   { 
     id: "mcp-tax", 
-    name: "mcp-tributario-cfc", 
+    name: "mcp-tax-engine", 
     type: "Tax Engine MCP", 
     transport: "sse (Server-Sent)", 
     endpoint: "http://localhost:3001/mcp", 
     active: true, 
-    desc: "Motor de regras da Lei 14.754/23 e blindagem do US Estate Tax IRS"
+    desc: "Cross-border tax rules, CFC regulations, and US Estate Tax IRS shielding"
   },
   { 
     id: "mcp-financedatabase", 
@@ -42,7 +42,7 @@ const DEFAULT_MCPS: McpServerItem[] = [
     transport: "stdio (Python / CLI)", 
     endpoint: "python -m financedatabase_mcp", 
     active: true, 
-    desc: "Diretório e screening global com 300k+ ativos (ações, ETFs, fundos, índices, moedas e cripto) categorizados por setor, indústria e país (Jeroen Bouma)"
+    desc: "Global directory and screening with 300k+ assets (equities, ETFs, funds, indices, currencies, crypto) categorized by sector, industry, and country (Jeroen Bouma)"
   },
   { 
     id: "mcp-equibles-etf", 
@@ -51,7 +51,7 @@ const DEFAULT_MCPS: McpServerItem[] = [
     transport: "sse (HTTP / REST)", 
     endpoint: "https://api.equibles.com/v1/etfs/mcp", 
     active: true, 
-    desc: "Composição e transparência de ETFs globais: ponderação de ativos subjacentes, exposição setorial, geográfica e overlap entre fundos"
+    desc: "Global ETF transparency: underlying asset weightings, sector breakdown, geographic exposure, and portfolio overlap analysis"
   },
   { 
     id: "mcp-bonds", 
@@ -60,7 +60,7 @@ const DEFAULT_MCPS: McpServerItem[] = [
     transport: "stdio (CLI)", 
     endpoint: "npx -y @mcp/bond-server", 
     active: true, 
-    desc: "Precificação e análise de títulos soberanos e corporativos globais: duration modificada, convexidade, yield to maturity (YTM) e rating de crédito"
+    desc: "Global sovereign and corporate bond analytics: modified duration, convexity, yield to maturity (YTM), and credit rating"
   },
   { 
     id: "mcp-treasury-yields", 
@@ -69,7 +69,7 @@ const DEFAULT_MCPS: McpServerItem[] = [
     transport: "sse (Cloudflare Worker)", 
     endpoint: "https://treasury-yields-rates-today-mcp.lipmichal.workers.dev/sse", 
     active: true, 
-    desc: "Curva de juros soberana dos EUA em tempo real (1M a 30Y), taxas hoje e spreads críticos de inversão de curva (10Y-2Y)"
+    desc: "Real-time US Treasury sovereign yield curve (1M to 30Y), current benchmark rates, and 10Y-2Y yield inversion spreads"
   },
   { 
     id: "mcp-tickerinside", 
@@ -78,119 +78,115 @@ const DEFAULT_MCPS: McpServerItem[] = [
     transport: "sse (HTTP / Agent)", 
     endpoint: "https://api.tickerinside.com/mcp/sse", 
     active: true, 
-    desc: "Rastreamento de compras e vendas de executivos (SEC Form 4), movimentações de grandes investidores institucionais (baleias) e sentimento de insiders"
+    desc: "Executive smart money tracking (SEC Form 4), institutional whale positioning, and insider transaction sentiment"
   }
 ];
 
 const DEFAULT_SKILLS: SkillDefinition[] = [
   { 
     id: "skill-etf-screening", 
-    name: "screening-ativos-etf-transparency", 
+    name: "screening-assets-etf-transparency", 
     slug: "screening",
-    description: "Cruza o universo global de ativos (FinanceDatabase) com a transparência de carteira e composição de ETFs (Equibles).", 
+    description: "Cross-references global asset universe (FinanceDatabase) with ETF portfolio holdings and transparency (Equibles).", 
     mcpDependency: "mcp-financedatabase, mcp-equibles-etf-holdings, mcp-yahoo-finance",
-    systemPrompt: `# Instruções da Skill de Screening Global & Transparência de ETFs
-Você é o estrategista de alocação multiativos do Staggi:
-1. Para ETFs e Fundos de Índice, consulte o mcp-equibles-etf-holdings para abrir a carteira interna do fundo:
-   - Liste as 10 principais posições em carteira com seus respectivos pesos percentuais.
-   - Analise concentração setorial e geográfica dos ativos detidos.
-   - Identifique sobreposição de carteira (overlap) caso o usuário pergunte sobre combinar mais de um ETF.
-2. Para screening de empresas e classificação setorial, utilize o mcp-financedatabase:
-   - Filtre ativos por país, setor, indústria, tipo de ativo e valor de mercado.
-   - Apresente tabelas limpas e estruturadas em Markdown com as empresas selecionadas.`,
+    systemPrompt: `# Global Screening & ETF Transparency Skill Directives
+You are Staggi's multi-asset portfolio strategist:
+1. For ETFs and Index Funds, query mcp-equibles-etf-holdings to inspect underlying fund holdings:
+   - Detail top 10 constituents with corresponding weights.
+   - Analyze sector and geographic concentration.
+   - Detect fund overlap when comparing multiple ETFs.
+2. For corporate screening and sector classification, leverage mcp-financedatabase:
+   - Filter assets by country, sector, industry, asset class, and market cap.
+   - Provide structured markdown tables with selected companies.`,
     active: true 
   },
   { 
     id: "skill-renda-fixa-yield-curve", 
-    name: "renda-fixa-e-curva-treasuries", 
-    slug: "renda-fixa",
-    description: "Analisa a curva de juros soberana americana (Treasuries) e precifica títulos corporativos e soberanos (duration e YTM).", 
+    name: "fixed-income-treasuries-curve", 
+    slug: "fixed-income",
+    description: "Analyzes US sovereign yield curves (Treasuries) and prices sovereign/corporate bonds (duration, convexity, YTM).", 
     mcpDependency: "mcp-treasury-yields, mcp-bond-intelligence",
-    systemPrompt: `# Instruções da Skill de Renda Fixa & Curva de Juros
-Você é o analista sênior de renda fixa e macroeconomia do Staggi:
-1. Consulte o mcp-treasury-yields para obter as taxas atuais da curva de juros soberana dos EUA (1M, 3M, 6M, 1Y, 2Y, 5Y, 10Y, 20Y, 30Y):
-   - Calcule o spread crítico 10Y - 2Y para verificar inclinação ou inversão da curva (sinal de alerta recessivo).
-   - Defina o patamar de taxa livre de risco (risk-free rate) para valuation e precificação de ativos globais.
-2. Consulte o mcp-bond-intelligence para títulos públicos e corporativos:
-   - Apresente o Yield to Maturity (YTM), cupom anual e vencimento.
-   - Avalie a duration modificada (sensibilidade a variações de juros) e convexidade.
-   - Avalie o rating de crédito e spread de crédito em relação à curva de Treasuries.`,
+    systemPrompt: `# Fixed Income & Sovereign Yield Curve Skill Directives
+You are Staggi's senior macro and fixed income analyst:
+1. Query mcp-treasury-yields for current US Treasury curve rates (1M, 3M, 6M, 1Y, 2Y, 5Y, 10Y, 20Y, 30Y):
+   - Compute critical 10Y - 2Y slope and curve inversion spread.
+   - Determine the risk-free rate benchmark for equity valuation.
+2. Query mcp-bond-intelligence for government and corporate debt:
+   - Report Yield to Maturity (YTM), annual coupon, and maturity.
+   - Evaluate modified duration (interest rate sensitivity) and convexity.
+   - Assess credit ratings and credit spreads over benchmark Treasuries.`,
     active: true 
   },
   { 
     id: "skill-insider-smart-money", 
     name: "smart-money-insider-flow", 
     slug: "insider",
-    description: "Monitora compras e vendas de diretores e conselheiros (SEC Form 4) e movimentações de grandes baleias institucionais.", 
+    description: "Monitors officer/director buys and sells (SEC Form 4) and institutional whale transactions.", 
     mcpDependency: "mcp-tickerinside-insider, mcp-yahoo-finance",
-    systemPrompt: `# Instruções da Skill de Insider Trading & Smart Money Flow
-Você é o analista de fluxo de capital institucional e governança corporativa do Staggi:
-1. Consulte o mcp-tickerinside-insider para auditar as transações declaradas na SEC (Form 4):
-   - Identifique se diretores, CEOs, CFOs ou membros do conselho estão comprando ou vendendo ações da própria empresa.
-   - Diferencie compras deliberadas em mercado aberto (sinal forte de convicção) de vendas programadas (Rule 10b5-1) ou exercício de opções.
-   - Avalie o Insider Sentiment Score e o volume financeiro transacionado.
-2. Cruze o sinal dos insiders com a análise de valuation e cotação recente.`,
+    systemPrompt: `# Insider Trading & Smart Money Flow Directives
+You are Staggi's institutional capital flow and corporate governance analyst:
+1. Query mcp-tickerinside-insider to audit SEC Form 4 filings:
+   - Identify open-market purchases by C-suite executives and board members.
+   - Distinguish discretionary market purchases from routine Rule 10b5-1 selling plans or option exercises.
+   - Assess aggregate Insider Sentiment Score and transaction volume.
+2. Correlate insider signals with underlying valuation and recent price action.`,
     active: true 
   },
   { 
     id: "skill-valuation", 
-    name: "analise-fundamentalista-mercado", 
+    name: "fundamental-valuation-analysis", 
     slug: "valuation",
-    description: "Audita valuation, ROE, Margem Líquida, Preço Justo de Graham e Bazin via market data e demonstrações contábeis.", 
+    description: "Audits valuation multiples, ROE, Net Margin, Graham Intrinsic Value, and Bazin ceiling.", 
     mcpDependency: "mcp-yahoo-finance, mcp-financedatabase",
-    systemPrompt: `# Instruções da Skill Fundamentalista
-Você é o analista fundamentalista sênior do Staggi:
-1. Avalie os indicadores fundamentalistas oficiais de empresas e FIIs:
-   - Valuation: P/L, P/VP, EV/EBITDA, PSR, Preço Justo de Graham e Preço Teto Bazin (DY 6%).
-   - Eficiência & Rentabilidade: ROE, ROIC, Margem Bruta, Margem EBITDA e Margem Líquida.
-   - Endividamento: Dívida Líquida/EBITDA (alerta se > 2.5x) e Liquidez Corrente.
-   - Histórico de Proventos: Dividend Yield (DY) dos últimos 5 anos e Payout.
-2. Analise vantagens competitivas duráveis (Moats) e governança corporativa (Novo Mercado).
-3. Produza uma síntese executiva estruturada com Preço Teto, Margem de Segurança e Recomendação de Alocação.`,
+    systemPrompt: `# Fundamental Valuation Skill Directives
+You are Staggi's senior equity research analyst:
+1. Evaluate verified financial multiples:
+   - Valuation: P/E, P/B, EV/EBITDA, P/S, Graham Intrinsic Formula, and Bazin Ceiling Price (DY 6%).
+   - Profitability: ROE, ROIC, Gross Margin, EBITDA Margin, and Net Margin.
+   - Leverage: Net Debt/EBITDA and Current Ratio.
+   - Dividend Consistency: 5-year average Dividend Yield and Payout Ratio.
+2. Assess durable competitive advantages (Economic Moats) and corporate governance quality.
+3. Deliver a concise executive synthesis with Ceiling Price, Margin of Safety, and Allocation Stance.`,
     active: true 
   },
   { 
     id: "skill-proventos", 
-    name: "analise-proventos-wm", 
-    slug: "proventos",
-    description: "Projeta dividendos, JCP e calcula o yield on cost líquido de impostos.", 
+    name: "dividend-cashflow-analysis", 
+    slug: "dividends",
+    description: "Forecasts dividend cashflows and calculates net yield on cost.", 
     mcpDependency: "mcp-yahoo-finance",
-    systemPrompt: `# Instruções da Skill de Proventos
-Você é o motor de cálculo de renda passiva do Staggi:
-1. Consulte o mcp-yahoo-finance para obter as cotações e proventos anunciados (datas-com).
-2. Regras de Tributação:
-   - Rendimentos de FIIs: Isentos de IRPF para pessoa física.
-   - JCP de Ações: Deduzir 15% de IR retido na fonte.
-   - Dividendos de Ações BR: Isentos no Brasil.
-3. Estruture a resposta com tabelas limpas em Markdown:
-   - Tabela de Proventos Recentes: | Tipo (JCP ou Dividendo) | Valor por Ação | Data Ex-Dividendo | Data de Pagamento |
-   - Tabela de Histórico Anual de DY: | Ano | Dividendos Totais (R$) | Cotação Média (R$) | DY Anual |`,
+    systemPrompt: `# Dividend & Yield Cashflow Skill Directives
+You are Staggi's passive income analytics engine:
+1. Query mcp-yahoo-finance for declared distributions, record dates, and ex-dates.
+2. Structure output into structured Markdown tables:
+   - Recent Declared Distributions Table: | Type | Amount per Share | Ex-Dividend Date | Payment Date |
+   - Historical Annual Yield Table: | Year | Total Dividends | Average Price | Annual DY |`,
     active: true 
   },
   { 
     id: "skill-report", 
-    name: "parecer-executivo-gemini", 
+    name: "executive-wealth-advisory", 
     slug: "report",
-    description: "Gera parecer consultivo e cálculo de Sharpe consolidado da carteira.", 
+    description: "Generates executive wealth advisory opinion and consolidated Sharpe ratio analysis.", 
     mcpDependency: "mcp-yahoo-finance, mcp-financedatabase",
-    systemPrompt: `# Instruções do Parecer Consultivo
-Você é um estrategista sênior de wealth management:
-1. Avalie o AUM consolidado, a volatilidade dos últimos 12 meses e o Índice Sharpe.
-2. Formule 3 recomendações claras de rebalanceamento (Aumentar, Manter, Reduzir).
-3. Produza uma síntese executiva pronta para ser enviada por WhatsApp ou e-mail ao cliente.`,
+    systemPrompt: `# Executive Advisory Directives
+You are Staggi's senior private wealth strategist:
+1. Assess consolidated portfolio metrics, 12-month volatility, and Sharpe Ratio.
+2. Formulate 3 distinct rebalancing recommendations (Increase, Hold, Reduce).
+3. Produce a polished executive briefing suitable for family office or client presentation.`,
     active: true 
   },
   { 
     id: "skill-offshore", 
-    name: "auditoria-us-estate-tax", 
+    name: "offshore-us-estate-tax-audit", 
     slug: "offshore",
-    description: "Audita exposição direta a US Situs Assets contra o limite de $60.000 do IRS.", 
-    mcpDependency: "mcp-tributario-cfc, mcp-financedatabase",
-    systemPrompt: `# Instruções de Auditoria Offshore & US Tax
-Você é o auditor tributário internacional do Staggi:
-1. Identifique ativos US Situs Assets detidos por não residentes fiscais dos EUA.
-2. Limite Crítico: USD 60.000 (alíquotas de 18% a 40% sobre o excedente em sucessão).
-3. Recomende a alocação através de ETFs UCITS na Irlanda ou via PIC Cayman para neutralizar o imposto sucessório.`,
+    description: "Audits direct US Situs Asset exposure against IRS $60,000 threshold.", 
+    mcpDependency: "mcp-tax-engine, mcp-financedatabase",
+    systemPrompt: `# Offshore & US Estate Tax Audit Directives
+You are Staggi's international wealth structuring auditor:
+1. Identify US Situs Assets held by non-US resident aliens.
+2. Critical Threshold: USD 60,000 (18% to 40% estate tax rates on excess values upon succession).
+3. Recommend optimal structuring via Irish/Luxembourg UCITS ETFs or foreign holding vehicles to eliminate US estate tax liability.`,
     active: true 
   }
 ];

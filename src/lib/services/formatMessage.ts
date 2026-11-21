@@ -365,41 +365,41 @@ function categorizeEvent(title: string, body: string): CorporateEventCategory {
   const b = body.toLowerCase();
 
   if (/\b(ai|ia|inteligência|azure|cloud|copilot|software|nuvem)\b/i.test(t)) {
-    return "Tecnologia & IA";
+    return "Tech & AI";
   }
-  if (t.includes("parceria") || t.includes("acordo") || t.includes("reestrutura") || t.includes("fusão") || t.includes("aquisi") || t.includes("separação") || t.includes("desinvest") || t.includes("estratég")) {
-    return "Estratégia";
+  if (t.includes("parceria") || t.includes("partnership") || t.includes("acordo") || t.includes("reestrutura") || t.includes("fusão") || t.includes("merger") || t.includes("aquisi") || t.includes("acquisition") || t.includes("separação") || t.includes("desinvest") || t.includes("estratég") || t.includes("strategy")) {
+    return "Strategy";
   }
-  if (t.includes("interrup") || t.includes("bug") || t.includes("falha") || t.includes("serviço") || t.includes("produção") || t.includes("operac")) {
-    return "Operacional";
+  if (t.includes("interrup") || t.includes("bug") || t.includes("falha") || t.includes("outage") || t.includes("serviço") || t.includes("produção") || t.includes("operac") || t.includes("operations")) {
+    return "Operations";
   }
-  if (t.includes("resultado") || t.includes("receita") || t.includes("lucro") || t.includes("fiscal") || t.includes("ebitda") || t.includes("margem") || /\b[1-4]t\d{2}\b/i.test(t)) {
-    return "Resultados";
+  if (t.includes("resultado") || t.includes("earnings") || t.includes("receita") || t.includes("revenue") || t.includes("lucro") || t.includes("profit") || t.includes("fiscal") || t.includes("ebitda") || t.includes("margem") || /\b[1-4]t\d{2}\b/i.test(t) || /\b[1-4]q\d{2}\b/i.test(t)) {
+    return "Earnings";
   }
-  if (t.includes("provento") || t.includes("dividendo") || t.includes("jcp")) {
-    return "Proventos";
+  if (t.includes("provento") || t.includes("dividendo") || t.includes("dividend") || t.includes("payout") || t.includes("jcp")) {
+    return "Dividends";
   }
-  if (t.includes("preço") || t.includes("combust")) {
-    return "Preços";
-  }
-
-  if (b.includes("receita") || b.includes("lucro") || b.includes("ebitda") || b.includes("margem líquida")) {
-    return "Resultados";
-  }
-  if (b.includes("inteligência artificial") || b.includes("openai") || b.includes("azure") || b.includes("cloud")) {
-    return "Tecnologia & IA";
-  }
-  if (b.includes("parceria") || b.includes("acordo") || b.includes("fusão") || b.includes("aquisição")) {
-    return "Estratégia";
-  }
-  if (b.includes("interrupção") || b.includes("falha") || b.includes("bug")) {
-    return "Operacional";
-  }
-  if (b.includes("dividendo") || b.includes("jcp")) {
-    return "Proventos";
+  if (t.includes("preço") || t.includes("price") || t.includes("pricing") || t.includes("combust")) {
+    return "Pricing";
   }
 
-  return "Geral";
+  if (b.includes("receita") || b.includes("revenue") || b.includes("lucro") || b.includes("profit") || b.includes("ebitda") || b.includes("margem líquida") || b.includes("earnings")) {
+    return "Earnings";
+  }
+  if (b.includes("inteligência artificial") || b.includes("artificial intelligence") || b.includes("openai") || b.includes("azure") || b.includes("cloud")) {
+    return "Tech & AI";
+  }
+  if (b.includes("parceria") || b.includes("partnership") || b.includes("acordo") || b.includes("deal") || b.includes("fusão") || b.includes("aquisição")) {
+    return "Strategy";
+  }
+  if (b.includes("interrupção") || b.includes("outage") || b.includes("falha") || b.includes("bug")) {
+    return "Operations";
+  }
+  if (b.includes("dividendo") || b.includes("dividend") || b.includes("payout") || b.includes("jcp")) {
+    return "Dividends";
+  }
+
+  return "General";
 }
 
 function extractKeyMetrics(body: string): EventDetailItem[] {

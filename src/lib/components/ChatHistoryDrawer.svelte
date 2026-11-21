@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { ChatSession } from "$lib/types";
+  import { t } from "$lib/i18n";
   import {
     Search,
     X,
@@ -58,7 +59,7 @@
     if (searchQuery.trim()) {
       return [
         {
-          label: `Resultados da Pesquisa (${filteredSessions.length})`,
+          label: `Search Results (${filteredSessions.length})`,
           items: filteredSessions,
         },
       ];
@@ -97,13 +98,13 @@
     }
 
     const groups: GroupedSessions[] = [];
-    if (todayItems.length > 0) groups.push({ label: "Hoje", items: todayItems });
-    if (yesterdayItems.length > 0) groups.push({ label: "Ontem", items: yesterdayItems });
-    if (thisWeekItems.length > 0) groups.push({ label: "Últimos 7 dias", items: thisWeekItems });
-    if (olderItems.length > 0) groups.push({ label: "Mais antigas", items: olderItems });
+    if (todayItems.length > 0) groups.push({ label: t("drawer.today"), items: todayItems });
+    if (yesterdayItems.length > 0) groups.push({ label: t("drawer.yesterday"), items: yesterdayItems });
+    if (thisWeekItems.length > 0) groups.push({ label: t("drawer.previous7Days"), items: thisWeekItems });
+    if (olderItems.length > 0) groups.push({ label: t("drawer.older"), items: olderItems });
 
     if (groups.length === 0 && filteredSessions.length > 0) {
-      groups.push({ label: "Todas as Conversas", items: filteredSessions });
+      groups.push({ label: "All Conversations", items: filteredSessions });
     }
 
     return groups;
@@ -111,7 +112,7 @@
 
   function getLastPreview(s: ChatSession): string {
     if (!s.messages || s.messages.length === 0) {
-      return "Nova conversa iniciada (sem mensagens ainda)";
+      return "New conversation started (no messages yet)";
     }
     const last = s.messages[s.messages.length - 1];
     let clean = (last.text || "")
@@ -120,7 +121,7 @@
       .replace(/\n+/g, " ")
       .trim();
     if (clean.length > 100) clean = clean.slice(0, 100) + "...";
-    return clean || "Mensagem de análise";
+    return clean || "Analysis query";
   }
 
   function handleSelect(s: ChatSession) {
@@ -154,12 +155,12 @@
           <div class="flex items-center gap-2">
             <h3 class="font-semibold text-xs text-zinc-100 tracking-wide flex items-center gap-1.5">
               <Clock class="w-3.5 h-3.5 text-sky-400" />
-              Histórico de Conversas
+              {t("drawer.historyTitle")}
             </h3>
             <span
               class="px-2 py-0.5 rounded-full text-[10px] bg-sky-500/15 text-sky-300 border border-sky-500/30"
             >
-              {sessions.length} {sessions.length === 1 ? "salva" : "salvas"}
+              {sessions.length} {sessions.length === 1 ? "saved" : "saved"}
             </span>
           </div>
         </div>
@@ -172,13 +173,13 @@
           class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 text-xs font-semibold transition-all cursor-pointer shadow-sm"
         >
           <Plus class="w-3.5 h-3.5" />
-          <span>Nova Conversa</span>
+          <span>{t("chat.newChat")}</span>
         </button>
 
         <button
           type="button"
           onclick={onClose}
-          title="Fechar Histórico (Esc)"
+          title="Close History (Esc)"
           class="h-8 w-8 rounded-lg text-zinc-500 hover:text-zinc-200 hover:bg-white/[0.06] flex items-center justify-center transition-colors cursor-pointer"
         >
           <X class="w-4 h-4" />
@@ -192,7 +193,7 @@
         <input
           type="text"
           bind:value={searchQuery}
-          placeholder="Pesquisar conversas por ativo, pergunta ou termo (ex: PETR4, Valuation, Lux, Bonds)..."
+          placeholder="Search conversations by ticker, prompt, or keywords (e.g. BBAS3, Valuation, ETFs)..."
           class="w-full rounded-xl bg-[#201d32] border border-white/[0.1] pl-9.5 pr-8 py-2 text-xs text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-sky-400/60 font-sans shadow-inner transition-colors"
         />
         {#if searchQuery}
@@ -213,13 +214,13 @@
           <MessageSquare class="w-8 h-8 text-zinc-600 mb-1" />
           <p class="text-xs text-zinc-400">
             {searchQuery
-              ? `Nenhuma conversa encontrada para "${searchQuery}"`
-              : "Nenhuma conversa armazenada no histórico."}
+              ? `No conversations matching "${searchQuery}"`
+              : "No conversations stored in history."}
           </p>
           <span class="text-[11px] text-zinc-500">
             {searchQuery
-              ? "Tente buscar por ticker, tema fiscal ou nome de fundo."
-              : "Inicie um diálogo no Spotlight para salvar sua primeira conversa."}
+              ? "Try searching by ticker, asset class, or topic."
+              : "Start a conversation in the Spotlight bar to save your first session."}
           </span>
           {#if searchQuery}
             <button
@@ -227,7 +228,7 @@
               onclick={() => (searchQuery = "")}
               class="mt-2 px-3 py-1 rounded-lg bg-white/[0.06] text-zinc-300 text-xs hover:bg-white/[0.1] cursor-pointer"
             >
-              Limpar filtro
+              Clear filter
             </button>
           {/if}
         </div>
@@ -273,14 +274,14 @@
                               ? 'text-sky-200'
                               : 'text-zinc-100 group-hover:text-white'}"
                           >
-                            {s.title || "Conversa Consultiva"}
+                            {s.title || "Consultative Chat"}
                           </span>
 
                           {#if s.id === currentSessionId}
                             <span
                               class="inline-flex items-center gap-1 text-[9px] font-mono px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/30 shrink-0 font-medium"
                             >
-                              <Check class="w-2.5 h-2.5" /> Ativa Agora
+                              <Check class="w-2.5 h-2.5" /> Active Now
                             </span>
                           {/if}
                         </div>
@@ -297,7 +298,7 @@
                             {s.createdAt}
                           </span>
                           <span>•</span>
-                          <span>{s.messages?.length || 0} {s.messages?.length === 1 ? "mensagem" : "mensagens"}</span>
+                          <span>{s.messages?.length || 0} {s.messages?.length === 1 ? "message" : "messages"}</span>
                         </div>
                       </div>
                     </div>
@@ -308,7 +309,7 @@
                         e.stopPropagation();
                         onDeleteSession(s.id);
                       }}
-                      title="Excluir esta conversa"
+                      title="Delete this conversation"
                       class="opacity-0 group-hover:opacity-100 p-2 rounded-xl text-zinc-500 hover:text-rose-400 hover:bg-rose-500/15 border border-transparent hover:border-rose-500/25 transition-all cursor-pointer shrink-0"
                     >
                       <Trash2 class="w-3.5 h-3.5" />
@@ -326,7 +327,7 @@
       class="px-5 py-3 border-t border-white/[0.08] bg-[#12101e]/90 flex items-center justify-between text-xs font-mono shrink-0"
     >
       <div class="text-[11px] text-zinc-500">
-        <span>Staggi Local Storage • Dados privados no seu computador</span>
+        <span>Staggi Local Storage • Private data isolated on your machine</span>
       </div>
 
       {#if sessions.length > 0}
@@ -334,7 +335,7 @@
           <div class="flex items-center gap-2 animate-fade-in">
             <span class="text-[11px] text-rose-300 flex items-center gap-1">
               <AlertTriangle class="w-3 h-3 text-rose-400" />
-              Apagar todas as conversas?
+              Delete all conversations?
             </span>
             <button
               type="button"
@@ -345,14 +346,14 @@
               }}
               class="px-2.5 py-1 rounded-lg bg-rose-500 text-white font-semibold text-[10px] hover:bg-rose-600 cursor-pointer shadow-sm"
             >
-              Sim, Apagar Tudo
+              Yes, Delete All
             </button>
             <button
               type="button"
               onclick={() => (confirmClearAll = false)}
               class="px-2 py-1 rounded-lg bg-white/[0.06] text-zinc-300 text-[10px] hover:bg-white/[0.1] cursor-pointer"
             >
-              Cancelar
+              Cancel
             </button>
           </div>
         {:else}
@@ -362,7 +363,7 @@
             class="text-[11px] text-zinc-500 hover:text-rose-400 flex items-center gap-1.5 transition-colors cursor-pointer"
           >
             <Trash2 class="w-3 h-3" />
-            <span>Limpar todo o histórico</span>
+            <span>{t("drawer.clearAll")}</span>
           </button>
         {/if}
       {/if}

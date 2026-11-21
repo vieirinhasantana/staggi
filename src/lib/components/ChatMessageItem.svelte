@@ -20,6 +20,7 @@
     renderMarkdown 
   } from "$lib/services/formatMessage";
   import { Bot, Sparkles, ShieldCheck, Brain } from "@lucide/svelte";
+  import { t } from "$lib/i18n";
 
   interface Props {
     message: ChatMessage;
@@ -59,10 +60,10 @@
 <div class="flex flex-col gap-1.5 {message.sender === 'user' ? 'items-end' : 'items-start'} animate-fade-in">
   <div class="flex items-center gap-1.5 px-2 text-[11px] text-zinc-400 font-mono">
     {#if message.sender === 'user'}
-      <span>Você</span>
+      <span>{t("chat.user")}</span>
     {:else}
       <span class="flex items-center gap-1.5 text-emerald-400 font-semibold">
-        <img src="/favicon.png" alt="Staggi" class="w-3.5 h-3.5 rounded-full object-cover ring-1 ring-emerald-500/30" /> Staggi
+        <img src="/favicon.png" alt="Staggi" class="w-3.5 h-3.5 rounded-full object-cover ring-1 ring-emerald-500/30" /> {t("chat.assistant")}
       </span>
     {/if}
     <span>• {message.time}</span>
@@ -116,10 +117,10 @@
           <div class="flex items-center justify-between pt-2.5 mt-1 border-t border-white/[0.06] text-[10px] font-mono text-zinc-400">
             <div class="flex items-center gap-1.5">
               <ShieldCheck class="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-              <span class="text-zinc-400">Fonte Auditada:</span>
+              <span class="text-zinc-400">{t("common.auditedSource")}:</span>
               <span class="text-zinc-200 font-medium">{auditedSource}</span>
             </div>
-            <span class="text-zinc-500 hidden sm:inline">Consolidado Oficial</span>
+            <span class="text-zinc-500 hidden sm:inline">Official Consensus</span>
           </div>
         {/if}
       </div>

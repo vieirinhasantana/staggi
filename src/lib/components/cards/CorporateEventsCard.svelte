@@ -24,16 +24,22 @@
 
   function getCategoryBadge(category: CorporateEventItem["category"]) {
     switch (category) {
+      case "Earnings":
       case "Resultados":
         return "bg-emerald-500/15 text-emerald-300 border-emerald-500/30";
+      case "Tech & AI":
       case "Tecnologia & IA":
         return "bg-sky-500/15 text-sky-300 border-sky-500/30";
+      case "Strategy":
       case "Estratégia":
         return "bg-violet-500/15 text-violet-300 border-violet-500/30";
+      case "Operations":
       case "Operacional":
         return "bg-rose-500/15 text-rose-300 border-rose-500/30";
+      case "Pricing":
       case "Preços":
         return "bg-amber-500/15 text-amber-300 border-amber-500/30";
+      case "Dividends":
       case "Proventos":
         return "bg-teal-500/15 text-teal-300 border-teal-500/30";
       default:
@@ -67,19 +73,19 @@
       </div>
       <div>
         <div class="flex items-center gap-2">
-          <span class="text-sm font-semibold text-zinc-100">{eventsData.companyName || 'Radar Corporativo'}</span>
+          <span class="text-sm font-semibold text-zinc-100">{eventsData.companyName || 'Corporate Radar'}</span>
           <span class="px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-300 font-mono text-[11px] font-bold border border-amber-500/30">
             {eventsData.ticker}
           </span>
         </div>
-        <div class="text-[11px] text-zinc-400 font-mono">Fatos Relevantes & Notícias de Mercado</div>
+        <div class="text-[11px] text-zinc-400 font-mono">Material Facts & Regulatory Filings</div>
       </div>
     </div>
 
     <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/25 text-emerald-300 text-[10px] font-mono font-semibold">
       <span class="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
       <ShieldCheck class="w-3.5 h-3.5 text-emerald-400" />
-      <span>Fonte: Fatos Relevantes CVM / SEC (Yahoo Finance)</span>
+      <span>Source: SEC / CVM Regulatory Filings (Yahoo Finance)</span>
     </div>
   </div>
 

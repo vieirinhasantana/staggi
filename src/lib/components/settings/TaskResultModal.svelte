@@ -3,6 +3,7 @@
   import type { ScheduledTask } from "$lib/types";
   import { renderMarkdown } from "$lib/services/formatMessage";
   import { formatRelativeTime } from "$lib/utils/formatters";
+  import { t } from "$lib/i18n";
 
   interface Props {
     task: ScheduledTask | null;
@@ -36,17 +37,17 @@
           </div>
           <div>
             <h4 class="text-sm font-semibold text-zinc-100 font-mono">
-              Resultado: {task.name}
+              {t("settings.tasks.resultModalTitle", { name: task.name })}
             </h4>
             <span class="text-[11px] text-zinc-400 font-mono">
-              Executado {formatRelativeTime(task.lastRun)}
+              {t("settings.tasks.executedAt", { time: formatRelativeTime(task.lastRun) })}
             </span>
           </div>
         </div>
         <button
           type="button"
           onclick={onClose}
-          aria-label="Fechar resultado da tarefa"
+          aria-label={t("common.close")}
           class="h-7 w-7 rounded-lg hover:bg-white/[0.08] flex items-center justify-center text-zinc-400 hover:text-zinc-100 cursor-pointer"
         >
           <X class="w-4 h-4" />
@@ -57,7 +58,7 @@
         class="flex-1 overflow-y-auto pr-1 text-sm text-zinc-200 leading-relaxed font-normal select-text space-y-2.5 [&_p]:my-1.5 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-2 [&_li]:my-1 [&_strong]:text-zinc-100 [&_strong]:font-semibold [&_h1]:text-base [&_h2]:text-sm [&_h3]:text-xs [&_h1]:font-bold [&_h2]:font-bold [&_code]:bg-white/[0.08] [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:font-mono [&_code]:text-xs [&_pre]:bg-[#161522] [&_pre]:p-3 [&_pre]:rounded-xl [&_pre]:overflow-x-auto"
       >
         {@html renderMarkdown(
-          task.lastResult || "Nenhum resultado registrado.",
+          task.lastResult || t("settings.tasks.noResultRecorded")
         )}
       </div>
 
@@ -65,14 +66,14 @@
         class="flex items-center justify-between pt-3 border-t border-white/[0.08] font-mono text-xs"
       >
         <span class="text-zinc-400">
-          Execuções registradas: {task.executionCount}
+          {t("common.totalExecutions", { count: task.executionCount })}
         </span>
         <button
           type="button"
           onclick={onClose}
           class="px-4 py-2 rounded-xl bg-white/[0.08] hover:bg-white/[0.12] text-zinc-200 cursor-pointer"
         >
-          Fechar
+          {t("common.close")}
         </button>
       </div>
     </div>

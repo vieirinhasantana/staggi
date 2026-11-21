@@ -13,6 +13,7 @@
   import { pluginsStore } from "$lib/services/pluginsState.svelte";
   import { tasksStore } from "$lib/services/tasksState.svelte";
   import { updaterStore } from "$lib/services/updaterService.svelte";
+  import { t } from "$lib/i18n";
   import type { ScheduledTask } from "$lib/types";
 
   import SettingsAiTab from "./settings/SettingsAiTab.svelte";
@@ -67,17 +68,17 @@
         />
         <div data-tauri-drag-region>
           <h3 class="text-sm font-semibold text-zinc-100">
-            Painel de Controle Staggi
+            {t("settings.title")}
           </h3>
           <p class="text-[11px] text-zinc-400 font-mono">
-            Gerenciador de Inteligência, Servidores MCP e Skills
+            AI Engine, Model Context Protocol (MCP) & Analytical Skills
           </p>
         </div>
       </div>
       <button
         type="button"
         onclick={onClose}
-        aria-label="Fechar painel de configurações"
+        aria-label="Close settings panel"
         class="flex h-8 w-8 items-center justify-center rounded-xl hover:bg-white/[0.08] text-zinc-400 hover:text-zinc-100 transition-colors cursor-pointer"
       >
         <X class="h-4 w-4" />
@@ -98,7 +99,7 @@
             : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]'}"
         >
           <Bot class="w-3.5 h-3.5 text-amber-400" />
-          <span>Modelo de IA {aiStore.isConfigured ? "✓" : ""}</span>
+          <span>{t("settings.tabs.ai")} {aiStore.isConfigured ? "✓" : ""}</span>
         </button>
 
         <button
@@ -110,7 +111,7 @@
             : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]'}"
         >
           <Server class="w-3.5 h-3.5 text-emerald-400" />
-          <span>MCPs ({pluginsStore.activeMcpsCount})</span>
+          <span>{t("settings.tabs.mcps")} ({pluginsStore.activeMcpsCount})</span>
         </button>
 
         <button
@@ -122,7 +123,7 @@
             : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]'}"
         >
           <Zap class="w-3.5 h-3.5 text-violet-400" />
-          <span>Skills ({pluginsStore.activeSkillsCount})</span>
+          <span>{t("settings.tabs.skills")} ({pluginsStore.activeSkillsCount})</span>
         </button>
 
         <button
@@ -134,7 +135,7 @@
             : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]'}"
         >
           <Clock class="w-3.5 h-3.5 text-sky-400" />
-          <span>Tarefas ({tasksStore.activeCount})</span>
+          <span>{t("settings.tabs.tasks")} ({tasksStore.activeCount})</span>
           {#if tasksStore.isRunningAny}
             <span class="h-1.5 w-1.5 rounded-full bg-amber-400 animate-ping"></span>
           {/if}

@@ -81,6 +81,13 @@ export interface EventDetailItem {
 }
 
 export type CorporateEventCategory = 
+  | "Earnings"
+  | "Tech & AI"
+  | "Strategy"
+  | "Operations"
+  | "Pricing"
+  | "Dividends"
+  | "General"
   | "Resultados" 
   | "Tecnologia & IA" 
   | "Estratégia" 

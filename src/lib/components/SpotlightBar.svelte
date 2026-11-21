@@ -20,6 +20,7 @@
   import { aiStore, geminiStore } from "$lib/services/aiProviderState.svelte";
   import { tasksStore } from "$lib/services/tasksState.svelte";
   import { updaterStore } from "$lib/services/updaterService.svelte";
+  import { t } from "$lib/i18n";
 
   interface Props {
     placeholder?: string;
@@ -29,11 +30,13 @@
   }
 
   let {
-    placeholder = "Pergunte sobre ativos, proventos, macro ou digite / para executar uma skill...",
+    placeholder,
     onSend = () => {},
     onOpenSettings = () => {},
     disabled = false
   }: Props = $props();
+
+  let effectivePlaceholder = $derived(placeholder || t("chat.inputPlaceholder"));
 
   let inputVal = $state("");
   let textareaEl = $state<HTMLTextAreaElement | null>(null);
@@ -159,7 +162,7 @@
       bind:value={inputVal}
       onkeydown={handleKeyDown}
       oninput={handleInput}
-      {placeholder}
+      placeholder={effectivePlaceholder}
       {disabled}
       rows={1}
       class="w-full bg-transparent text-[15px] sm:text-[16px] font-normal text-zinc-100 placeholder:text-zinc-400 focus:outline-none cursor-text select-text resize-none overflow-y-auto min-h-[44px] max-h-[140px] py-1.5 leading-relaxed break-words whitespace-pre-wrap"
@@ -172,7 +175,7 @@
         <button 
           type="button"
           onclick={() => togglePopover("mcp")}
-          title="Clique para ver os {pluginsStore.activeMcpsCount} Servidores MCP Conectados"
+          title="Click to view {pluginsStore.activeMcpsCount} Connected MCP Servers"
           class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border transition-all cursor-pointer text-[11px] font-mono {activePopover === 'mcp' ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.25)]' : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/15'}"
         >
           <Server class="h-3.5 w-3.5 text-emerald-400" />
@@ -184,7 +187,7 @@
         <button 
           type="button"
           onclick={() => togglePopover("skills")}
-          title="Clique para ver as {pluginsStore.activeSkillsCount} Skills Especializadas Ativas"
+          title="Click to view {pluginsStore.activeSkillsCount} Active Specialized Skills"
           class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border transition-all cursor-pointer text-[11px] font-mono {activePopover === 'skills' ? 'bg-violet-500/20 border-violet-500/40 text-violet-300 shadow-[0_0_12px_rgba(139,92,246,0.25)]' : 'bg-violet-500/10 border-violet-500/20 text-violet-400 hover:bg-violet-500/15'}"
         >
           <Zap class="h-3.5 w-3.5 text-violet-400" />
@@ -196,15 +199,15 @@
         <button 
           type="button"
           onclick={() => togglePopover("tasks")}
-          title="Clique para ver as {tasksStore.totalCount} Tarefas Agendadas em 2º Plano"
+          title="Click to view {tasksStore.totalCount} Scheduled Background Automations"
           class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border transition-all cursor-pointer text-[11px] font-mono {activePopover === 'tasks' ? 'bg-sky-500/20 border-sky-500/40 text-sky-300 shadow-[0_0_12px_rgba(14,165,233,0.25)]' : tasksStore.activeAlert ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.3)]' : 'bg-sky-500/10 border-sky-500/20 text-sky-400 hover:bg-sky-500/15'}"
         >
           <Clock class="h-3.5 w-3.5 text-sky-400" />
           <span class="font-semibold">{tasksStore.activeCount}/{tasksStore.totalCount} {tasksStore.totalCount === 1 ? 'Task' : 'Tasks'}</span>
           {#if tasksStore.isRunningAny}
-            <span class="h-1.5 w-1.5 rounded-full bg-amber-400 animate-ping" title="Executando tarefa..."></span>
+            <span class="h-1.5 w-1.5 rounded-full bg-amber-400 animate-ping" title="Running task..."></span>
           {:else if tasksStore.activeAlert}
-            <span class="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" title="Novo resultado de tarefa disponível"></span>
+            <span class="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" title="New task execution result available"></span>
           {/if}
         </button>
       {/if}
@@ -219,7 +222,7 @@
               updaterStore.startDownloadAndInstall();
             }
           }}
-          title={updaterStore.status === 'downloaded' ? 'Atualização baixada! Clique para reiniciar' : updaterStore.status === 'downloading' ? `Baixando atualização (${updaterStore.downloadProgress}%)...` : `Nova versão v${updaterStore.availableVersion} disponível! Clique para baixar e atualizar`}
+          title={updaterStore.status === 'downloaded' ? 'Update downloaded! Click to restart' : updaterStore.status === 'downloading' ? `Downloading update (${updaterStore.downloadProgress}%)...` : `New version v${updaterStore.availableVersion} available! Click to update`}
           class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border transition-all cursor-pointer text-[11px] font-mono bg-emerald-500/20 border-emerald-500/40 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.3)] animate-pulse"
         >
           {#if updaterStore.status === "downloading"}
@@ -227,10 +230,10 @@
             <span class="font-semibold">{updaterStore.downloadProgress}%</span>
           {:else if updaterStore.status === "downloaded"}
             <CheckCircle2 class="h-3.5 w-3.5 text-emerald-400" />
-            <span class="font-semibold">Reiniciar</span>
+            <span class="font-semibold">Restart</span>
           {:else}
             <ArrowDownCircle class="h-3.5 w-3.5 text-emerald-400" />
-            <span class="font-semibold">Baixar v{updaterStore.availableVersion}</span>
+            <span class="font-semibold">Download v{updaterStore.availableVersion}</span>
           {/if}
         </button>
       {/if}
@@ -240,7 +243,7 @@
       <button
         type="button"
         onclick={() => onOpenSettings("ai")}
-        title="Provedor: {aiStore.provider.toUpperCase()} • Modelo: {aiStore.currentModelInfo?.name || aiStore.model} (Suporte a Tools ✓). Clique para trocar provedor/modelo."
+        title="Provider: {aiStore.provider.toUpperCase()} • Model: {aiStore.currentModelInfo?.name || aiStore.model}. Click to configure."
         class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border transition-all cursor-pointer text-[11px] font-mono {aiStore.isConfigured
           ? 'bg-amber-500/10 border-amber-500/20 text-amber-300 hover:bg-amber-500/20'
           : 'bg-rose-500/10 border-rose-500/20 text-rose-300 hover:bg-rose-500/20 animate-pulse'}"
@@ -252,7 +255,7 @@
       <button 
         type="button"
         onclick={() => onOpenSettings("ai")}
-        title="Abrir Painel de Configurações, Modelos de IA, MCPs e Skills"
+        title="Open Settings (AI Providers, Models, MCPs, Skills)"
         class="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.08] transition-colors cursor-pointer"
       >
         <Settings class="w-4 h-4" />
@@ -276,10 +279,10 @@
       <div class="flex items-center justify-between px-2 py-1 border-b border-white/[0.08] text-[11px] text-zinc-400">
         <span class="flex items-center gap-1.5 text-violet-300 font-semibold">
           <Zap class="w-3.5 h-3.5 text-violet-400" />
-          Acionar Skill Específica ({matchingSkills.length})
+          Trigger Analytical Skill ({matchingSkills.length})
         </span>
         <span class="text-[10px] text-zinc-500 font-sans">
-          Navegue com ↑↓ • Enter ou Tab para selecionar
+          Navigate with ↑↓ • Enter or Tab to select
         </span>
       </div>
 
@@ -329,7 +332,7 @@
     <div class="absolute left-4 top-[102%] z-50 w-72 rounded-xl border border-white/[0.12] bg-[#1a1926]/95 p-3 shadow-[0_12px_32px_rgba(0,0,0,0.6)] backdrop-blur-2xl space-y-2 animate-fade-in">
       <div class="flex items-center justify-between pb-1.5 border-b border-white/[0.08] text-[11px] font-mono text-zinc-300">
         <span class="flex items-center gap-1.5 text-emerald-400 font-semibold">
-          <Server class="w-3.5 h-3.5" /> Servidores MCP Ativos ({pluginsStore.activeMcpsCount})
+          <Server class="w-3.5 h-3.5" /> Active MCP Servers ({pluginsStore.activeMcpsCount})
         </span>
         <button type="button" onclick={() => activePopover = 'none'} class="text-zinc-500 hover:text-zinc-200 cursor-pointer">
           <X class="h-3 w-3" />
@@ -341,7 +344,7 @@
             <div class="flex items-center justify-between text-zinc-200 font-semibold">
               <span>{mcp.name}</span>
               <span class="flex items-center gap-1 text-[9px] text-emerald-400 font-normal">
-                <span class="h-1.5 w-1.5 rounded-full bg-emerald-400"></span> ativo
+                <span class="h-1.5 w-1.5 rounded-full bg-emerald-400"></span> active
               </span>
             </div>
             <p class="text-[10px] text-zinc-400 font-sans leading-tight">{mcp.desc}</p>
@@ -353,7 +356,7 @@
         onclick={() => { activePopover = 'none'; onOpenSettings("mcps"); }}
         class="w-full mt-1 py-1.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] text-zinc-300 text-[10px] font-mono flex items-center justify-center gap-1 transition-colors cursor-pointer"
       >
-        <span>Gerenciar Servidores MCP</span>
+        <span>Manage MCP Servers</span>
         <ExternalLink class="w-3 h-3" />
       </button>
     </div>
@@ -363,7 +366,7 @@
     <div class="absolute left-24 top-[102%] z-50 w-80 rounded-xl border border-white/[0.12] bg-[#1a1926]/95 p-3 shadow-[0_12px_32px_rgba(0,0,0,0.6)] backdrop-blur-2xl space-y-2 animate-fade-in">
       <div class="flex items-center justify-between pb-1.5 border-b border-white/[0.08] text-[11px] font-mono text-zinc-300">
         <span class="flex items-center gap-1.5 text-violet-400 font-semibold">
-          <Zap class="w-3.5 h-3.5" /> Skills Especializadas Ativas ({pluginsStore.activeSkillsCount})
+          <Zap class="w-3.5 h-3.5" /> Active Analytical Skills ({pluginsStore.activeSkillsCount})
         </span>
         <button type="button" onclick={() => activePopover = 'none'} class="text-zinc-500 hover:text-zinc-200 cursor-pointer">
           <X class="h-3 w-3" />
@@ -382,7 +385,7 @@
         onclick={() => { activePopover = 'none'; onOpenSettings("skills"); }}
         class="w-full mt-1 py-1.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] text-zinc-300 text-[10px] font-mono flex items-center justify-center gap-1 transition-colors cursor-pointer"
       >
-        <span>Gerenciar ou Criar Skills</span>
+        <span>Manage Analytical Skills</span>
         <ExternalLink class="w-3 h-3" />
       </button>
     </div>
@@ -392,7 +395,7 @@
     <div class="absolute left-40 top-[102%] z-50 w-96 rounded-xl border border-white/[0.12] bg-[#1a1926]/95 p-3 shadow-[0_12px_32px_rgba(0,0,0,0.6)] backdrop-blur-2xl space-y-2 animate-fade-in">
       <div class="flex items-center justify-between pb-1.5 border-b border-white/[0.08] text-[11px] font-mono text-zinc-300">
         <span class="flex items-center gap-1.5 text-sky-400 font-semibold">
-          <Clock class="w-3.5 h-3.5" /> Tarefas Agendadas ({tasksStore.activeCount}/{tasksStore.totalCount})
+          <Clock class="w-3.5 h-3.5" /> Scheduled Automations ({tasksStore.activeCount}/{tasksStore.totalCount})
         </span>
         <button type="button" onclick={() => activePopover = 'none'} class="text-zinc-500 hover:text-zinc-200 cursor-pointer">
           <X class="h-3 w-3" />
@@ -401,13 +404,13 @@
 
       {#if tasksStore.tasks.length === 0}
         <div class="py-4 text-center space-y-2 font-mono text-[11px] text-zinc-400">
-          <p>Nenhuma tarefa agendada.</p>
+          <p>No scheduled tasks found.</p>
           <button
             type="button"
             onclick={() => { activePopover = 'none'; onOpenSettings("tasks"); }}
             class="px-2.5 py-1 rounded-lg bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-500/30 text-[10px] cursor-pointer"
           >
-            + Criar Nova Tarefa
+            + Create New Task
           </button>
         </div>
       {:else}
@@ -422,15 +425,15 @@
               </div>
               
               <div class="flex items-center justify-between text-[10px] text-zinc-400 font-sans">
-                <span>Última: {task.lastRun ? new Date(task.lastRun).toLocaleTimeString().slice(0, 5) : 'Pendente'}</span>
+                <span>Last: {task.lastRun ? new Date(task.lastRun).toLocaleTimeString().slice(0, 5) : 'Pending'}</span>
                 {#if task.lastStatus === 'running'}
                   <span class="text-amber-400 animate-pulse font-mono text-[9px] flex items-center gap-1">
-                    <RefreshCw class="w-2.5 h-2.5 animate-spin" /> Executando...
+                    <RefreshCw class="w-2.5 h-2.5 animate-spin" /> Running...
                   </span>
                 {:else if task.lastStatus === 'success'}
                   <span class="text-emerald-400 font-mono text-[9px]">✓ Ok</span>
                 {:else if task.lastStatus === 'error'}
-                  <span class="text-rose-400 font-mono text-[9px]">✗ Erro</span>
+                  <span class="text-rose-400 font-mono text-[9px]">✗ Error</span>
                 {/if}
               </div>
 
@@ -439,22 +442,22 @@
                   <button
                     type="button"
                     onclick={() => { activePopover = 'none'; tasksStore.openTaskResult(task); }}
-                    title="Ver resultado da última execução"
+                    title="View execution report"
                     class="flex items-center gap-1 px-2 py-0.5 rounded bg-sky-500/15 hover:bg-sky-500/25 text-sky-300 text-[10px] border border-sky-500/25 cursor-pointer transition-colors"
                   >
                     <Eye class="w-2.5 h-2.5" />
-                    <span>Ver Resultado</span>
+                    <span>View Report</span>
                   </button>
                 {/if}
                 <button
                   type="button"
                   onclick={() => tasksStore.runTaskNow(task.id)}
                   disabled={task.lastStatus === 'running'}
-                  title="Executar agora"
+                  title="Run now"
                   class="flex items-center gap-1 px-2 py-0.5 rounded bg-white/[0.06] hover:bg-white/[0.12] text-zinc-300 text-[10px] border border-white/[0.06] cursor-pointer transition-colors disabled:opacity-40"
                 >
                   <Play class="w-2.5 h-2.5 text-zinc-400 fill-current" />
-                  <span>Rodar</span>
+                  <span>Run</span>
                 </button>
               </div>
             </div>
@@ -467,7 +470,7 @@
         onclick={() => { activePopover = 'none'; onOpenSettings("tasks"); }}
         class="w-full mt-1 py-1.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] text-zinc-300 text-[10px] font-mono flex items-center justify-center gap-1 transition-colors cursor-pointer"
       >
-        <span>Painel Completo de Tarefas</span>
+        <span>Full Automations Panel</span>
         <ExternalLink class="w-3 h-3" />
       </button>
     </div>

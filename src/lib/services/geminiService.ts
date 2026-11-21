@@ -162,13 +162,13 @@ NUNCA diga que não tem dados em tempo real ou que não tem acesso a notícias r
   let skillsInstructions = "";
   if (activeSkills.length > 0) {
     skillsInstructions = "\n\nSkills Especializadas Ativas no Staggi (Você tem total autonomia para orquestrar e aplicar as diretrizes de cada uma conforme a pergunta do usuário):\n" + 
-      activeSkills.map(s => `[Skill: ${s.name}]\nDescrição: ${s.description}\nDiretrizes Analíticas:\n${s.systemPrompt}`).join("\n\n");
+      activeSkills.map(s => `[Skill: ${s.name}]\nDescription: ${s.description}\nAnalytical Directives:\n${s.systemPrompt}`).join("\n\n");
   }
 
   let mcpsContext = "";
   if (activeMcps.length > 0) {
-    mcpsContext = "\n\nServidores MCP Conectados no Staggi:\n" + 
-      activeMcps.map(m => `- ${m.name} (${m.type}) [Transporte: ${m.transport}]: ${m.desc}`).join("\n");
+    mcpsContext = "\n\nConnected MCP Servers in Staggi:\n" + 
+      activeMcps.map(m => `- ${m.name} (${m.type}) [Transport: ${m.transport}]: ${m.desc}`).join("\n");
   }
 
   const memoryAndFormattingInstruction = `\n\nDiretrizes de Contexto, Ativo & Formatação Executiva:
@@ -187,7 +187,7 @@ NUNCA diga que não tem dados em tempo real ou que não tem acesso a notícias r
      - Foco / Estratégia: [Resumo objetivo da tese e política de investimento]
      - Domicílio: [ex: Luxemburgo (UCITS), Irlanda (UCITS), EUA, Brasil]
      - Distribuição: [Acumulação (Acc) ou Distribuição (Dist)]
-  3. Adicione uma síntese analítica sobre o enquadramento do ativo e eventuais vantagens tributárias (ex: enquadramento na Lei 14.754/23, isenção de US Estate Tax para veículos europeus UCITS/SICAV).
+  3. Provide an analytical synthesis on asset eligibility and potential cross-border tax efficiencies (e.g., US Estate Tax exemption for European UCITS/SICAV funds).
   4. Ativos e ISINs de Referência Auditados:
      - LU2451829373: BTG Pactual SICAV - Balanced Fund A (USD) (Acc). Cotação Atual / NAV: US$ 12.39 (USD). Gestora: BTG Pactual Asset Management S.A. Tipo: Fundo UCITS / SICAV. Classe: Fundo Balanceado Global / Multimercado Offshore. Domicílio: Luxemburgo (UCITS). Distribuição: Acumulação (Acc).
      - LU3046410299: Mandatum SICAV-UCITS - Mandatum Managed Futures Fund (Share Class A EUR Cap Perf Hedged). Cotação Atual / NAV: € 100.71 (EUR). Gestora: Mandatum Fund Management S.A. Tipo: Fundo UCITS / SICAV. Classe: Alternativos Líquidos Globais / Trend Following Quantitativo de Futuros. Domicílio: Luxemburgo (UCITS). Distribuição: Acumulação (Acc).

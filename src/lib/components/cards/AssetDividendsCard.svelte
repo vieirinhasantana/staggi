@@ -88,7 +88,7 @@
             {data.ticker}
           </span>
         </div>
-        <div class="text-[11px] text-zinc-400 font-mono">Fluxo de Dividendos, JCP & Histórico de Yield</div>
+        <div class="text-[11px] text-zinc-400 font-mono">Dividend Payouts & Historical Yield</div>
       </div>
     </div>
 
@@ -100,7 +100,7 @@
           ? 'bg-teal-500/25 text-teal-200 border border-teal-500/40 font-semibold shadow-sm'
           : 'text-zinc-400 hover:text-zinc-200'}"
       >
-        Evolução do DY
+        DY History
       </button>
       <button
         type="button"
@@ -109,7 +109,7 @@
           ? 'bg-teal-500/25 text-teal-200 border border-teal-500/40 font-semibold shadow-sm'
           : 'text-zinc-400 hover:text-zinc-200'}"
       >
-        Pagamentos ({data.payouts.length})
+        Payouts ({data.payouts.length})
       </button>
     </div>
   </div>
@@ -124,17 +124,17 @@
     <div class="space-y-3">
       <div class="flex items-center justify-between text-xs font-mono text-zinc-400 flex-wrap gap-2">
         <span class="flex items-center gap-1.5 text-teal-300 font-semibold">
-          <BarChart3 class="w-3.5 h-3.5 text-teal-400" /> Histórico de Dividend Yield (DY) Anual
+          <BarChart3 class="w-3.5 h-3.5 text-teal-400" /> Annual Dividend Yield (DY) History
         </span>
         <div class="flex items-center gap-3 text-[11px]">
           {#if peakItem}
             <span class="text-zinc-400">
-              Pico: <strong class="text-emerald-400 font-mono">{peakItem.dy}</strong> ({peakItem.year})
+              Peak: <strong class="text-emerald-400 font-mono">{peakItem.dy}</strong> ({peakItem.year})
             </span>
           {/if}
           {#if avgDyText}
             <span class="text-zinc-400">
-              Média: <strong class="text-teal-300 font-mono">{avgDyText}</strong>
+              Average: <strong class="text-teal-300 font-mono">{avgDyText}</strong>
             </span>
           {/if}
         </div>
@@ -160,7 +160,7 @@
               <div class="mb-2 flex flex-col items-center transition-transform group-hover:-translate-y-1">
                 {#if isDestaque}
                   <span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 mb-0.5 whitespace-nowrap">
-                    Alto
+                    High
                   </span>
                 {/if}
                 <span class="font-mono font-bold text-xs sm:text-sm {isDestaque ? 'text-emerald-400' : hasValidDy ? 'text-teal-300' : 'text-zinc-500'}">
@@ -178,7 +178,7 @@
                         ? 'bg-gradient-to-t from-teal-600/60 via-teal-500 to-cyan-300 border-t border-x border-teal-400/30'
                         : 'bg-white/[0.06] border border-dashed border-white/[0.15]'
                   }"
-                  title="{item.year}: DY {item.dy} | Total: {item.totalPaid}{item.avgPrice && item.avgPrice !== 'N/D' ? ` | Cotação Média: ${item.avgPrice}` : ''}"
+                  title="{item.year}: DY {item.dy} | Total: {item.totalPaid}{item.avgPrice && item.avgPrice !== 'N/D' ? ` | Average Price: ${item.avgPrice}` : ''}"
                 >
                   <div class="absolute inset-x-0 top-0 h-1 bg-white/40"></div>
                 </div>
@@ -192,8 +192,8 @@
                   {item.totalPaid}
                 </span>
                 {#if item.avgPrice && item.avgPrice !== "N/D"}
-                  <span class="text-[9px] text-zinc-500 font-sans truncate max-w-full" title={`Cotação Média: ${item.avgPrice}`}>
-                    Méd {item.avgPrice.replace("R$", "").trim()}
+                  <span class="text-[9px] text-zinc-500 font-sans truncate max-w-full" title={`Average Price: ${item.avgPrice}`}>
+                    Avg {item.avgPrice.replace("R$", "").trim()}
                   </span>
                 {/if}
               </div>
@@ -205,13 +205,13 @@
         <div class="flex items-center justify-between pt-3 mt-1 border-t border-white/[0.06] text-[10px] font-mono text-zinc-400">
           <div class="flex items-center gap-3">
             <span class="flex items-center gap-1.5">
-              <span class="h-2 w-2 rounded-full bg-emerald-400"></span> Alto Yield (&ge; 8%)
+              <span class="h-2 w-2 rounded-full bg-emerald-400"></span> High Yield (&ge; 8%)
             </span>
             <span class="flex items-center gap-1.5">
-              <span class="h-2 w-2 rounded-full bg-teal-400"></span> Yield Padrão
+              <span class="h-2 w-2 rounded-full bg-teal-400"></span> Standard Yield
             </span>
           </div>
-          <span class="text-zinc-500 hidden sm:inline">Visualização compacta sem necessidade de rolagem</span>
+          <span class="text-zinc-500 hidden sm:inline">Compact responsive visualization</span>
         </div>
 
       </div>
@@ -222,11 +222,11 @@
     <div class="space-y-2.5">
       <div class="flex items-center justify-between text-xs font-mono text-zinc-400">
         <span class="flex items-center gap-1.5 text-teal-300 font-semibold">
-          <Calendar class="w-3.5 h-3.5 text-teal-400" /> Proventos Declarados & Pagos
+          <Calendar class="w-3.5 h-3.5 text-teal-400" /> Declared & Paid Distributions
         </span>
         {#if totalRecentSum}
           <span class="text-[11px] text-zinc-300">
-            Últimos pagamentos: <strong class="text-emerald-400 font-mono">{totalRecentSum}</strong>/ação
+            Recent distributions: <strong class="text-emerald-400 font-mono">{totalRecentSum}</strong>/share
           </span>
         {/if}
       </div>
@@ -236,10 +236,10 @@
           <table class="w-full text-left border-collapse text-xs font-mono">
             <thead class="sticky top-0 bg-[#242232] border-b border-white/[0.08] text-[10px] text-zinc-400 uppercase tracking-wider">
               <tr>
-                <th class="py-2 px-3">Tipo</th>
-                <th class="py-2 px-3">Valor por Ação</th>
-                <th class="py-2 px-3">Data Ex</th>
-                <th class="py-2 px-3">Pagamento</th>
+                <th class="py-2 px-3">Type</th>
+                <th class="py-2 px-3">Amount per Share</th>
+                <th class="py-2 px-3">Ex-Date</th>
+                <th class="py-2 px-3">Payment Date</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-white/[0.04]">
@@ -248,11 +248,11 @@
                   <td class="py-2 px-3">
                     {#if item.type === "JCP"}
                       <span class="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-amber-500/15 text-amber-300 border border-amber-500/30">
-                        JCP (15% IR)
+                        JCP (15% Tax)
                       </span>
                     {:else}
                       <span class="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
-                        Dividendo
+                        Dividend
                       </span>
                     {/if}
                   </td>
@@ -277,8 +277,8 @@
   <div class="p-3 rounded-xl bg-violet-500/[0.08] border border-violet-500/20 flex items-start gap-2.5 text-xs text-zinc-300 font-sans leading-relaxed">
     <Scale class="w-4 h-4 text-violet-400 shrink-0 mt-0.5" />
     <div>
-      <strong class="text-violet-200 font-semibold">Tributação de Proventos no Brasil:</strong>
-      JCP (Juros Sobre Capital Próprio) possui retenção definitiva de 15% de imposto de renda na fonte. Dividendos de ações são isentos de IRPF para pessoas físicas.
+      <strong class="text-violet-200 font-semibold">Distribution & Tax Summary:</strong>
+      Interest on Equity (JCP) incurs 15% withholding tax at source in Brazil. Stock dividends remain exempt from personal income tax.
     </div>
   </div>
 
@@ -291,9 +291,9 @@
   <div class="flex items-center justify-between pt-2 border-t border-white/[0.06] text-[10px] font-mono text-zinc-400 flex-wrap gap-2">
     <div class="flex items-center gap-1.5">
       <ShieldCheck class="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-      <span class="text-zinc-400">Fonte Auditada:</span>
-      <span class="text-zinc-200 font-medium">B3 / CVM • Informes Oficiais de Escrituração Central</span>
+      <span class="text-zinc-400">Audited Source:</span>
+      <span class="text-zinc-200 font-medium">B3 / SEC / CVM • Official Central Registry Filings</span>
     </div>
-    <span class="text-zinc-500">Histórico & DY Verificado</span>
+    <span class="text-zinc-500">Verified DY & Historical Cashflows</span>
   </div>
 </div>

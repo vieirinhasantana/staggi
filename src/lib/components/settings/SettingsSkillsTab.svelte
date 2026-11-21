@@ -9,6 +9,7 @@
   import { pluginsStore } from "$lib/services/pluginsState.svelte";
   import { toastStore } from "$lib/services/toastService.svelte";
   import type { SkillDefinition } from "$lib/types";
+  import { t } from "$lib/i18n";
 
   let editingSkillId = $state<string | null>(null);
   let isCreatingSkill = $state(false);
@@ -33,11 +34,11 @@
     editName = "";
     editDesc = "";
     editMcp = "mcp-yahoo-finance";
-    editPrompt = `# Instruções da Nova Skill
-Você é o assistente especializado do Staggi.
-1. Defina aqui os passos de raciocínio.
-2. Defina os critérios e fórmulas analíticas.
-3. Formate a resposta executiva para o cliente.`;
+    editPrompt = `# Specialized Skill Directives
+You are Staggi's specialized financial intelligence advisor.
+1. Outline reasoning steps and verified data checkpoints here.
+2. Define formulas, valuation metrics, and fiduciary guardrails.
+3. Structure output in executive markdown tables and summaries.`;
   }
 
   function handleCancelSkill() {
@@ -51,26 +52,33 @@ Você é o assistente especializado do Staggi.
 
   function handleSaveSkill() {
     if (!editName.trim()) return;
+    const name = editName.trim();
 
     if (isCreatingSkill) {
       pluginsStore.addSkill({
-        name: editName.trim(),
-        description: editDesc.trim() || "Skill personalizada",
+        name,
+        description: editDesc.trim() || "Custom analytical skill",
         mcpDependency: editMcp,
         systemPrompt: editPrompt,
         active: true,
       });
-      toastStore.success("Nova Skill Criada", `Skill "${editName.trim()}" pronta para uso via /${editName.trim().toLowerCase()}.`);
+      toastStore.success(
+        t("toasts.skillCreatedTitle"),
+        t("toasts.skillCreatedDesc", { name, command: name.toLowerCase() })
+      );
       isCreatingSkill = false;
       editingSkillId = null;
     } else if (editingSkillId) {
       pluginsStore.updateSkill(editingSkillId, {
-        name: editName.trim(),
+        name,
         description: editDesc.trim(),
         mcpDependency: editMcp,
         systemPrompt: editPrompt,
       });
-      toastStore.success("Skill Atualizada", `Instruções da skill "${editName.trim()}" salvas com sucesso.`);
+      toastStore.success(
+        t("toasts.skillUpdatedTitle"),
+        t("toasts.skillUpdatedDesc", { name })
+      );
       editingSkillId = null;
     }
   }
@@ -100,17 +108,17 @@ Você é o assistente especializado do Staggi.
           <h5
             class="text-xs font-semibold text-zinc-100 font-mono flex items-center gap-1.5"
           >
-            + Escrever Nova Skill Especializada (SKILL.md)
+            {t("settings.skills.createNew")}
           </h5>
           <p class="text-[11px] text-zinc-400 font-sans">
-            Crie prompts analíticos especializados com orquestração autônoma de servidores MCP.
+            {t("settings.skills.createNewDesc")}
           </p>
         </div>
       </div>
       <span
         class="px-3 py-1.5 rounded-xl bg-violet-500/20 text-violet-200 text-xs font-mono font-semibold border border-violet-500/35 group-hover:bg-violet-500/30 transition-all shrink-0"
       >
-        Criar Skill
+        {t("settings.skills.createBtn")}
       </span>
     </button>
   {/if}
@@ -125,15 +133,15 @@ Você é o assistente especializado do Staggi.
         <span class="flex items-center gap-2">
           <Code class="w-4 h-4" />
           {isCreatingSkill
-            ? "Escrever Nova Skill"
-            : `Editando: ${editName}`}
+            ? t("settings.skills.modalTitle")
+            : t("settings.skills.editing", { name: editName })}
         </span>
         <button
           type="button"
           onclick={handleCancelSkill}
           class="text-zinc-400 hover:text-zinc-100 text-xs font-mono cursor-pointer"
         >
-          Cancelar
+          {t("common.cancel")}
         </button>
       </div>
 
@@ -142,13 +150,13 @@ Você é o assistente especializado do Staggi.
           <label
             for="edit-skill-name"
             class="text-[10px] text-zinc-400 uppercase"
-            >Nome da Skill (Identificador):</label
+            >{t("settings.skills.skillNameLabel")}</label
           >
           <input
             id="edit-skill-name"
             type="text"
             bind:value={editName}
-            placeholder="ex: calculadora-irpf-offshore"
+            placeholder={t("settings.skills.skillNamePlaceholder")}
             class="w-full rounded-xl bg-[#2a273b] border border-white/[0.1] px-3 py-2 text-zinc-100 focus:outline-none"
           />
         </div>
@@ -156,13 +164,13 @@ Você é o assistente especializado do Staggi.
           <label
             for="edit-skill-mcp"
             class="text-[10px] text-zinc-400 uppercase"
-            >MCPs Autorizados:</label
+            >{t("settings.skills.authorizedMcpsLabel")}</label
           >
           <input
             id="edit-skill-mcp"
             type="text"
             bind:value={editMcp}
-            placeholder="ex: mcp-yahoo-finance, mcp-tributario"
+            placeholder={t("settings.skills.authorizedMcpsPlaceholder")}
             class="w-full rounded-xl bg-[#2a273b] border border-white/[0.1] px-3 py-2 text-zinc-100 focus:outline-none"
           />
         </div>
@@ -172,13 +180,13 @@ Você é o assistente especializado do Staggi.
         <label
           for="edit-skill-prompt"
           class="text-[10px] text-zinc-400 uppercase"
-          >Instruções de Sistema & Regras da Skill (Prompt Markdown):</label
+          >{t("settings.skills.systemPromptLabel")}</label
         >
         <textarea
           id="edit-skill-prompt"
           bind:value={editPrompt}
           rows={6}
-          placeholder="Escreva aqui como o modelo deve analisar os dados, quais fórmulas aplicar e como responder..."
+          placeholder={t("settings.skills.systemPromptPlaceholder")}
           class="w-full rounded-xl bg-[#181624] border border-white/[0.12] p-3 text-xs text-zinc-200 font-mono focus:outline-none leading-relaxed resize-y"
         ></textarea>
       </div>
@@ -189,7 +197,7 @@ Você é o assistente especializado do Staggi.
           onclick={handleCancelSkill}
           class="px-4 py-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] text-zinc-300 text-xs font-mono transition-colors cursor-pointer"
         >
-          Cancelar
+          {t("common.cancel")}
         </button>
         <button
           type="button"
@@ -198,7 +206,7 @@ Você é o assistente especializado do Staggi.
           class="flex items-center gap-1.5 px-5 py-2 rounded-xl bg-violet-500 text-white font-semibold text-xs transition-all hover:bg-violet-600 cursor-pointer disabled:opacity-40 shadow-md"
         >
           <Save class="w-3.5 h-3.5" />
-          <span>Salvar Skill</span>
+          <span>{t("settings.skills.saveSkill")}</span>
         </button>
       </div>
     </div>
@@ -206,10 +214,10 @@ Você é o assistente especializado do Staggi.
 
   <div class="flex items-center justify-between pt-1">
     <h5 class="text-xs font-semibold text-zinc-300 font-mono">
-      Skills Instaladas & Prontas ({pluginsStore.skills.length})
+      {t("settings.skills.installedSkills", { count: pluginsStore.skills.length })}
     </h5>
     <span class="text-[10px] text-zinc-400 font-mono">
-      {pluginsStore.activeSkillsCount} ativas
+      {t("settings.skills.activeSkillsCount", { count: pluginsStore.activeSkillsCount })}
     </span>
   </div>
 
@@ -225,10 +233,10 @@ Você é o assistente especializado do Staggi.
         </div>
         <div class="space-y-1">
           <h5 class="text-sm font-semibold text-zinc-200">
-            Nenhuma skill cadastrada
+            {t("settings.skills.noSkillsTitle")}
           </h5>
           <p class="text-xs text-zinc-400 max-w-sm mx-auto">
-            Crie prompts analíticos especializados para turbinar as análises do Staggi.
+            {t("settings.skills.noSkillsDesc")}
           </p>
         </div>
         <button
@@ -237,7 +245,7 @@ Você é o assistente especializado do Staggi.
           class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-violet-500 hover:bg-violet-400 text-white font-medium text-xs shadow-md shadow-violet-500/20 transition-all cursor-pointer"
         >
           <Plus class="w-3.5 h-3.5" />
-          <span>Criar Primeira Skill</span>
+          <span>{t("settings.skills.createFirstSkill")}</span>
         </button>
       </div>
     {/if}
@@ -281,7 +289,7 @@ Você é o assistente especializado do Staggi.
               onclick={() => startEditSkill(skill)}
               class="px-3 py-1.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] text-zinc-300 text-xs font-mono transition-colors cursor-pointer"
             >
-              Editar Instruções
+              {t("settings.skills.editDirectives")}
             </button>
             <button
               type="button"
@@ -290,12 +298,12 @@ Você é o assistente especializado do Staggi.
                 ? 'bg-violet-500/20 text-violet-300 border border-violet-500/30'
                 : 'bg-white/[0.06] text-zinc-500 border border-white/[0.06]'}"
             >
-              {skill.active ? "Ativa" : "Inativa"}
+              {skill.active ? t("common.active") : t("common.inactive")}
             </button>
             <button
               type="button"
               onclick={() => handleDeleteSkill(skill.id)}
-              aria-label="Excluir skill {skill.name}"
+              aria-label={`${t("common.delete")} ${skill.name}`}
               class="text-zinc-500 hover:text-rose-400 p-1.5 rounded-lg hover:bg-rose-500/10 transition-colors cursor-pointer"
             >
               <Trash2 class="w-4 h-4" />
