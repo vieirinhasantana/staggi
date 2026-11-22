@@ -201,6 +201,475 @@ async fn fetch_yahoo_news(query: Option<String>) -> Result<String, String> {
     Ok(serde_json::json!({ "news": [] }).to_string())
 }
 
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+pub struct DiscoveredModel {
+    pub id: String,
+    pub name: String,
+    pub description: String,
+    pub context_window: String,
+    pub supports_tools: bool,
+    pub supports_reasoning: bool,
+    pub is_recommended: bool,
+}
+
+fn get_fallback_gemini_models() -> Vec<DiscoveredModel> {
+    vec![
+        DiscoveredModel {
+            id: "gemini-2.0-flash".to_string(),
+            name: "Gemini 2.0 Flash (Recommended)".to_string(),
+            description: "High speed, multimodal, tool-enabled flagship model".to_string(),
+            context_window: "1M tokens".to_string(),
+            supports_tools: true,
+            supports_reasoning: false,
+            is_recommended: true,
+        },
+        DiscoveredModel {
+            id: "gemini-2.0-flash-lite".to_string(),
+            name: "Gemini 2.0 Flash-Lite".to_string(),
+            description: "Ultra fast with maximum cost and latency efficiency".to_string(),
+            context_window: "1M tokens".to_string(),
+            supports_tools: true,
+            supports_reasoning: false,
+            is_recommended: false,
+        },
+        DiscoveredModel {
+            id: "gemini-2.0-pro-exp-02-05".to_string(),
+            name: "Gemini 2.0 Pro Experimental".to_string(),
+            description: "Highest cognitive reasoning for quant, code, and financial models".to_string(),
+            context_window: "2M tokens".to_string(),
+            supports_tools: true,
+            supports_reasoning: false,
+            is_recommended: false,
+        },
+        DiscoveredModel {
+            id: "gemini-2.0-flash-thinking-exp-01-21".to_string(),
+            name: "Gemini 2.0 Flash Thinking".to_string(),
+            description: "Deep step-by-step reasoning and transparent chain-of-thought".to_string(),
+            context_window: "1M tokens".to_string(),
+            supports_tools: false,
+            supports_reasoning: true,
+            is_recommended: false,
+        },
+        DiscoveredModel {
+            id: "gemini-1.5-pro".to_string(),
+            name: "Gemini 1.5 Pro".to_string(),
+            description: "Massive context window for long-form analysis".to_string(),
+            context_window: "2M tokens".to_string(),
+            supports_tools: true,
+            supports_reasoning: false,
+            is_recommended: false,
+        },
+        DiscoveredModel {
+            id: "gemini-1.5-flash".to_string(),
+            name: "Gemini 1.5 Flash".to_string(),
+            description: "Balanced speed and analytical intelligence".to_string(),
+            context_window: "1M tokens".to_string(),
+            supports_tools: true,
+            supports_reasoning: false,
+            is_recommended: false,
+        },
+        DiscoveredModel {
+            id: "gemini-1.5-flash-8b".to_string(),
+            name: "Gemini 1.5 Flash-8B".to_string(),
+            description: "Compact high-frequency analytical model".to_string(),
+            context_window: "1M tokens".to_string(),
+            supports_tools: true,
+            supports_reasoning: false,
+            is_recommended: false,
+        },
+    ]
+}
+
+fn get_fallback_openai_models() -> Vec<DiscoveredModel> {
+    vec![
+        DiscoveredModel {
+            id: "gpt-4o".to_string(),
+            name: "GPT-4o (Recommended)".to_string(),
+            description: "Flagship intelligent multimodal model".to_string(),
+            context_window: "128k tokens".to_string(),
+            supports_tools: true,
+            supports_reasoning: false,
+            is_recommended: true,
+        },
+        DiscoveredModel {
+            id: "gpt-4o-mini".to_string(),
+            name: "GPT-4o Mini".to_string(),
+            description: "Fast and lightweight for frequent financial queries".to_string(),
+            context_window: "128k tokens".to_string(),
+            supports_tools: true,
+            supports_reasoning: false,
+            is_recommended: false,
+        },
+        DiscoveredModel {
+            id: "o3-mini".to_string(),
+            name: "o3-mini (Reasoning)".to_string(),
+            description: "High-effort mathematical and quantitative reasoning model".to_string(),
+            context_window: "200k tokens".to_string(),
+            supports_tools: true,
+            supports_reasoning: true,
+            is_recommended: false,
+        },
+        DiscoveredModel {
+            id: "o1".to_string(),
+            name: "o1 (Full Reasoning)".to_string(),
+            description: "Deep reasoning model for complex financial architectures".to_string(),
+            context_window: "200k tokens".to_string(),
+            supports_tools: true,
+            supports_reasoning: true,
+            is_recommended: false,
+        },
+        DiscoveredModel {
+            id: "o1-mini".to_string(),
+            name: "o1-mini".to_string(),
+            description: "Fast reasoning for math and code generation".to_string(),
+            context_window: "128k tokens".to_string(),
+            supports_tools: true,
+            supports_reasoning: true,
+            is_recommended: false,
+        },
+        DiscoveredModel {
+            id: "gpt-4.5-preview".to_string(),
+            name: "GPT-4.5 Preview (Orion)".to_string(),
+            description: "Next-generation knowledge and encyclopedic context".to_string(),
+            context_window: "128k tokens".to_string(),
+            supports_tools: true,
+            supports_reasoning: false,
+            is_recommended: false,
+        },
+        DiscoveredModel {
+            id: "chatgpt-4o-latest".to_string(),
+            name: "ChatGPT-4o Latest".to_string(),
+            description: "Continuously updated dynamic ChatGPT-4o model".to_string(),
+            context_window: "128k tokens".to_string(),
+            supports_tools: true,
+            supports_reasoning: false,
+            is_recommended: false,
+        },
+        DiscoveredModel {
+            id: "gpt-4-turbo".to_string(),
+            name: "GPT-4 Turbo".to_string(),
+            description: "High-precision traditional structured analysis".to_string(),
+            context_window: "128k tokens".to_string(),
+            supports_tools: true,
+            supports_reasoning: false,
+            is_recommended: false,
+        },
+    ]
+}
+
+fn get_fallback_anthropic_models() -> Vec<DiscoveredModel> {
+    vec![
+        DiscoveredModel {
+            id: "claude-3-7-sonnet-latest".to_string(),
+            name: "Claude 3.7 Sonnet (Hybrid)".to_string(),
+            description: "Recommended • State-of-the-art hybrid model with Extended Thinking".to_string(),
+            context_window: "200k tokens".to_string(),
+            supports_tools: true,
+            supports_reasoning: true,
+            is_recommended: true,
+        },
+        DiscoveredModel {
+            id: "claude-3-5-sonnet-latest".to_string(),
+            name: "Claude 3.5 Sonnet".to_string(),
+            description: "Benchmark for financial reasoning, coding, and tool use".to_string(),
+            context_window: "200k tokens".to_string(),
+            supports_tools: true,
+            supports_reasoning: false,
+            is_recommended: false,
+        },
+        DiscoveredModel {
+            id: "claude-3-5-haiku-latest".to_string(),
+            name: "Claude 3.5 Haiku".to_string(),
+            description: "Ultra-fast responses with high contextual intelligence".to_string(),
+            context_window: "200k tokens".to_string(),
+            supports_tools: true,
+            supports_reasoning: false,
+            is_recommended: false,
+        },
+        DiscoveredModel {
+            id: "claude-3-opus-latest".to_string(),
+            name: "Claude 3 Opus".to_string(),
+            description: "Deep strategic and institutional analytical model".to_string(),
+            context_window: "200k tokens".to_string(),
+            supports_tools: true,
+            supports_reasoning: false,
+            is_recommended: false,
+        },
+        DiscoveredModel {
+            id: "claude-3-sonnet-20240229".to_string(),
+            name: "Claude 3 Sonnet".to_string(),
+            description: "Balanced traditional Claude 3 generation model".to_string(),
+            context_window: "200k tokens".to_string(),
+            supports_tools: true,
+            supports_reasoning: false,
+            is_recommended: false,
+        },
+        DiscoveredModel {
+            id: "claude-3-haiku-20240307".to_string(),
+            name: "Claude 3 Haiku".to_string(),
+            description: "Compact traditional generation model".to_string(),
+            context_window: "200k tokens".to_string(),
+            supports_tools: true,
+            supports_reasoning: false,
+            is_recommended: false,
+        },
+    ]
+}
+
+#[tauri::command]
+async fn list_ai_models(
+    provider: String,
+    api_key: String,
+) -> Result<Vec<DiscoveredModel>, String> {
+    let key = api_key.trim();
+    if key.is_empty() {
+        return Err("API key not provided".to_string());
+    }
+
+    let prov = provider.to_lowercase();
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(12))
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    match prov.as_str() {
+        "gemini" => {
+            let url = format!(
+                "https://generativelanguage.googleapis.com/v1beta/models?key={}",
+                key
+            );
+            let res = client
+                .get(&url)
+                .send()
+                .await
+                .map_err(|e| format!("Network error querying Gemini models: {}", e))?;
+
+            let status = res.status();
+            let body = res.text().await.unwrap_or_default();
+            if !status.is_success() {
+                return Err(format!("Google Gemini API returned status {}: {}", status, body));
+            }
+
+            let json: serde_json::Value = serde_json::from_str(&body)
+                .map_err(|e| format!("Error parsing Gemini models response: {}", e))?;
+
+            let mut results = Vec::new();
+            if let Some(models) = json.get("models").and_then(|m| m.as_array()) {
+                for m in models {
+                    let supports_generate = m.get("supportedGenerationMethods")
+                        .and_then(|s| s.as_array())
+                        .map(|arr| arr.iter().any(|v| v.as_str() == Some("generateContent")))
+                        .unwrap_or(false);
+
+                    if !supports_generate {
+                        continue;
+                    }
+
+                    if let Some(name) = m.get("name").and_then(|n| n.as_str()) {
+                        let clean_id = name.strip_prefix("models/").unwrap_or(name);
+                        
+                        if clean_id.contains("embedding") || clean_id.contains("aqa") || clean_id.contains("imagen") {
+                            continue;
+                        }
+
+                        let display = m.get("displayName")
+                            .and_then(|d| d.as_str())
+                            .unwrap_or(clean_id);
+
+                        let desc = m.get("description")
+                            .and_then(|d| d.as_str())
+                            .unwrap_or("");
+
+                        let token_limit = m.get("inputTokenLimit")
+                            .and_then(|t| t.as_u64())
+                            .map(|t| {
+                                if t >= 1_000_000 {
+                                    format!("{}M tokens", t / 1_000_000)
+                                } else if t >= 1_000 {
+                                    format!("{}k tokens", t / 1_000)
+                                } else {
+                                    format!("{} tokens", t)
+                                }
+                            })
+                            .unwrap_or_else(|| "1M tokens".to_string());
+
+                        let is_thinking = clean_id.contains("thinking");
+                        let is_recommended = clean_id == "gemini-2.0-flash";
+
+                        results.push(DiscoveredModel {
+                            id: clean_id.to_string(),
+                            name: display.to_string(),
+                            description: desc.to_string(),
+                            context_window: token_limit,
+                            supports_tools: !is_thinking,
+                            supports_reasoning: is_thinking,
+                            is_recommended,
+                        });
+                    }
+                }
+            }
+
+            results.sort_by(|a, b| {
+                if a.is_recommended {
+                    return std::cmp::Ordering::Less;
+                }
+                if b.is_recommended {
+                    return std::cmp::Ordering::Greater;
+                }
+                b.id.cmp(&a.id)
+            });
+
+            if results.is_empty() {
+                results = get_fallback_gemini_models();
+            }
+
+            Ok(results)
+        }
+        "openai" => {
+            let res = client
+                .get("https://api.openai.com/v1/models")
+                .header("Authorization", format!("Bearer {}", key))
+                .send()
+                .await
+                .map_err(|e| format!("Network error querying OpenAI models: {}", e))?;
+
+            let status = res.status();
+            let body = res.text().await.unwrap_or_default();
+            if !status.is_success() {
+                return Err(format!("OpenAI API returned status {}: {}", status, body));
+            }
+
+            let json: serde_json::Value = serde_json::from_str(&body)
+                .map_err(|e| format!("Error parsing OpenAI models response: {}", e))?;
+
+            let mut results = Vec::new();
+            if let Some(models) = json.get("data").and_then(|d| d.as_array()) {
+                for m in models {
+                    if let Some(id) = m.get("id").and_then(|i| i.as_str()) {
+                        let id_lower = id.to_lowercase();
+                        
+                        let is_chat = id_lower.starts_with("gpt-4")
+                            || id_lower.starts_with("o1")
+                            || id_lower.starts_with("o3")
+                            || id_lower.starts_with("chatgpt-4o")
+                            || id_lower.starts_with("gpt-3.5-turbo");
+
+                        let is_excluded = id_lower.contains("audio")
+                            || id_lower.contains("realtime")
+                            || id_lower.contains("transcribe")
+                            || id_lower.contains("tts")
+                            || id_lower.contains("search-preview")
+                            || id_lower.contains("instruct");
+
+                        if is_chat && !is_excluded {
+                            let is_reasoning = id_lower.starts_with("o1") || id_lower.starts_with("o3");
+                            let is_rec = id == "gpt-4o";
+                            let ctx = if is_reasoning {
+                                "200k tokens"
+                            } else if id_lower.contains("4o") || id_lower.contains("gpt-4.5") {
+                                "128k tokens"
+                            } else {
+                                "128k tokens"
+                            };
+
+                            let desc = if id == "gpt-4o" {
+                                "Flagship Multimodal & High Speed"
+                            } else if id == "gpt-4o-mini" {
+                                "Fast & Cost-Efficient"
+                            } else if id == "o3-mini" {
+                                "High-Effort Mathematical & Quantitative Reasoning"
+                            } else if id == "o1" {
+                                "Deep Reasoning & Chain-of-Thought"
+                            } else if id.contains("4.5") {
+                                "Next-Generation Advanced Context & Encyclopedic Knowledge"
+                            } else {
+                                "OpenAI Official Language Model"
+                            };
+
+                            results.push(DiscoveredModel {
+                                id: id.to_string(),
+                                name: id.to_string(),
+                                description: desc.to_string(),
+                                context_window: ctx.to_string(),
+                                supports_tools: true,
+                                supports_reasoning: is_reasoning,
+                                is_recommended: is_rec,
+                            });
+                        }
+                    }
+                }
+            }
+
+            results.sort_by(|a, b| {
+                if a.is_recommended {
+                    return std::cmp::Ordering::Less;
+                }
+                if b.is_recommended {
+                    return std::cmp::Ordering::Greater;
+                }
+                b.id.cmp(&a.id)
+            });
+
+            if results.is_empty() {
+                results = get_fallback_openai_models();
+            }
+
+            Ok(results)
+        }
+        "anthropic" => {
+            let res = client
+                .get("https://api.anthropic.com/v1/models")
+                .header("x-api-key", key)
+                .header("anthropic-version", "2023-06-01")
+                .send()
+                .await;
+
+            let mut results = Vec::new();
+
+            if let Ok(response) = res {
+                if response.status().is_success() {
+                    if let Ok(body) = response.text().await {
+                        if let Ok(json) = serde_json::from_str::<serde_json::Value>(&body) {
+                            if let Some(models) = json.get("data").and_then(|d| d.as_array()) {
+                                for m in models {
+                                    if let Some(id) = m.get("id").and_then(|i| i.as_str()) {
+                                        let display = m.get("display_name")
+                                            .and_then(|d| d.as_str())
+                                            .unwrap_or(id);
+                                        let is_reasoning = id.contains("3-7") || id.contains("thinking");
+                                        let is_rec = id.contains("claude-3-7-sonnet");
+
+                                        results.push(DiscoveredModel {
+                                            id: id.to_string(),
+                                            name: display.to_string(),
+                                            description: if is_reasoning {
+                                                "Hybrid State-of-the-Art with Extended Thinking"
+                                            } else {
+                                                "Anthropic Claude Production Model"
+                                            }.to_string(),
+                                            context_window: "200k tokens".to_string(),
+                                            supports_tools: true,
+                                            supports_reasoning: is_reasoning,
+                                            is_recommended: is_rec,
+                                        });
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            if results.is_empty() {
+                results = get_fallback_anthropic_models();
+            }
+
+            Ok(results)
+        }
+        _ => Err(format!("Unsupported AI provider: {}", provider)),
+    }
+}
+
 #[tauri::command]
 async fn list_gemini_models(api_key: String) -> Result<Vec<String>, String> {
     let key = api_key.trim();
@@ -273,8 +742,6 @@ async fn test_gemini_connection(api_key: String, _model: Option<String>) -> Resu
     let client = reqwest::Client::new();
     let res = client
         .get(&url)
-        .header("x-goog-api-key", key)
-        .header("Content-Type", "application/json")
         .send()
         .await
         .map_err(|e| format!("Erro de rede ao conectar na Google Gemini API: {}", e))?;
@@ -381,13 +848,13 @@ async fn ask_gemini(
         }
     }
 
-    if use_search {
+    let is_thinking_model = clean_model.contains("thinking");
+    if use_search && !is_thinking_model {
         payload["tools"] = serde_json::json!([{ "google_search": {} }]);
     }
 
     let enf = enforcement_level.unwrap_or_else(|| "medium".to_string()).to_lowercase();
     let temp = if enf == "high" { 0.1 } else if enf == "low" { 0.4 } else { 0.2 };
-    let is_thinking_model = clean_model.contains("thinking");
     let mut gen_config = serde_json::json!({
         "temperature": temp
     });
@@ -830,6 +1297,7 @@ pub fn run() {
             fetch_yahoo_data,
             fetch_yahoo_news,
             list_gemini_models,
+            list_ai_models,
             test_gemini_connection,
             ask_gemini,
             test_ai_connection,

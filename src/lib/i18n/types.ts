@@ -95,6 +95,12 @@ export interface TranslationDictionary {
       verified: string;
       unverified: string;
       modelLabel: string;
+      refreshModels: string;
+      refreshingModels: string;
+      modelsRefreshed: string;
+      customModelLabel: string;
+      customModelPlaceholder: string;
+      customOption: string;
       enforcementLabel: string;
       enforcementLow: string;
       enforcementLowDesc: string;

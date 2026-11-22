@@ -11,11 +11,25 @@
     RefreshCw,
     ChevronDown,
   } from "@lucide/svelte";
-  import { aiStore, AI_MODELS } from "$lib/services/aiProviderState.svelte";
+  import { aiStore } from "$lib/services/aiProviderState.svelte";
   import { toastStore } from "$lib/services/toastService.svelte";
   import { t } from "$lib/i18n";
 
   let isTestingAi = $state(false);
+  let isCustomModelMode = $state(false);
+  let customModelInput = $state("");
+
+  async function handleFetchLiveModels() {
+    if (!aiStore.apiKey.trim()) {
+      toastStore.warning(t("toasts.keyMissingTitle"), t("toasts.keyMissingDesc"));
+      return;
+    }
+    const models = await aiStore.fetchLiveModels();
+    toastStore.info(
+      t("settings.ai.refreshModels"),
+      t("settings.ai.modelsRefreshed", { count: models.length, provider: aiStore.provider.toUpperCase() })
+    );
+  }
 
   async function testAiKey() {
     if (!aiStore.apiKey.trim()) {
@@ -36,6 +50,15 @@
         t("toasts.authSuccessTitle"),
         t("toasts.authSuccessDesc", { provider: aiStore.provider.toUpperCase() })
       );
+
+      // Automatically discover and refresh models for this validated key
+      const models = await aiStore.fetchLiveModels();
+      if (models.length > 0) {
+        toastStore.info(
+          t("settings.ai.refreshModels"),
+          t("settings.ai.modelsRefreshed", { count: models.length, provider: aiStore.provider.toUpperCase() })
+        );
+      }
     } catch (e: any) {
       aiStore.setValidated(aiStore.provider, false);
       const msg = String(e || `Failed to authenticate with ${aiStore.provider.toUpperCase()} API.`);
@@ -46,6 +69,9 @@
   }
 
   function saveAiSettings() {
+    if (isCustomModelMode && customModelInput.trim()) {
+      aiStore.setModel(customModelInput.trim());
+    }
     aiStore.save();
     toastStore.success(
       t("toasts.configSavedTitle"),
@@ -62,7 +88,10 @@
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 font-mono text-xs">
       <button
         type="button"
-        onclick={() => aiStore.setProvider("gemini")}
+        onclick={() => {
+          isCustomModelMode = false;
+          aiStore.setProvider("gemini");
+        }}
         class="flex flex-col items-center justify-center gap-1.5 p-3 rounded-xl border transition-all cursor-pointer text-center {aiStore.provider ===
         'gemini'
           ? 'bg-amber-500/20 border-amber-500/50 text-amber-200 shadow-[0_0_15px_rgba(245,158,11,0.2)]'
@@ -79,7 +108,10 @@
 
       <button
         type="button"
-        onclick={() => aiStore.setProvider("openai")}
+        onclick={() => {
+          isCustomModelMode = false;
+          aiStore.setProvider("openai");
+        }}
         class="flex flex-col items-center justify-center gap-1.5 p-3 rounded-xl border transition-all cursor-pointer text-center {aiStore.provider ===
         'openai'
           ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-200 shadow-[0_0_15px_rgba(16,185,129,0.2)]'
@@ -96,7 +128,10 @@
 
       <button
         type="button"
-        onclick={() => aiStore.setProvider("anthropic")}
+        onclick={() => {
+          isCustomModelMode = false;
+          aiStore.setProvider("anthropic");
+        }}
         class="flex flex-col items-center justify-center gap-1.5 p-3 rounded-xl border transition-all cursor-pointer text-center {aiStore.provider ===
         'anthropic'
           ? 'bg-violet-500/20 border-violet-500/50 text-violet-200 shadow-[0_0_15px_rgba(139,92,246,0.2)]'
@@ -183,10 +218,23 @@
     <div
       class="flex items-center justify-between text-xs font-mono text-zinc-300"
     >
-      <label for="ai-model" class="flex items-center gap-1.5 font-medium">
-        <Sliders class="w-3.5 h-3.5 text-emerald-400" />
-        {t("settings.ai.modelLabel")}
-      </label>
+      <div class="flex items-center gap-2">
+        <label for="ai-model" class="flex items-center gap-1.5 font-medium">
+          <Sliders class="w-3.5 h-3.5 text-emerald-400" />
+          {t("settings.ai.modelLabel")}
+        </label>
+        <button
+          type="button"
+          onclick={handleFetchLiveModels}
+          disabled={aiStore.isFetchingModels || !aiStore.apiKey.trim()}
+          class="flex items-center gap-1 text-[11px] text-sky-400 hover:text-sky-300 hover:underline transition-colors disabled:opacity-40 cursor-pointer ml-1"
+          title={t("settings.ai.refreshModels")}
+        >
+          <RefreshCw class="w-2.5 h-2.5 {aiStore.isFetchingModels ? 'animate-spin text-sky-300' : ''}" />
+          <span>{aiStore.isFetchingModels ? t("settings.ai.refreshingModels") : t("settings.ai.refreshModels")}</span>
+        </button>
+      </div>
+
       <span class="text-[10px] font-mono flex items-center gap-1">
         {#if aiStore.isValidated}
           <span class="text-emerald-400 flex items-center gap-1">
@@ -203,22 +251,64 @@
     <div class="relative">
       <select
         id="ai-model"
-        value={aiStore.model}
+        value={isCustomModelMode ? "__custom__" : aiStore.model}
         onchange={(e) => {
-          aiStore.setModel((e.target as HTMLSelectElement).value);
+          const val = (e.target as HTMLSelectElement).value;
+          if (val === "__custom__") {
+            isCustomModelMode = true;
+            customModelInput = aiStore.model;
+          } else {
+            isCustomModelMode = false;
+            aiStore.setModel(val);
+          }
         }}
         class="w-full appearance-none rounded-xl bg-[#1c1a28] border pl-4 pr-10 py-2.5 text-xs font-mono transition-all shadow-sm border-white/[0.12] hover:border-white/[0.22] text-zinc-100 focus:outline-none focus:border-amber-400/70 focus:ring-1 focus:ring-amber-400/20 cursor-pointer"
       >
-        {#each AI_MODELS[aiStore.provider] as opt}
+        {#each aiStore.availableModelOptions as opt}
           <option value={opt.id} class="bg-[#1c1a28] text-zinc-100 py-1">
             {opt.name} — {opt.description} ({opt.contextWindow}) {opt.supportsReasoning ? '[Reasoning ⚡]' : ''}
           </option>
         {/each}
+        <option value="__custom__" class="bg-[#242036] text-amber-300 py-1 font-semibold">
+          {t("settings.ai.customOption")}
+        </option>
       </select>
       <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3.5 text-zinc-400">
         <ChevronDown class="w-4 h-4" />
       </div>
     </div>
+
+    {#if isCustomModelMode}
+      <div class="space-y-1.5 p-3 rounded-xl bg-[#1f1d2e] border border-amber-500/35 animate-fade-in text-xs font-mono">
+        <label for="custom-ai-model" class="text-[11px] text-amber-300 font-medium block">
+          {t("settings.ai.customModelLabel")}
+        </label>
+        <div class="flex items-center gap-2">
+          <input
+            id="custom-ai-model"
+            type="text"
+            bind:value={customModelInput}
+            placeholder={t("settings.ai.customModelPlaceholder")}
+            class="flex-1 rounded-xl bg-[#171523] border border-white/[0.12] px-3.5 py-2 text-xs text-zinc-100 focus:outline-none focus:border-amber-400"
+          />
+          <button
+            type="button"
+            onclick={() => {
+              if (customModelInput.trim()) {
+                aiStore.setModel(customModelInput.trim());
+                toastStore.success(
+                  t("toasts.configSavedTitle"),
+                  `Active model set to ${customModelInput.trim()}`
+                );
+              }
+            }}
+            class="px-3 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-200 text-xs font-semibold cursor-pointer transition-colors shrink-0"
+          >
+            {t("common.save")}
+          </button>
+        </div>
+      </div>
+    {/if}
   </div>
 
   <div class="space-y-2 pt-2 border-t border-white/[0.08]">
