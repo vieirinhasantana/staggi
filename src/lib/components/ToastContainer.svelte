@@ -11,12 +11,12 @@
 
 {#if toastStore.toasts.length > 0}
   <aside
-    aria-label="Notificações do sistema"
-    class="fixed top-5 right-5 z-[9999] pointer-events-none flex flex-col gap-2.5 max-w-sm w-full select-none"
+    aria-label="System notifications"
+    class="fixed top-7 right-7 sm:top-8 sm:right-8 z-[9999] pointer-events-none flex flex-col gap-3 max-w-[360px] w-full select-none"
   >
     {#each toastStore.toasts as toast (toast.id)}
       <div
-        class="pointer-events-auto rounded-2xl p-4 shadow-2xl backdrop-blur-xl border flex items-start gap-3 transition-all duration-300 animate-slide-in-right {toast.type ===
+        class="pointer-events-auto rounded-2xl p-3.5 sm:p-4 shadow-2xl backdrop-blur-xl border flex items-start gap-3 transition-all duration-300 animate-slide-in-right {toast.type ===
         'success'
           ? 'bg-[#182320]/95 border-emerald-500/40 text-emerald-200 shadow-emerald-950/40'
           : toast.type === 'error'
@@ -51,7 +51,7 @@
         <button
           type="button"
           onclick={() => toastStore.dismiss(toast.id)}
-          aria-label="Fechar notificação"
+          aria-label="Close notification"
           class="shrink-0 text-zinc-400 hover:text-zinc-100 p-1 rounded-lg hover:bg-white/[0.08] transition-colors cursor-pointer"
         >
           <X class="w-3.5 h-3.5" />
