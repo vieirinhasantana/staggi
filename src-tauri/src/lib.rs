@@ -674,7 +674,7 @@ async fn list_ai_models(
 async fn list_gemini_models(api_key: String) -> Result<Vec<String>, String> {
     let key = api_key.trim();
     if key.is_empty() {
-        return Err("Chave da API do Gemini não informada".to_string());
+        return Err("Gemini API key not provided".to_string());
     }
 
     let url = format!(
@@ -687,17 +687,17 @@ async fn list_gemini_models(api_key: String) -> Result<Vec<String>, String> {
         .get(&url)
         .send()
         .await
-        .map_err(|e| format!("Erro ao consultar modelos da Google Gemini API: {}", e))?;
+        .map_err(|e| format!("Error querying Google Gemini API models: {}", e))?;
 
     let status = res.status();
     let body = res.text().await.unwrap_or_default();
 
     if !status.is_success() {
-        return Err(format!("Falha ao listar modelos (Status {}): {}", status, body));
+        return Err(format!("Failed to list Gemini models (Status {}): {}", status, body));
     }
 
     let json: serde_json::Value = serde_json::from_str(&body)
-        .map_err(|e| format!("Erro ao processar JSON de modelos: {}", e))?;
+        .map_err(|e| format!("Error parsing Gemini models response: {}", e))?;
 
     let mut model_names = Vec::new();
     if let Some(models) = json.get("models").and_then(|m| m.as_array()) {
@@ -718,8 +718,9 @@ async fn list_gemini_models(api_key: String) -> Result<Vec<String>, String> {
 
     if model_names.is_empty() {
         model_names = vec![
-            "gemini-1.5-flash".to_string(),
             "gemini-2.0-flash".to_string(),
+            "gemini-2.0-flash-lite".to_string(),
+            "gemini-1.5-flash".to_string(),
             "gemini-1.5-pro".to_string(),
         ];
     }
@@ -731,7 +732,7 @@ async fn list_gemini_models(api_key: String) -> Result<Vec<String>, String> {
 async fn test_gemini_connection(api_key: String, _model: Option<String>) -> Result<String, String> {
     let key = api_key.trim();
     if key.is_empty() {
-        return Err("Chave da API do Gemini não informada".to_string());
+        return Err("Gemini API key not provided".to_string());
     }
 
     let url = format!(
@@ -744,7 +745,7 @@ async fn test_gemini_connection(api_key: String, _model: Option<String>) -> Resu
         .get(&url)
         .send()
         .await
-        .map_err(|e| format!("Erro de rede ao conectar na Google Gemini API: {}", e))?;
+        .map_err(|e| format!("Network error connecting to Google Gemini API: {}", e))?;
 
     let status = res.status();
     let body = res
@@ -753,7 +754,7 @@ async fn test_gemini_connection(api_key: String, _model: Option<String>) -> Resu
         .unwrap_or_default();
 
     if !status.is_success() {
-        return Err(format!("Google Gemini API retornou erro (Status {}): {}", status, body));
+        return Err(format!("Google Gemini API returned error (Status {}): {}", status, body));
     }
 
     Ok("CONEXAO_OK".to_string())
@@ -777,7 +778,7 @@ async fn ask_gemini(
 ) -> Result<String, String> {
     let key = api_key.trim();
     if key.is_empty() {
-        return Err("Chave da API do Gemini não informada".to_string());
+        return Err("Gemini API key not provided".to_string());
     }
 
     let chosen_model = model
@@ -870,18 +871,17 @@ async fn ask_gemini(
 
     let res = client
         .post(&url)
-        .header("x-goog-api-key", key)
         .header("Content-Type", "application/json")
         .json(&payload)
         .send()
         .await
-        .map_err(|e| format!("Erro de rede ao conectar no Google Gemini: {}", e))?;
+        .map_err(|e| format!("Network error connecting to Google Gemini: {}", e))?;
 
     let mut status = res.status();
     let mut body = res
         .text()
         .await
-        .map_err(|e| format!("Erro ao processar resposta do Gemini: {}", e))?;
+        .map_err(|e| format!("Error processing Gemini response: {}", e))?;
 
     let mut current_url = url;
     if status == reqwest::StatusCode::NOT_FOUND && clean_model != "gemini-2.0-flash" {
@@ -896,7 +896,6 @@ async fn ask_gemini(
         }
         if let Ok(fallback_res) = client
             .post(&current_url)
-            .header("x-goog-api-key", key)
             .header("Content-Type", "application/json")
             .json(&payload)
             .send()
@@ -941,7 +940,6 @@ async fn ask_gemini(
         }
         if let Ok(res_alt) = client
             .post(&current_url)
-            .header("x-goog-api-key", key)
             .header("Content-Type", "application/json")
             .json(&payload)
             .send()
@@ -960,7 +958,6 @@ async fn ask_gemini(
         }
         if let Ok(res2) = client
             .post(&current_url)
-            .header("x-goog-api-key", key)
             .header("Content-Type", "application/json")
             .json(&payload)
             .send()
@@ -986,7 +983,6 @@ async fn ask_gemini(
 
     if let Ok(res3) = client
         .post(&current_url)
-        .header("x-goog-api-key", key)
         .header("Content-Type", "application/json")
         .json(&fallback_payload)
         .send()
@@ -1002,10 +998,10 @@ async fn ask_gemini(
     }
 
     if !status.is_success() {
-        return Err(format!("Google Gemini API retornou erro (Status {}): {}", status, body));
+        return Err(format!("Google Gemini API returned error (Status {}): {}", status, body));
     }
 
-    Err("O modelo concluiu a consulta sem gerar texto de resposta. Tente reenviar ou reformular sua pergunta.".to_string())
+    Err("The model completed the request without generating text output. Please retry or rephrase your prompt.".to_string())
 }
 
 #[tauri::command]
@@ -1016,7 +1012,7 @@ async fn test_ai_connection(
 ) -> Result<String, String> {
     let key = api_key.trim();
     if key.is_empty() {
-        return Err("Chave de API não informada".to_string());
+        return Err("API key not provided".to_string());
     }
 
     let prov = provider.to_lowercase();
@@ -1028,11 +1024,11 @@ async fn test_ai_connection(
                 .header("Authorization", format!("Bearer {}", key))
                 .send()
                 .await
-                .map_err(|e| format!("Erro de rede ao conectar na OpenAI: {}", e))?;
+                .map_err(|e| format!("Network error connecting to OpenAI: {}", e))?;
             let status = res.status();
             let body = res.text().await.unwrap_or_default();
             if !status.is_success() {
-                return Err(format!("OpenAI retornou erro (Status {}): {}", status, body));
+                return Err(format!("OpenAI returned error (Status {}): {}", status, body));
             }
             Ok("CONEXAO_OK".to_string())
         }
@@ -1044,7 +1040,7 @@ async fn test_ai_connection(
                 .header("anthropic-version", "2023-06-01")
                 .send()
                 .await
-                .map_err(|e| format!("Erro de rede ao conectar na Anthropic: {}", e))?;
+                .map_err(|e| format!("Network error connecting to Anthropic: {}", e))?;
             let status = res.status();
             if status.is_success() {
                 return Ok("CONEXAO_OK".to_string());
@@ -1064,11 +1060,11 @@ async fn test_ai_connection(
                 .json(&payload)
                 .send()
                 .await
-                .map_err(|e| format!("Erro de rede ao conectar na Anthropic: {}", e))?;
+                .map_err(|e| format!("Network error connecting to Anthropic: {}", e))?;
             let post_status = res_post.status();
             let post_body = res_post.text().await.unwrap_or_default();
             if !post_status.is_success() {
-                return Err(format!("Anthropic retornou erro (Status {}): {}", post_status, post_body));
+                return Err(format!("Anthropic returned error (Status {}): {}", post_status, post_body));
             }
             Ok("CONEXAO_OK".to_string())
         }
@@ -1092,7 +1088,7 @@ async fn ask_ai(
     let prov = provider.unwrap_or_else(|| "gemini".to_string()).to_lowercase();
     let key = api_key.trim();
     if key.is_empty() {
-        return Err(format!("Chave da API de {} não informada", prov));
+        return Err(format!("API key for {} not provided", prov));
     }
     let enf = enforcement_level.clone().unwrap_or_else(|| "medium".to_string()).to_lowercase();
 
@@ -1152,16 +1148,16 @@ async fn ask_ai(
                 .json(&payload)
                 .send()
                 .await
-                .map_err(|e| format!("Erro de rede ao conectar na OpenAI: {}", e))?;
+                .map_err(|e| format!("Network error connecting to OpenAI: {}", e))?;
 
             let status = res.status();
-            let body = res.text().await.map_err(|e| format!("Erro ao ler resposta da OpenAI: {}", e))?;
+            let body = res.text().await.map_err(|e| format!("Error reading OpenAI response: {}", e))?;
             if !status.is_success() {
-                return Err(format!("OpenAI retornou erro (Status {}): {}", status, body));
+                return Err(format!("OpenAI returned error (Status {}): {}", status, body));
             }
 
             let json: serde_json::Value = serde_json::from_str(&body)
-                .map_err(|e| format!("Erro ao processar JSON da OpenAI: {}", e))?;
+                .map_err(|e| format!("Error parsing OpenAI JSON response: {}", e))?;
             let content = json.get("choices")
                 .and_then(|c| c.get(0))
                 .and_then(|c0| c0.get("message"))
@@ -1258,16 +1254,16 @@ async fn ask_ai(
                 .json(&payload)
                 .send()
                 .await
-                .map_err(|e| format!("Erro de rede ao conectar na Anthropic: {}", e))?;
+                .map_err(|e| format!("Network error connecting to Anthropic: {}", e))?;
 
             let status = res.status();
-            let body = res.text().await.map_err(|e| format!("Erro ao processar resposta da Anthropic: {}", e))?;
+            let body = res.text().await.map_err(|e| format!("Error processing Anthropic response: {}", e))?;
             if !status.is_success() {
-                return Err(format!("Anthropic retornou erro (Status {}): {}", status, body));
+                return Err(format!("Anthropic returned error (Status {}): {}", status, body));
             }
 
             let json: serde_json::Value = serde_json::from_str(&body)
-                .map_err(|e| format!("Erro ao processar JSON da Anthropic: {}", e))?;
+                .map_err(|e| format!("Error parsing Anthropic JSON response: {}", e))?;
             let mut result_text = String::new();
             if let Some(content_arr) = json.get("content").and_then(|c| c.as_array()) {
                 for item in content_arr {

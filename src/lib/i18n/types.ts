@@ -98,9 +98,6 @@ export interface TranslationDictionary {
       refreshModels: string;
       refreshingModels: string;
       modelsRefreshed: string;
-      customModelLabel: string;
-      customModelPlaceholder: string;
-      customOption: string;
       enforcementLabel: string;
       enforcementLow: string;
       enforcementLowDesc: string;

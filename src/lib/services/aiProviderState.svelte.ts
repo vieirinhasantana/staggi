@@ -320,34 +320,11 @@ export class AIProviderStore {
   canSelectModel = $derived(true);
 
   availableModelOptions = $derived.by(() => {
-    const staticList = AI_MODELS[this.provider] || [];
     const liveList = this.discoveredModels[this.provider] || [];
-
-    const map = new Map<string, AIModelOption>();
-    for (const m of staticList) {
-      map.set(m.id, m);
+    if (liveList.length > 0) {
+      return liveList;
     }
-    for (const m of liveList) {
-      const existing = map.get(m.id);
-      if (existing) {
-        map.set(m.id, { ...existing, ...m });
-      } else {
-        map.set(m.id, m);
-      }
-    }
-
-    if (this.model && !map.has(this.model)) {
-      map.set(this.model, {
-        id: this.model,
-        name: `${this.model} (Custom)`,
-        provider: this.provider,
-        description: "Manually specified model identifier",
-        supportsTools: true,
-        contextWindow: "Variable",
-      });
-    }
-
-    return Array.from(map.values());
+    return AI_MODELS[this.provider] || [];
   });
 
   availableModels = $derived.by(() => {
@@ -362,16 +339,25 @@ export class AIProviderStore {
 
   readonly enableSearch = true;
 
-  setProvider(p: AIProvider) {
-    this.provider = p;
-    setStorage(PROVIDER_STORAGE, p);
+  ensureValidActiveModel() {
     const list = this.availableModelOptions;
-    const currentForProvider = p === "openai" ? this.openaiModel : p === "anthropic" ? this.anthropicModel : this.geminiModel;
-    if (!currentForProvider || !list.some(m => m.id === currentForProvider)) {
+    if (list.length === 0) return;
+    const current = this.model;
+    if (!list.some(m => m.id === current)) {
       const fallback = list.find(m => m.isRecommended) || list[0];
       if (fallback) {
         this.setModel(fallback.id);
       }
+    }
+  }
+
+  setProvider(p: AIProvider) {
+    this.provider = p;
+    setStorage(PROVIDER_STORAGE, p);
+    this.ensureValidActiveModel();
+    const key = p === "openai" ? this.openaiApiKey : p === "anthropic" ? this.anthropicApiKey : this.geminiApiKey;
+    if (key.trim()) {
+      this.fetchLiveModels(p);
     }
   }
 
@@ -411,6 +397,10 @@ export class AIProviderStore {
       }
       this.anthropicApiKey = clean;
       setStorage(ANTHROPIC_KEY_STORAGE, clean);
+    }
+
+    if (clean.length > 15) {
+      this.fetchLiveModels(p);
     }
   }
 
@@ -470,6 +460,7 @@ export class AIProviderStore {
 
         this.discoveredModels[prov] = mapped;
         setStorage(`${DYNAMIC_MODELS_STORAGE_PREFIX}${prov}`, JSON.stringify(mapped));
+        this.ensureValidActiveModel();
         return mapped;
       }
     } catch {
