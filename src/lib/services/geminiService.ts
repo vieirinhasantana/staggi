@@ -66,7 +66,28 @@ Hoje é ${currentDateStr} (Ano corrente: ${currentYear}).
 Quando o usuário utilizar expressões temporais como "desse ano", "deste ano", "ano atual", "hoje", "neste mês", "no ano", considere SEMPRE e EXCLUSIVAMENTE o ano de ${currentYear}.`;
 
   let activeSkillName: string | null = null;
-  let activeToolName: string | null = null;
+  interface ExecutedToolInfo {
+    mcpName: string;
+    toolName: string;
+  }
+  const executedTools: ExecutedToolInfo[] = [];
+
+  function formatToolsSummary(tools: ExecutedToolInfo[]): string {
+    if (tools.length === 0) return "";
+    const grouped = new Map<string, string[]>();
+    for (const t of tools) {
+      const list = grouped.get(t.mcpName) || [];
+      if (!list.includes(t.toolName)) {
+        list.push(t.toolName);
+      }
+      grouped.set(t.mcpName, list);
+    }
+    const parts: string[] = [];
+    for (const [mcpName, toolNames] of grouped.entries()) {
+      parts.push(`${mcpName} • ${toolNames.join(", ")}`);
+    }
+    return parts.join(" | ");
+  }
 
   let cleanPrompt = prompt.trim();
   let explicitSkillDirective = "";
@@ -141,10 +162,11 @@ ${targetSkill.systemPrompt}`;
       }
 
       if (shouldExecute) {
-        activeToolName = `${mcp.name} • ${tool.name}`;
+        executedTools.push({ mcpName: mcp.name, toolName: tool.name });
+        const toolsLabel = formatToolsSummary(executedTools);
         const statusText = activeSkillName
-          ? `Thinking... [${activeToolName} • Skill: ${activeSkillName}]`
-          : `Thinking... [${activeToolName}]`;
+          ? `Thinking... [${toolsLabel} • Skill: ${activeSkillName}]`
+          : `Thinking... [${toolsLabel}]`;
         onProgress?.(statusText);
 
         try {
@@ -217,10 +239,11 @@ Equilibre profundidade técnica, dados reais auditados e contextualização exec
     }));
 
   try {
-    const statusBracket = activeToolName && activeSkillName
-      ? ` [${activeToolName} • Skill: ${activeSkillName}]`
-      : activeToolName
-        ? ` [${activeToolName}]`
+    const allToolsLabel = formatToolsSummary(executedTools);
+    const statusBracket = allToolsLabel && activeSkillName
+      ? ` [${allToolsLabel} • Skill: ${activeSkillName}]`
+      : allToolsLabel
+        ? ` [${allToolsLabel}]`
         : activeSkillName
           ? ` [Skill: ${activeSkillName}]`
           : "";
@@ -240,9 +263,10 @@ Equilibre profundidade técnica, dados reais auditados e contextualização exec
       text: responseText,
       success: true,
       isConfigured: true,
-      source: activeToolName || undefined
+      source: allToolsLabel || undefined
     };
   } catch (err: any) {
+    const allToolsLabel = formatToolsSummary(executedTools);
     try {
       if (provider === "openai") {
         const res = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -264,7 +288,7 @@ Equilibre profundidade técnica, dados reais auditados e contextualização exec
         if (res.ok) {
           const json = await res.json();
           const text = json.choices?.[0]?.message?.content;
-          if (text) return { text, success: true, isConfigured: true, source: activeToolName || undefined };
+          if (text) return { text, success: true, isConfigured: true, source: allToolsLabel || undefined };
         }
       } else if (provider === "anthropic") {
         const res = await fetch("https://api.anthropic.com/v1/messages", {
@@ -287,7 +311,7 @@ Equilibre profundidade técnica, dados reais auditados e contextualização exec
         if (res.ok) {
           const json = await res.json();
           const text = json.content?.[0]?.text;
-          if (text) return { text, success: true, isConfigured: true, source: activeToolName || undefined };
+          if (text) return { text, success: true, isConfigured: true, source: allToolsLabel || undefined };
         }
       } else {
         const cleanModel = model.trim().replace(/^models\//, "");
@@ -316,7 +340,7 @@ Equilibre profundidade técnica, dados reais auditados e contextualização exec
         if (res.ok) {
           const json = await res.json();
           const text = json.candidates?.[0]?.content?.parts?.[0]?.text;
-          if (text) return { text, success: true, isConfigured: true, source: activeToolName || undefined };
+          if (text) return { text, success: true, isConfigured: true, source: allToolsLabel || undefined };
         }
       }
     } catch {
