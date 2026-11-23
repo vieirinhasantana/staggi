@@ -159,14 +159,17 @@ You are Staggi's senior equity research analyst:
     id: "skill-proventos", 
     name: "dividend-cashflow-analysis", 
     slug: "dividends",
-    description: "Forecasts dividend cashflows and calculates net yield on cost.", 
+    description: "Forecasts dividend cashflows, filters declared distributions, and calculates yield.", 
     mcpDependency: "mcp-yahoo-finance",
     systemPrompt: `# Dividend & Yield Cashflow Skill Directives
 You are Staggi's passive income analytics engine:
-1. Query mcp-yahoo-finance for declared distributions, record dates, and ex-dates.
+1. STRICT TEMPORAL FILTERING:
+   - When the user asks for dividends of a specific period (e.g. "desse ano", "deste ano", "somente 2024", "último trimestre"), filter and show ONLY distributions for that exact period.
+   - Do NOT output multi-year historical tables unless the user explicitly requested "histórico" or multi-year evolution.
 2. Structure output into structured Markdown tables:
-   - Recent Declared Distributions Table: | Type | Amount per Share | Ex-Dividend Date | Payment Date |
-   - Historical Annual Yield Table: | Year | Total Dividends | Average Price | Annual DY |`,
+   - Declared Distributions Table: | Type | Amount per Share | Ex-Dividend Date | Payment Date |
+   - Period Total (R$) and Dividend Yield on current price.
+   - Only include a Historical Annual Yield Table (| Year | Total Dividends | Average Price | Annual DY |) if explicitly requested.`,
     active: true 
   },
   { 
@@ -234,14 +237,24 @@ function loadStoredSkills(): SkillDefinition[] {
     }
     const parsed: SkillDefinition[] = JSON.parse(raw);
     if (Array.isArray(parsed)) {
-      return parsed.filter(
-        (s) =>
-          s &&
-          s.id !== "skill-bloomberg" &&
-          s.name !== "terminal-bloomberg-intelligence" &&
-          s.id !== "skill-investidor10" &&
-          s.name !== "analise-fundamentalista-investidor10"
-      );
+      return parsed
+        .filter(
+          (s) =>
+            s &&
+            s.id !== "skill-bloomberg" &&
+            s.name !== "terminal-bloomberg-intelligence" &&
+            s.id !== "skill-investidor10" &&
+            s.name !== "analise-fundamentalista-investidor10"
+        )
+        .map((s) => {
+          if (s.id === "skill-proventos") {
+            const def = DEFAULT_SKILLS.find((d) => d.id === "skill-proventos");
+            if (def && (!s.systemPrompt || s.systemPrompt.includes("Historical Annual Yield Table: | Year | Total Dividends | Average Price | Annual DY |"))) {
+              return { ...s, systemPrompt: def.systemPrompt, description: def.description };
+            }
+          }
+          return s;
+        });
     }
     return DEFAULT_SKILLS;
   } catch {

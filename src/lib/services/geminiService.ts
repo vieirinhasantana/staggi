@@ -58,6 +58,13 @@ export async function queryGemini(
   const activeSkills = pluginsStore.activeSkills;
   const activeMcps = pluginsStore.activeMcps;
 
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentDateStr = now.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
+  const dateContext = `\n\n[CONTEXTO TEMPORAL & DATA ATUAL DE REFERÊNCIA]:
+Hoje é ${currentDateStr} (Ano corrente: ${currentYear}).
+Quando o usuário utilizar expressões temporais como "desse ano", "deste ano", "ano atual", "hoje", "neste mês", "no ano", considere SEMPRE e EXCLUSIVAMENTE o ano de ${currentYear}.`;
+
   let activeSkillName: string | null = null;
   let activeToolName: string | null = null;
 
@@ -229,14 +236,19 @@ NUNCA diga que não tem dados em tempo real ou que não tem acesso a notícias r
   Ao listar notícias ou fatos relevantes sobre qualquer empresa, inicie identificando: "Fatos relevantes e notícias recentes sobre [Nome da Empresa] ([TICKER]):"
   E estruture cada evento em tópicos claros:
   1. **[Título do Evento]:** [Descrição analítica detalhada com dados numéricos de receita, lucro, investimentos e impactos operacionais].
-- FORMATAÇÃO DE PROVENTOS E HISTÓRICO DE DIVIDENDOS:
-  Ao detalhar histórico de proventos e dividendos de uma ação:
-  1. Identifique a empresa e ticker: [Nome da Empresa] ([TICKER])
-  2. Apresente os proventos recentes em tabela Markdown com barras:
-     | Tipo | Valor por Ação | Data Ex-Dividendo | Data de Pagamento |
-     (onde Tipo deve ser explicitamente "JCP" ou "Dividendo")
-  3. Apresente o histórico de yield anual em tabela Markdown:
-     | Ano | Dividendos Totais (R$) | Cotação Média (R$) | DY Anual |
+- FORMATAÇÃO DE PROVENTOS E RESPEITO ESTRITO AO RECORTE TEMPORAL:
+  1. FILTRO TEMPORAL OBRIGATÓRIO:
+     - Quando o usuário solicitar proventos de um período específico (ex: "desse ano", "deste ano", "no ano", "em ${currentYear}", "somente 2024", "último mês", "deste trimestre"):
+       Você DEVE filtrar e trazer ESTRITAMENTE os proventos declarados/pagos dentro desse período exato.
+       É TERMINANTEMENTE PROIBIDO listar proventos ou tabela histórica de anos anteriores (como últimos 3 ou 4 anos) quando a pergunta delimitar "desse ano" ou um período específico!
+     - Apresente apenas a tabela com os proventos do período solicitado:
+       | Tipo | Valor por Ação | Data Com / Declaração | Data Ex-Dividendo | Data de Pagamento |
+       (onde Tipo deve ser explicitamente "JCP" ou "Dividendo")
+     - Ao final da tabela, forneça o Total de Proventos no período (R$) e o Dividend Yield correspondente sobre a cotação atual.
+  2. TABELA DE HISTÓRICO MULTIANUAL (APENAS QUANDO SOLICITADA):
+     - SOMENTE apresente tabela de histórico de yield anual (| Ano | Dividendos Totais (R$) | Cotação Média (R$) | DY Anual |) se o usuário pedir explicitamente termos como "histórico", "evolução dos últimos anos", "últimos 5 anos" ou "série histórica".
+     - Se o usuário pediu "desse ano", "proventos deste ano" ou uma consulta pontual, NUNCA inclua tabela de anos anteriores.
+  3. Identifique a empresa e ticker no topo: [Nome da Empresa] ([TICKER])
   4. NUNCA mencione componentes internos como "DividendsChart" no texto.
 - MEMÓRIA E CONTEXTO MULTI-TURNO: Você possui histórico completo da conversa. Quando o usuário fizer perguntas de acompanhamento usando pronomes, elipses ou referências a mensagens anteriores (ex: "e dela?", "quais os proventos?", "me fale mais sobre o primeiro ponto", "compare essas duas"), relacione DIRETAMENTE com as empresas, tickers e tópicos discutidos anteriormente no histórico.
 - DIRETRIZES DE SAUDAÇÃO E CONVERSAÇÃO NATURAL:
@@ -274,7 +286,7 @@ O usuário configurou o nível de enforcement para HIGH. Você DEVE operar com r
 Equilibre profundidade técnica, dados reais auditados e contextualização executiva com tabelas claras e conclusões numéricas.`;
   }
 
-  const systemInstruction = `Você é o Staggi, o motor de inteligência e copiloto executivo para assessores de investimento e wealth managers no Brasil. Suas respostas devem ser de alto padrão, numéricas, concisas, sem rodeios desnecessários, com foco em alocação patrimonial, governança offshore, tributação (Lei 14.754/23) e fluxo de proventos.${enforcementDirective}${explicitSkillDirective}${skillsInstructions}${mcpsContext}${liveMarketDataContext}${liveNewsContext}${memoryAndFormattingInstruction}${portfolioContext ? `\n\nContexto do Portfólio: ${JSON.stringify(portfolioContext)}` : ""}`;
+  const systemInstruction = `Você é o Staggi, o motor de inteligência e copiloto executivo para assessores de investimento e wealth managers no Brasil. Suas respostas devem ser de alto padrão, numéricas, concisas, sem rodeios desnecessários, com foco em alocação patrimonial, governança offshore, tributação (Lei 14.754/23) e fluxo de proventos.${dateContext}${enforcementDirective}${explicitSkillDirective}${skillsInstructions}${mcpsContext}${liveMarketDataContext}${liveNewsContext}${memoryAndFormattingInstruction}${portfolioContext ? `\n\nContexto do Portfólio: ${JSON.stringify(portfolioContext)}` : ""}`;
 
   const cleanHistory = (history || [])
     .filter(h => h.text && !(h.text.trim().startsWith("{") && h.text.includes('"candidates"')))
