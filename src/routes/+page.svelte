@@ -95,11 +95,8 @@
     };
 
     const pendingBotId = String(Date.now() + 1);
-    let initialStatus = t("chat.thinking");
     const slashMatch = trimmed.match(/^\/([a-zA-Z0-9_-]+)/);
-    if (slashMatch) {
-      initialStatus = t("chat.thinkingWithTool", { tool: `/${slashMatch[1]}` });
-    }
+    const initialStatus = slashMatch ? `Thinking... [/${slashMatch[1]}]` : "Thinking...";
 
     const pendingBotMessage: ChatMessage = {
       id: pendingBotId,
@@ -119,29 +116,6 @@
 
     const geminiResult = await queryGemini(trimmed, historyTurns, onProgress);
     const fullText = geminiResult.text || "";
-
-    if (geminiResult.success && fullText.length > 0) {
-      const tokens = fullText.match(/\S+|\s+/g) || [fullText];
-      let accumulated = "";
-
-      messages = messages.map(m => m.id === pendingBotId ? {
-        ...m,
-        isLoading: false,
-        isStreaming: true,
-        text: ""
-      } : m);
-
-      const chunkSize = 3;
-      for (let i = 0; i < tokens.length; i += chunkSize) {
-        accumulated += tokens.slice(i, i + chunkSize).join("");
-        messages = messages.map(m => m.id === pendingBotId ? {
-          ...m,
-          text: accumulated
-        } : m);
-        scrollToTop();
-        await new Promise(r => setTimeout(r, 16));
-      }
-    }
 
     const finalBotMessage: ChatMessage = {
       id: pendingBotId,

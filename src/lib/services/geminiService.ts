@@ -58,6 +58,9 @@ export async function queryGemini(
   const activeSkills = pluginsStore.activeSkills;
   const activeMcps = pluginsStore.activeMcps;
 
+  let activeSkillName: string | null = null;
+  let activeToolName: string | null = null;
+
   let cleanPrompt = prompt.trim();
   let explicitSkillDirective = "";
   const slashMatch = cleanPrompt.match(/^\/([a-zA-Z0-9_-]+)(?:\s+(.*))?$/s);
@@ -72,7 +75,8 @@ export async function queryGemini(
     });
 
     if (targetSkill) {
-      onProgress?.(`Pensando... [Skill: ${targetSkill.name}]`);
+      activeSkillName = targetSkill.name;
+      onProgress?.(`Thinking... [Skill: ${targetSkill.name}]`);
       explicitSkillDirective = `\n\n[DIRETIVA EXPLÍCITA /${requestedSlug} - EXECUÇÃO PRIORITÁRIA DA SKILL: ${targetSkill.name.toUpperCase()}]:
 O usuário acionou especificamente a Skill "${targetSkill.name}" via comando de barra (/${requestedSlug}).
 Você DEVE adotar com máxima prioridade e rigor metodológico todas as seguintes regras analíticas, fórmulas e modelo de resposta desta skill:
@@ -80,10 +84,10 @@ ${targetSkill.systemPrompt}`;
 
       cleanPrompt = restOfPrompt ? `[Skill: ${targetSkill.name}] ${restOfPrompt}` : `Execute a análise especializada da skill ${targetSkill.name}`;
     } else {
-      onProgress?.("Pensando...");
+      onProgress?.("Thinking...");
     }
   } else {
-    onProgress?.("Pensando...");
+    onProgress?.("Thinking...");
   }
 
   const searchContext = [
@@ -109,7 +113,11 @@ ${targetSkill.systemPrompt}`;
 
   let liveMarketDataContext = "";
   if (allIdentifiers.length > 0) {
-    onProgress?.("Pensando... [Yahoo Finance Market Data]");
+    activeToolName = "Yahoo Finance Market Data";
+    const statusText = activeSkillName
+      ? `Thinking... [Yahoo Finance Market Data • Skill: ${activeSkillName}]`
+      : `Thinking... [Yahoo Finance Market Data]`;
+    onProgress?.(statusText);
     const quotePromises = allIdentifiers.slice(0, 4).map(async (id) => {
       try {
         const q = await getQuote(id);
@@ -136,7 +144,11 @@ ${targetSkill.systemPrompt}`;
 
   let liveNewsContext = "";
   if (isNewsQuery) {
-    onProgress?.("Pensando... [Yahoo Finance News Wire]");
+    activeToolName = "Yahoo Finance News Wire";
+    const statusText = activeSkillName
+      ? `Thinking... [Yahoo Finance News Wire • Skill: ${activeSkillName}]`
+      : `Thinking... [Yahoo Finance News Wire]`;
+    onProgress?.(statusText);
     try {
       const newsQuery = allIdentifiers.length > 0 ? allIdentifiers.join(",") : "market";
       const newsList = await getMarketNews(newsQuery);
@@ -265,8 +277,14 @@ Equilibre profundidade técnica, dados reais auditados e contextualização exec
     }));
 
   try {
-    const providerLabel = provider === "openai" ? `OpenAI ${model}` : provider === "anthropic" ? `Claude ${model}` : `Gemini ${model}`;
-    onProgress?.(`Pensando... [${providerLabel}]`);
+    const statusBracket = activeToolName && activeSkillName
+      ? ` [${activeToolName} • Skill: ${activeSkillName}]`
+      : activeToolName
+        ? ` [${activeToolName}]`
+        : activeSkillName
+          ? ` [Skill: ${activeSkillName}]`
+          : "";
+    onProgress?.(`Thinking...${statusBracket}`);
     const responseText = await invoke<string>("ask_ai", {
       provider,
       apiKey: apiKey.trim(),
