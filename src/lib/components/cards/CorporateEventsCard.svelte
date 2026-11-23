@@ -65,42 +65,42 @@
   }
 </script>
 
-<div class="w-full rounded-2xl border border-white/[0.12] bg-[#1d1b2a]/95 backdrop-blur-2xl shadow-xl p-4.5 space-y-3.5 select-text">
+<div class="w-full rounded-2xl border border-white/[0.12] bg-[#212121]/95 backdrop-blur-2xl shadow-xl p-4.5 space-y-3.5 select-text">
   <div class="flex items-center justify-between pb-2.5 border-b border-white/[0.08]">
     <div class="flex items-center gap-2.5">
-      <div class="h-9 w-9 rounded-xl bg-amber-500/15 border border-amber-500/25 flex items-center justify-center text-amber-400 font-bold text-xs font-mono">
+      <div class="h-9 w-9 rounded-xl bg-amber-500/15 border border-amber-500/25 flex items-center justify-center text-amber-400 font-bold text-xs">
         <Megaphone class="w-4 h-4" />
       </div>
       <div>
         <div class="flex items-center gap-2">
           <span class="text-sm font-semibold text-zinc-100">{eventsData.companyName || 'Corporate Radar'}</span>
-          <span class="px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-300 font-mono text-[11px] font-bold border border-amber-500/30">
+          <span class="px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-300 text-[11px] font-bold border border-amber-500/30">
             {eventsData.ticker}
           </span>
         </div>
-        <div class="text-[11px] text-zinc-400 font-mono">Material Facts & Regulatory Filings</div>
+        <div class="text-[11px] text-zinc-400">Material Facts & Regulatory Filings</div>
       </div>
     </div>
 
-    <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/25 text-emerald-300 text-[10px] font-mono font-semibold">
+    <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/25 text-emerald-300 text-[10px] font-semibold">
       <span class="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
       <ShieldCheck class="w-3.5 h-3.5 text-emerald-400" />
       <span>Source: SEC / CVM Regulatory Filings (Yahoo Finance)</span>
     </div>
   </div>
 
-  <div class="rounded-xl bg-[#171524]/70 border border-white/[0.06] divide-y divide-white/[0.06] overflow-hidden">
+  <div class="rounded-xl bg-[#1c1c1c]/70 border border-white/[0.06] divide-y divide-white/[0.06] overflow-hidden">
     {#each eventsData.events as item}
       <div class="p-3.5 space-y-2 hover:bg-white/[0.02] transition-colors">
         <div class="flex items-center justify-between flex-wrap gap-2">
           <div class="flex items-center gap-2">
-            <span class="flex h-5 w-5 items-center justify-center rounded-md bg-white/[0.08] text-zinc-200 font-mono text-xs font-bold border border-white/[0.06] shrink-0">
+            <span class="flex h-5 w-5 items-center justify-center rounded-md bg-white/[0.08] text-zinc-200 text-xs font-bold border border-white/[0.06] shrink-0">
               {item.number}
             </span>
             <span class="font-semibold text-xs text-zinc-100">{item.title}</span>
           </div>
 
-          <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-semibold border {getCategoryBadge(item.category)}">
+          <span class="px-2 py-0.5 rounded-md text-[10px] font-semibold border {getCategoryBadge(item.category)}">
             {item.category}
           </span>
         </div>
@@ -113,7 +113,7 @@
           <div class="flex items-center gap-2 flex-wrap pl-7 pt-1">
             {#each item.details as detail}
               {@const IconComp = getDetailIcon(detail.label)}
-              <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-white/[0.04] border border-white/[0.06] text-[10px] font-mono">
+              <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-white/[0.04] border border-white/[0.06] text-[10px]">
                 <IconComp class="w-3 h-3 text-amber-400/90 shrink-0" />
                 <span class="text-zinc-400">{detail.label}:</span>
                 <span class="text-zinc-100 font-medium">{detail.value}</span>

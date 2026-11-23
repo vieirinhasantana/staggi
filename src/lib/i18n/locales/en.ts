@@ -85,6 +85,7 @@ export const en: TranslationDictionary = {
       mcps: "MCP Servers",
       skills: "Skills",
       tasks: "Automations",
+      memory: "Second Brain",
     },
     ai: {
       selectProvider: "Select AI Provider (Source):",

@@ -5,12 +5,12 @@ export type EnforcementLevel = "low" | "medium" | "high";
 export interface AIModelOption {
   id: string;
   name: string;
-  provider: AIProvider;
-  description: string;
-  supportsTools: boolean;
+  provider?: AIProvider;
+  description?: string;
+  supportsTools?: boolean;
   supportsReasoning?: boolean;
   isRecommended?: boolean;
-  contextWindow: string;
+  contextWindow?: string;
 }
 
 export interface AIChatMessagePayload {

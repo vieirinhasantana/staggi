@@ -11,7 +11,7 @@
 
 <div
   class={cn(
-    "rounded-2xl border border-white/[0.08] bg-[#1c1a28]/80 text-zinc-100 shadow-sm backdrop-blur-xl",
+    "rounded-2xl border border-white/[0.08] bg-[#232323]/80 text-zinc-100 shadow-sm backdrop-blur-xl",
     className
   )}
   {...restProps}

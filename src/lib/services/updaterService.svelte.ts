@@ -1,6 +1,7 @@
 import { check, type Update, type DownloadEvent } from "@tauri-apps/plugin-updater";
 import { getVersion } from "@tauri-apps/api/app";
 import { invoke } from "@tauri-apps/api/core";
+import { toastStore } from "./toastService.svelte";
 
 export type UpdateStatus =
   | "idle"
@@ -98,8 +99,18 @@ class UpdaterService {
         this.releaseDate = update.date || "";
         this.releaseNotes = update.body || "";
         this.status = "available";
+        toastStore.info(
+          "Atualização Disponível",
+          `A versão v${update.version} está disponível no GitHub para download.`
+        );
       } else {
         this.status = "up-to-date";
+        if (!silent) {
+          toastStore.success(
+            "Staggi Atualizado",
+            `Você já está utilizando a versão mais recente (v${this.currentVersion}).`
+          );
+        }
       }
     } catch (err: any) {
       console.warn("[Updater] Verificação de atualização falhou:", err);
@@ -107,6 +118,12 @@ class UpdaterService {
         err?.message ||
         "Não foi possível verificar atualizações no momento. Verifique a conexão com a internet.";
       this.status = silent ? "idle" : "error";
+      if (!silent) {
+        toastStore.warning(
+          "Verificação de Atualização",
+          this.errorMessage
+        );
+      }
     }
   }
 

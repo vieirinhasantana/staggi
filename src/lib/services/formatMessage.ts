@@ -13,6 +13,8 @@ import type {
   ParsedComparisonTable,
   AssetProfileField,
   ParsedAssetProfile,
+  PortfolioAllocationItem,
+  ParsedPortfolioDistribution,
 } from "$lib/types";
 
 export type {
@@ -29,6 +31,8 @@ export type {
   ParsedComparisonTable,
   AssetProfileField,
   ParsedAssetProfile,
+  PortfolioAllocationItem,
+  ParsedPortfolioDistribution,
 };
 
 export function parseSingleAssetProfile(rawText: string): ParsedAssetProfile | null {
@@ -226,96 +230,13 @@ export function detectAuditedSource(text: string): string | null {
     return null;
   }
 
-  // If explicit audited source was provided in the text by the model
+  // If explicit audited source was provided in the text by the model or MCP
   const explicitMatch = text.match(/(?:Fonte Auditada|Audited Source):\s*([^\n\r.]+)/i);
   if (explicitMatch && explicitMatch[1]) {
     const matched = explicitMatch[1].trim();
-    if (matched.length > 3) {
+    if (matched.length > 2) {
       return matched;
     }
-  }
-
-  // Only infer an audited source if there are actual financial numbers, tables, or tickers
-  const hasFinancialContent = text.includes("|") || /R\$\s*\d|US\$\s*\d|\b\d+([,.]\d+)?%\b|\bDY\b|\bP\/L\b|\bP\/VP\b|\bISIN\b|\bROE\b|\bYTM\b/i.test(text);
-  if (!hasFinancialContent) {
-    return null;
-  }
-
-  const lower = text.toLowerCase();
-
-  if (
-    lower.includes("treasury") ||
-    lower.includes("treasuries") ||
-    lower.includes("curva de juros") ||
-    lower.includes("spread 10y") ||
-    lower.includes("yield curve")
-  ) {
-    return "U.S. Department of the Treasury (Daily Yield Curve) • Fed St. Louis";
-  }
-
-  if (
-    lower.includes("etf") ||
-    lower.includes("holdings") ||
-    lower.includes("composição") ||
-    lower.includes("composicao") ||
-    lower.includes("sobreposição") ||
-    lower.includes("overlap")
-  ) {
-    return "Equibles ETF Holdings • SEC N-PORT / Informes CVM";
-  }
-
-  if (
-    lower.includes("bond") ||
-    lower.includes("debenture") ||
-    lower.includes("debênture") ||
-    lower.includes("ytm") ||
-    lower.includes("duration modificada") ||
-    lower.includes("renda fixa global")
-  ) {
-    return "Bond Intelligence • FINRA TRACE / Emissores e Escrituradores";
-  }
-
-  if (
-    lower.includes("insider") ||
-    lower.includes("form 4") ||
-    lower.includes("baleias") ||
-    lower.includes("compras de diretores") ||
-    lower.includes("tickerinside")
-  ) {
-    return "SEC EDGAR (Form 4 Insider Transactions) • TickerInside Intelligence";
-  }
-
-  if (lower.includes("isin") || lower.includes("financedatabase") || lower.includes("300k")) {
-    return "FinanceDatabase Global Directory (300k+ Ativos) • Bolsas Globais";
-  }
-
-  if (
-    (lower.includes("provento") ||
-    lower.includes("dividendo") ||
-    lower.includes("jcp") ||
-    lower.includes("yield on cost")) &&
-    (text.includes("|") || text.includes("R$"))
-  ) {
-    return "B3 / CVM • Informes Oficiais de Escrituração Central";
-  }
-
-  if (
-    lower.includes("graham") ||
-    lower.includes("bazin") ||
-    lower.includes("valuation") ||
-    lower.includes("preço justo") ||
-    lower.includes("preco justo") ||
-    lower.includes("preço teto") ||
-    lower.includes("preco teto") ||
-    lower.includes("p/l") ||
-    lower.includes("p/vp") ||
-    lower.includes("roe")
-  ) {
-    return "Demonstrações IFRS / CVM • Consenso Sell-Side • Market Data";
-  }
-
-  if (lower.includes("cotação") || lower.includes("cotacao") || lower.includes("preço atual")) {
-    return "B3 / NYSE / Nasdaq (Market Data Yahoo Finance)";
   }
 
   return null;
@@ -770,97 +691,148 @@ export function parseAssetDividends(rawText: string): ParsedAssetDividends | nul
   };
 }
 
-function guessCompanyNameFromColumn(colValues: string[], index: number): string {
-  const combined = colValues.join(" ").toLowerCase();
-  if (combined.includes("claude") || combined.includes("anthropic")) return "Anthropic (Claude)";
-  if (combined.includes("nubank") || combined.includes("roxo34") || combined.includes("cartões") || combined.includes("contas, empréstimos")) return "Nubank (ROXO34)";
-  if (combined.includes("spacex") || combined.includes("starlink") || combined.includes("starship") || combined.includes("foguetes")) return "SpaceX";
-  if (combined.includes("petrobras") || combined.includes("petr4") || combined.includes("petr3")) return "Petrobras (PETR4)";
-  if (combined.includes("vale") || combined.includes("vale3") || combined.includes("minério")) return "Vale (VALE3)";
-  if (combined.includes("itau") || combined.includes("itaú") || combined.includes("itub4")) return "Itaú (ITUB4)";
-  if (combined.includes("bradesco") || combined.includes("bbdc4")) return "Bradesco (BBDC4)";
-  if (combined.includes("banco do brasil") || combined.includes("bbas3")) return "Banco do Brasil (BBAS3)";
-  if (combined.includes("microsoft") || combined.includes("msft") || combined.includes("azure")) return "Microsoft (MSFT)";
-  if (combined.includes("apple") || combined.includes("aapl") || combined.includes("iphone")) return "Apple (AAPL)";
-  if (combined.includes("nvidia") || combined.includes("nvda")) return "Nvidia (NVDA)";
-  if (combined.includes("tesla") || combined.includes("tsla")) return "Tesla (TSLA)";
-  return `Ativo ${String.fromCharCode(65 + index)}`;
+export function parseComparisonTable(_rawText: string): ParsedComparisonTable | null {
+  // Markdown tables are rendered natively and accurately via renderMarkdown
+  // without intercepting or replacing generic tabular data (clients, portfolios, products, etc.)
+  return null;
 }
 
-export function parseComparisonTable(rawText: string): ParsedComparisonTable | null {
-  if (!rawText || rawText.length < 30) return null;
+export function parsePortfolioDistribution(rawText: string): ParsedPortfolioDistribution | null {
+  if (!rawText || rawText.length < 40) return null;
 
-  const normalized = rawText.replace(/\|\s*\|\s*(?=[A-Za-z0-9\*\_\#])/g, "|\n|");
-  const rawLines = normalized.split("\n").map(l => l.trim()).filter(Boolean);
+  const hasKeywords = /\b(portf[oó]lio|carteira|aloca[çc][aã]o|distribui[çc][aã]o|classes?\s+de\s+ativos|patrim[oô]nio)\b/i.test(rawText);
+  if (!hasKeywords) return null;
 
-  const tableLines: string[] = [];
-  let curr = "";
+  // Exclude dividend payout histories
+  if (/proventos?\s+declarados|dividend\s*yield\s*\(dy\)\s*hist[óo]rico/i.test(rawText)) {
+    return null;
+  }
 
-  for (const l of rawLines) {
-    if (curr) {
-      curr += " " + l;
-      if (curr.endsWith("|")) {
-        tableLines.push(curr);
-        curr = "";
-      }
-    } else if (l.startsWith("|") && l.endsWith("|")) {
-      tableLines.push(l);
-    } else if (l.startsWith("|")) {
-      curr = l;
+  // Extract client or portfolio title
+  let clientName: string | undefined;
+  const clientMatch = rawText.match(/(?:cliente|investidor|titular|carteira\s+de|portf[oó]lio\s+de)\s*[:\-–—]?\s*\*?\*?([A-ZÀ-ÿ][A-Za-zÀ-ÿ\s]{2,30})\*?\*?/i);
+  if (clientMatch) {
+    const candidate = clientMatch[1].trim();
+    if (!/^(total|renda|ativos|ações|fiis|resumo|consolidado|alocação|distribuição)/i.test(candidate)) {
+      clientName = candidate;
     }
   }
 
-  if (tableLines.length < 2) return null;
+  let totalValue: string | undefined;
+  const totalMatch = rawText.match(/(?:patrim[oô]nio\s+total|total\s+da\s+carteira|valor\s+total|patrim[oô]nio)\s*[:\-–—]?\s*\*?\*?([R$US€£\s\d.,]+)/i);
+  if (totalMatch) {
+    const candidate = totalMatch[1].trim();
+    if (/\d/.test(candidate) && (candidate.includes("R$") || candidate.includes("$") || candidate.length >= 4)) {
+      totalValue = candidate.replace(/\*+/g, "").trim();
+    }
+  }
 
-  const parsedRows: { metric: string; values: string[] }[] = [];
-  let explicitHeaders: string[] | null = null;
+  const palette = [
+    "#10b981", // emerald
+    "#14b8a6", // teal
+    "#0ea5e9", // sky
+    "#6366f1", // indigo
+    "#8b5cf6", // violet
+    "#a855f7", // purple
+    "#f59e0b", // amber
+    "#f97316", // orange
+    "#ec4899", // pink
+    "#06b6d4", // cyan
+    "#84cc16"  // lime
+  ];
 
-  for (let i = 0; i < tableLines.length; i++) {
-    const line = tableLines[i];
+  const items: PortfolioAllocationItem[] = [];
+
+  // Parse lines (table or list)
+  const lines = rawText.split("\n").map(l => l.trim()).filter(Boolean);
+
+  for (const line of lines) {
     if (line.includes("---")) continue;
 
-    const cells = line
-      .split("|")
-      .map(c => c.trim())
-      .filter((_, idx, arr) => idx > 0 && idx < arr.length - 1);
+    // Check if line contains a percentage
+    const pctMatch = line.match(/\b(\d+(?:[.,]\d+)?)\s*%/);
+    if (!pctMatch) continue;
 
-    if (cells.length < 3) continue;
+    const percentage = parseFloat(pctMatch[1].replace(",", "."));
+    if (isNaN(percentage) || percentage <= 0 || percentage > 100) continue;
 
-    const col0Clean = cells[0].replace(/\*\*/g, "").replace(/^#+\s*/, "").trim();
+    // Check table row format
+    if (line.includes("|")) {
+      const cells = line.split("|").map(c => c.trim()).filter(Boolean);
+      if (cells.length >= 2) {
+        // Exclude header row
+        const headerTest = cells.join(" ").toLowerCase();
+        if (headerTest.includes("ativo") && headerTest.includes("classe") && headerTest.includes("%")) continue;
+        if (headerTest.includes("ativo") && headerTest.includes("alocação")) continue;
 
-    if (i === 0 && (col0Clean.toLowerCase().includes("métrica") || col0Clean.toLowerCase().includes("aspecto") || col0Clean.toLowerCase().includes("indicador") || col0Clean.toLowerCase().includes("empresa") || col0Clean.toLowerCase().includes("ativo"))) {
-      explicitHeaders = cells.map(c => c.replace(/\*\*/g, "").trim());
-      continue;
+        let label = "";
+        let category: string | undefined;
+        let value: string | undefined;
+
+        // Extract label from the first cell that is text
+        const col0 = cells[0].replace(/\*\*/g, "").replace(/^#+\s*/, "").trim();
+        if (col0 && !col0.includes("%")) {
+          label = col0;
+        }
+
+        for (let c = 1; c < cells.length; c++) {
+          const cell = cells[c].replace(/\*\*/g, "").trim();
+          if (cell.includes("%")) continue;
+          if (/(?:R\$|US\$|\$)\s*[\d.,]+/i.test(cell) || /^\d{1,3}(?:\.\d{3})*(?:,\d{2})?$/.test(cell)) {
+            value = cell.startsWith("R$") || cell.startsWith("$") ? cell : `R$ ${cell}`;
+          } else if (cell.length > 1 && !category && cell !== label) {
+            category = cell;
+          }
+        }
+
+        if (label && label.length >= 2 && !/^(total|soma|consolidado)/i.test(label)) {
+          items.push({
+            label,
+            category,
+            value,
+            percentage,
+            percentageFormatted: `${percentage.toFixed(1).replace(".", ",")}%`,
+            color: palette[items.length % palette.length]
+          });
+        }
+      }
+    } else {
+      // Bullet list format: e.g. - **Renda Fixa**: 40% (R$ 400.000)
+      const listMatch = line.match(/^[-*•]\s*\*?\*?([^:*]+?)\*?\*?\s*:\s*.*?\b(\d+(?:[.,]\d+)?)\s*%/);
+      if (listMatch) {
+        const label = listMatch[1].trim();
+        const valueMatch = line.match(/(?:R\$|US\$|\$)\s*[\d.,]+/i);
+        const value = valueMatch ? valueMatch[0].trim() : undefined;
+
+        if (label && !/^(total|soma|consolidado)/i.test(label)) {
+          items.push({
+            label,
+            value,
+            percentage,
+            percentageFormatted: `${percentage.toFixed(1).replace(".", ",")}%`,
+            color: palette[items.length % palette.length]
+          });
+        }
+      }
     }
-
-    parsedRows.push({
-      metric: col0Clean,
-      values: cells.slice(1)
-    });
   }
 
-  if (parsedRows.length < 2) return null;
+  // Must have at least 2 allocation items and total percentage >= 50%
+  if (items.length < 2) return null;
 
-  const numCols = parsedRows[0].values.length;
-  if (numCols < 2) return null;
+  const totalPercentage = items.reduce((sum, it) => sum + it.percentage, 0);
+  if (totalPercentage < 50 || totalPercentage > 115) return null;
 
-  let headers: string[] = [];
-  if (explicitHeaders && explicitHeaders.length === numCols + 1) {
-    headers = explicitHeaders;
-  } else {
-    headers = [
-      "Métrica / Indicador",
-      ...Array.from({ length: numCols }, (_, idx) => {
-        const colVals = parsedRows.map(r => r.values[idx] || "");
-        return guessCompanyNameFromColumn(colVals, idx);
-      })
-    ];
-  }
+  const title = clientName
+    ? `Distribuição de Carteira • ${clientName}`
+    : "Distribuição e Alocação de Portfólio";
 
   return {
-    headers,
-    rows: parsedRows,
-    intro: "Quadro comparativo de ativos e múltiplos de mercado."
+    title,
+    clientName,
+    totalValue,
+    items,
+    intro: "Alocação patrimonial consolidada por classes de ativos e posições estratégicas."
   };
 }
 

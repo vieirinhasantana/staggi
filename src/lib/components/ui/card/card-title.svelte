@@ -10,7 +10,7 @@
 </script>
 
 <h3
-  class={cn("text-sm font-semibold font-mono leading-none tracking-tight text-zinc-100", className)}
+  class={cn("text-sm font-semibold  leading-none tracking-tight text-zinc-100", className)}
   {...restProps}
 >
   {@render children?.()}

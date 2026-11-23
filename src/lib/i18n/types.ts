@@ -83,6 +83,7 @@ export interface TranslationDictionary {
       mcps: string;
       skills: string;
       tasks: string;
+      memory: string;
     };
     ai: {
       selectProvider: string;
