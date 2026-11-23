@@ -19,7 +19,7 @@ export interface GeminiAnalysisResponse {
   summary: string;
   recommendation: "Comprar" | "Aumentar" | "Manter" | "Reduzir" | "Ajustar Hedge";
   taxImplication: string;
-  source: "Gemini AI" | "Staggi Deterministic Intelligence";
+  source: string;
 }
 
 export async function queryGemini(
@@ -114,16 +114,19 @@ ${targetSkill.systemPrompt}`;
     searchContext.includes("ativo");
 
   const isinMatches = prompt.match(/\b[A-Z]{2}[A-Z0-9]{9}\d\b/gi) || [];
-  const tickerMatches = prompt.match(/\b[A-Z]{4,5}\d{1,2}\b/gi) || [];
-  const commonTickers = prompt.match(/\b(?:AAPL|NVDA|MSFT|SPY|IVV|QQQ|TSLA|AMZN|GOOGL|META)\b/gi) || [];
-  const allIdentifiers = [...new Set([...isinMatches, ...tickerMatches, ...commonTickers])];
+  const b3TickerMatches = prompt.match(/\b[A-Z]{4,5}\d{1,2}\b/gi) || [];
+  const genericTickers = prompt
+    .split(/[\s,;?!()]+/)
+    .map(w => w.trim().toUpperCase())
+    .filter(w => /^[A-Z]{1,5}(\.[A-Z]{2})?$/.test(w) && !["DE", "DO", "DA", "EM", "NO", "NA", "OU", "SE", "OS", "AS", "UM", "ME", "AI", "POR", "COM", "PARA", "QUE", "QUAL", "QUAIS", "VER", "E"].includes(w));
+  const allIdentifiers = [...new Set([...isinMatches, ...b3TickerMatches, ...genericTickers])];
 
   let liveMarketDataContext = "";
   if (allIdentifiers.length > 0) {
-    activeToolName = "Yahoo Finance Market Data";
+    activeToolName = "Market Data Engine";
     const statusText = activeSkillName
-      ? `Thinking... [Yahoo Finance Market Data • Skill: ${activeSkillName}]`
-      : `Thinking... [Yahoo Finance Market Data]`;
+      ? `Thinking... [Market Data Engine • Skill: ${activeSkillName}]`
+      : `Thinking... [Market Data Engine]`;
     onProgress?.(statusText);
     const quotePromises = allIdentifiers.slice(0, 4).map(async (id) => {
       try {
@@ -131,7 +134,7 @@ ${targetSkill.systemPrompt}`;
         if (q && q.price > 0) {
           const formattedChange = q.changePercent ? `${q.changePercent > 0 ? "+" : ""}${q.changePercent.toFixed(2)}%` : "";
           const formattedPrice = `${q.currency} ${q.price.toFixed(q.currency === "BRL" ? 2 : 4)}`;
-          return `- ${id} (${q.name}): Cotação Atual / NAV: ${formattedPrice} (Variação: ${formattedChange})`;
+          return `- ${id} (${q.name}): Cotação Atual / Preço: ${formattedPrice} (Variação: ${formattedChange})`;
         }
       } catch {}
       return null;
@@ -139,9 +142,9 @@ ${targetSkill.systemPrompt}`;
 
     const resolvedQuotes = (await Promise.all(quotePromises)).filter(Boolean);
     if (resolvedQuotes.length > 0) {
-      liveMarketDataContext = `\n\nDADOS DE MERCADO EM TEMPO REAL (Fonte Auditada: Yahoo Finance Market Data):\n` +
+      liveMarketDataContext = `\n\nDADOS DE MERCADO EM TEMPO REAL:\n` +
         resolvedQuotes.join("\n") +
-        `\nATENÇÃO: Utilize OBRIGATORIAMENTE esses valores exatos de cotação/NAV e moedas acima na sua resposta para esses ativos.`;
+        `\nATENÇÃO: Utilize com prioridade os valores de cotação/preço acima na sua resposta para esses ativos.`;
     }
   }
 
@@ -151,29 +154,21 @@ ${targetSkill.systemPrompt}`;
 
   let liveNewsContext = "";
   if (isNewsQuery) {
-    activeToolName = "Yahoo Finance News Wire";
+    activeToolName = "News Wire";
     const statusText = activeSkillName
-      ? `Thinking... [Yahoo Finance News Wire • Skill: ${activeSkillName}]`
-      : `Thinking... [Yahoo Finance News Wire]`;
+      ? `Thinking... [News Wire • Skill: ${activeSkillName}]`
+      : `Thinking... [News Wire]`;
     onProgress?.(statusText);
     try {
       const newsQuery = allIdentifiers.length > 0 ? allIdentifiers.join(",") : "market";
       const newsList = await getMarketNews(newsQuery);
       if (newsList && newsList.length > 0) {
-        const formattedNews = newsList.slice(0, 10).map((n, idx) => {
-          return `${idx + 1}. **${n.title}**\n   - Publicado: ${n.publishedAt} | Veículo / Fonte: ${n.source}\n   - Detalhes / Fato: ${n.aiSummary}`;
+        const formattedNews = newsList.slice(0, 8).map((n, idx) => {
+          return `${idx + 1}. **${n.title}**\n   - Publicado: ${n.publishedAt} | Fonte: ${n.source}\n   - Detalhes: ${n.aiSummary}`;
         });
-        liveNewsContext = `\n\nMANCHETES E NOTÍCIAS DE MERCADO EM TEMPO REAL HOJE (Fonte Auditada: Yahoo Finance Market News Wire):\n` +
+        liveNewsContext = `\n\nNOTÍCIAS E FATOS RELEVANTES DE MERCADO EM TEMPO REAL:\n` +
           formattedNews.join("\n\n") +
-          `\n\nDIRETRIZ OBRIGATÓRIA DE NOTÍCIAS DO MERCADO:
-O usuário solicitou as principais notícias, acontecimentos ou fatos relevantes do mercado.
-Utilize OBRIGATORIAMENTE as notícias reais em tempo real listadas acima para compor sua resposta.
-Estruture a resposta de forma executiva para o investidor:
-- **Panorama Geral do Mercado**: Breve síntese em 1 ou 2 parágrafos sobre o sentimento macroeconômico atual (juros, inflação, commodities, tecnologia).
-- **Destaques & Fatos Relevantes**: Apresente as notícias mais impactantes em bullet points claros, explicando a relevância de cada uma e citando a fonte explícita (ex: [Fonte: Yahoo Finance / Reuters / Bloomberg]).
-- **Impacto para Carteiras e Alocação**: Como esse cenário afeta Renda Fixa, Ações e Câmbio.
-- **Rodapé de Auditoria**: "Fonte Auditada: Yahoo Finance News Feeds • Global Real-Time Financial Wire"
-NUNCA diga que não tem dados em tempo real ou que não tem acesso a notícias recentes, pois as notícias de hoje estão explicitadas acima.`;
+          `\n\nDIRETRIZ DE NOTÍCIAS:\nUtilize as informações reais acima para compor uma síntese executiva com panorama geral, destaques objetivos e impactos para os ativos ou carteiras em análise.`;
       }
     } catch {}
   }
@@ -197,78 +192,31 @@ NUNCA diga que não tem dados em tempo real ou que não tem acesso a notícias r
       }).join("\n\n");
   }
 
-  const memoryAndFormattingInstruction = `\n\nDiretrizes de Contexto, Ativo & Formatação Executiva:
-- PROIBIÇÃO ABSOLUTA DE PREFIXOS DE MCP: NUNCA inicie suas respostas com frases como "Consultando o mcp-financedatabase...", "Acessando o servidor mcp-...", "Com base no mcp-..." ou qualquer menção a nomes de ferramentas internas. Responda DIRETAMENTE como o Staggi de forma natural, executiva e autoritativa.
-- FICHAS CADASTRAIS, VALOR E PERFIS DE ATIVOS (ISIN, CUSIP, TICKER, ETFS, BONDS, FUNDOS):
-  Ao apresentar informações ou perfil de qualquer ativo por ISIN, CUSIP ou Ticker (inclusive buscas múltiplas como "LU3046410299 e LU2451829373"):
-  1. Identifique no cabeçalho o Identificador e o Nome Completo de CADA ativo separadamente:
-     ### [ISIN ou TICKER]: [Nome Completo do Ativo]
-  2. Forneça os atributos essenciais de forma padronizada para cada um, incluindo OBRIGATORIAMENTE o Valor / Cotação Atual / NAV:
-     - Cotação Atual / NAV: [ex: US$ 12.39, € 100.71, R$ 36.85]
-     - Moeda: [USD, EUR, BRL]
-     - Variação Recente: [ex: +0.35%, -0.10%]
-     - Tipo de Ativo: [ex: Fundo UCITS / SICAV, ETF, Bond Corporativo, Ação]
-     - Gestora / Emissor: [Nome da gestora ou emissor]
-     - Classe de Ativo: [ex: Fundo Multimercado Balanceado Global, Alternativos Líquidos / Trend Following, Renda Fixa Global]
-     - Foco / Estratégia: [Resumo objetivo da tese e política de investimento]
-     - Domicílio: [ex: Luxemburgo (UCITS), Irlanda (UCITS), EUA, Brasil]
-     - Distribuição: [Acumulação (Acc) ou Distribuição (Dist)]
-  3. Provide an analytical synthesis on asset eligibility and potential cross-border tax efficiencies (e.g., US Estate Tax exemption for European UCITS/SICAV funds).
-  4. Ativos e ISINs de Referência Auditados:
-     - LU2451829373: BTG Pactual SICAV - Balanced Fund A (USD) (Acc). Cotação Atual / NAV: US$ 12.39 (USD). Gestora: BTG Pactual Asset Management S.A. Tipo: Fundo UCITS / SICAV. Classe: Fundo Balanceado Global / Multimercado Offshore. Domicílio: Luxemburgo (UCITS). Distribuição: Acumulação (Acc).
-     - LU3046410299: Mandatum SICAV-UCITS - Mandatum Managed Futures Fund (Share Class A EUR Cap Perf Hedged). Cotação Atual / NAV: € 100.71 (EUR). Gestora: Mandatum Fund Management S.A. Tipo: Fundo UCITS / SICAV. Classe: Alternativos Líquidos Globais / Trend Following Quantitativo de Futuros. Domicílio: Luxemburgo (UCITS). Distribuição: Acumulação (Acc).
-- PROATIVIDADE E PROIBIÇÃO DE RECUSA: NUNCA diga frases como "eu não consigo gerar gráficos diretamente", "meu foco é apenas em dados", "se desejar, posso detalhar" ou faça perguntas retóricas oferecendo opções do que você poderia fazer. O usuário precisa de respostas imediatas, definitivas e numéricas. ENTREGUE IMEDIATAMENTE a análise completa, a projeção, os múltiplos e as tabelas com os números reais do ativo.
-- ATIVO E CONTEXTO SOLICITADO: NUNCA assuma Petrobras (PETR4) ou qualquer ativo fixo como padrão quando o usuário estiver solicitando informações sobre outra empresa (ex: Banco do Brasil / BBAS3, Microsoft / MSFT, Apple / AAPL, Vale / VALE3, Itaú / ITUB4, etc.). Identifique a empresa solicitada pelo usuário no prompt e no histórico da conversa e responda estritamente sobre ela.
-- PROJEÇÕES, VALUATION E GRÁFICOS:
-  Quando o usuário pedir projeções, estimativas, gráficos ou valuation de qualquer ação ou empresa:
-  1. Forneça IMEDIATAMENTE os dados fundamentais estruturados:
-     - Nome da Empresa e Ticker entre parênteses: [Nome] ([TICKER])
-     - Cotação Atual: R$ [valor] ou US$ [valor]
-     - Preço Teto Bazin (DY 6%): R$ [valor]
-     - Preço Justo Graham: R$ [valor]
-     - Preço-Alvo Consenso: R$ [valor]
-     - Margem de Segurança: [valor]%
-     - Múltiplos: P/L, P/VP, ROE, Margem Líquida, DY Projetado
-     - Recomendação: Comprar / Manter / Reduzir
-     - Tabela Comparativa de Cenários / Projeções: Crie uma tabela estruturada em Markdown (| Cenário | Projeção LPA | DY Projetado | Preço Teto | Margem |)
-     - Síntese: Diagnóstico analítico objetivo.
-- FORMATAÇÃO DE NOTÍCIAS E FATOS RELEVANTES:
-  Ao listar notícias ou fatos relevantes sobre qualquer empresa, inicie identificando: "Fatos relevantes e notícias recentes sobre [Nome da Empresa] ([TICKER]):"
-  E estruture cada evento em tópicos claros:
-  1. **[Título do Evento]:** [Descrição analítica detalhada com dados numéricos de receita, lucro, investimentos e impactos operacionais].
-- FORMATAÇÃO DE PROVENTOS E RESPEITO ESTRITO AO RECORTE TEMPORAL:
-  1. FILTRO TEMPORAL OBRIGATÓRIO:
-     - Quando o usuário solicitar proventos de um período específico (ex: "desse ano", "deste ano", "no ano", "em ${currentYear}", "somente 2024", "último mês", "deste trimestre"):
-       Você DEVE filtrar e trazer ESTRITAMENTE os proventos declarados/pagos dentro desse período exato.
-       É TERMINANTEMENTE PROIBIDO listar proventos ou tabela histórica de anos anteriores (como últimos 3 ou 4 anos) quando a pergunta delimitar "desse ano" ou um período específico!
-     - Apresente apenas a tabela com os proventos do período solicitado:
-       | Tipo | Valor por Ação | Data Com / Declaração | Data Ex-Dividendo | Data de Pagamento |
-       (onde Tipo deve ser explicitamente "JCP" ou "Dividendo")
-     - Ao final da tabela, forneça o Total de Proventos no período (R$) e o Dividend Yield correspondente sobre a cotação atual.
-  2. TABELA DE HISTÓRICO MULTIANUAL (APENAS QUANDO SOLICITADA):
-     - SOMENTE apresente tabela de histórico de yield anual (| Ano | Dividendos Totais (R$) | Cotação Média (R$) | DY Anual |) se o usuário pedir explicitamente termos como "histórico", "evolução dos últimos anos", "últimos 5 anos" ou "série histórica".
-     - Se o usuário pediu "desse ano", "proventos deste ano" ou uma consulta pontual, NUNCA inclua tabela de anos anteriores.
-  3. Identifique a empresa e ticker no topo: [Nome da Empresa] ([TICKER])
-  4. NUNCA mencione componentes internos como "DividendsChart" no texto.
-- MEMÓRIA E CONTEXTO MULTI-TURNO: Você possui histórico completo da conversa. Quando o usuário fizer perguntas de acompanhamento usando pronomes, elipses ou referências a mensagens anteriores (ex: "e dela?", "quais os proventos?", "me fale mais sobre o primeiro ponto", "compare essas duas"), relacione DIRETAMENTE com as empresas, tickers e tópicos discutidos anteriormente no histórico.
-- DIRETRIZES DE SAUDAÇÃO E CONVERSAÇÃO NATURAL:
-  Quando o usuário enviar saudações ("Olá", "Bom dia", "Boa tarde", "Tudo bem?"), agradecimentos ou perguntas conceituais simples:
-  - Responda de forma direta, educada, fluida e executiva em 1 a 3 frases.
-  - NUNCA inclua rodapé de "Fonte Auditada", tabelas vazias, cotações não solicitadas ou relatórios pré-formatados.
-  - A citação de fonte auditada e relatórios técnicos só devem ser gerados quando o usuário de fato solicitar uma análise de ativo, valuation, cotação, proventos ou screening de mercado.
-- CREDIBILIDADE E AUDITORIA DE FONTES DE DADOS:
-  SOMENTE quando a resposta contiver de fato dados numéricos de mercado, cotações reais, proventos, holdings de ETFs, demonstrativos ou balanços oriundos das fontes/MCPs, cite no rodapé a fonte auditada correspondente:
-  - Proventos e Dividendos: "Fonte Auditada: B3 / CVM • Informes Oficiais de Escrituração Central"
-  - Composição e Holdings de ETFs: "Fonte Auditada: Equibles ETF Holdings • SEC N-PORT / Informes CVM"
-  - Renda Fixa, Bonds e Títulos: "Fonte Auditada: Bond Intelligence • FINRA TRACE / Emissores e Escrituradores"
-  - Curva de Juros e Treasuries: "Fonte Auditada: U.S. Department of the Treasury (Daily Treasury Yield Curve)"
-  - Transações de Insiders e Baleias: "Fonte Auditada: SEC EDGAR (Form 4) • TickerInside Intelligence"
-  - Ficha Cadastral e Triagem Multi-Ativos: "Fonte Auditada: FinanceDatabase Global Directory • Bolsas Globais"
-  - Múltiplos e Valuation: "Fonte Auditada: Demonstrações IFRS / CVM • Consenso Sell-Side"
-  - Cotações de Mercado: "Fonte Auditada: B3 / NYSE / Nasdaq (Market Data Yahoo Finance)"
-  - Notícias e Fatos Relevantes: "Fonte Auditada: Yahoo Finance News Feeds • Global Real-Time Financial Wire"
-  Em conversas gerais, saudações, introduções ou dúvidas teóricas/abstratas, NUNCA inclua citação de fonte auditada.
-- Mantenha a resposta objetiva, matemática e elegante em Markdown com tabelas limpas.`;
+  const memoryAndFormattingInstruction = `\n\nDiretrizes Universais de Execução & Padrão de Resposta:
+1. DIRETRIZ GERAL & TOM EXECUTIVO:
+   - Responda como Staggi, motor analítico e copiloto fiduciário de alta inteligência para assessores de investimento e wealth managers.
+   - Linguagem executiva, concisa, matemática e sem prolixidade. Utilize Markdown com tabelas limpas.
+   - NUNCA use prefixos técnicos ou menções a nomes de ferramentas internas (ex: "consultando mcp...", "acessando base...", "usando ferramenta..."). Responda diretamente com naturalidade e autoridade.
+
+2. FIDELIDADE ESTRITA AO PEDIDO DO USUÁRIO & RECORTE TEMPORAL:
+   - Responda estritamente sobre o ativo, carteira, período ou tópico solicitado na mensagem do usuário e no histórico.
+   - NUNCA assuma ativos fixos ou padrão se o usuário não os mencionou.
+   - FILTRO TEMPORAL OBRIGATÓRIO: Se o usuário pedir dados de um período ou ano específico (ex: "desse ano", "deste ano", "em ${currentYear}", "no último trimestre", "somente 2024", "último mês"):
+     Você DEVE filtrar e fornecer EXCLUSIVAMENTE os dados correspondentes a esse período solicitado. É expressamente proibido adicionar tabelas históricas multianuais ou dados de anos anteriores quando não forem solicitados.
+   - Somente apresente histórico multianual se o usuário pedir explicitamente termos como "histórico", "evolução dos últimos anos", "últimos 5 anos" ou "série histórica".
+   - Mantenha continuidade conversacional entre mensagens do histórico (perguntas de acompanhamento, pronomes, comparações de ativos discutidos anteriormente).
+
+3. PROATIVIDADE & RESPOSTAS DEFINITIVAS:
+   - Apresente diretamente números reais, cálculos, múltiplos e conclusões analíticas.
+   - Evite respostas evasivas, recusas injustificadas ou perguntas retóricas sobre o que você poderia fazer.
+
+4. DIRETRIZES DE SAUDAÇÃO & INTERAÇÃO NATURAL:
+   - Em saudações ("Olá", "Bom dia", "Tudo bem?"), agradecimentos ou perguntas conceituais simples, responda de forma direta, educada e ágil em 1 a 3 frases.
+   - NUNCA inclua rodapé de auditoria, tabelas vazias ou cotações não solicitadas em conversas gerais.
+
+5. AUDITORIA E CITAÇÃO DE FONTES:
+   - SOMENTE inclua rodapé de auditoria ("Fonte Auditada: ...") quando a resposta contiver de fato dados numéricos reais de mercado, cotações, proventos, demonstrativos ou balanços oriundos das ferramentas/MCPs.
+   - Cite a fonte correspondente de forma concisa e factual (ex: "Fonte Auditada: Yahoo Finance Market Data", "Fonte Auditada: B3 / CVM", ou a respectiva fonte/MCP provedora). Em dúvidas conceituais ou saudações, nunca inclua rodapé de auditoria.`;
 
   let enforcementDirective = "";
   if (aiStore.enforcementLevel === "low") {
@@ -430,7 +378,7 @@ export async function askGeminiWealthAdvisor(
   return {
     summary: result.text,
     recommendation: "Manter",
-    taxImplication: "Offshore via PIC em Cayman com transparência fiscal adequada (Lei 14.754/23)",
-    source: "Staggi Deterministic Intelligence"
+    taxImplication: "Estruturação fiscal conforme normas vigentes",
+    source: "Staggi Intelligence Engine"
   };
 }
