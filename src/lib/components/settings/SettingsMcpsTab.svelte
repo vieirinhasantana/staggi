@@ -11,6 +11,7 @@
     Lock,
     Wrench,
     FileCode,
+    Play,
   } from "@lucide/svelte";
   import { pluginsStore } from "$lib/services/pluginsState.svelte";
   import { toastStore } from "$lib/services/toastService.svelte";
@@ -43,8 +44,26 @@
   let testingMcpId = $state<string | null>(null);
   let openAuthMcpId = $state<string | null>(null);
   let expandedToolsMcpId = $state<string | null>(null);
+  let executingToolName = $state<string | null>(null);
+  let toolExecutionResult = $state<{ toolName: string; resultText: string } | null>(null);
   let tempApiKey = $state<string>("");
   let tempAuthHeader = $state<string>("Authorization");
+
+  async function handleExecuteTool(mcpId: string, toolName: string) {
+    executingToolName = toolName;
+    toolExecutionResult = null;
+    try {
+      const res = await pluginsStore.callTool(mcpId, toolName, {});
+      const raw = res?.result?.content || res?.result || res;
+      let text = typeof raw === "string" ? raw : JSON.stringify(raw, null, 2);
+      toolExecutionResult = { toolName, resultText: text };
+      toastStore.success("Ferramenta Executada", `${toolName} respondeu com sucesso.`);
+    } catch (e: any) {
+      toastStore.error("Erro na Execução", String(e || "Falha ao executar ferramenta"));
+    } finally {
+      executingToolName = null;
+    }
+  }
 
   async function testMcpYahooQuote() {
     isTestingMcpYahoo = true;
@@ -503,12 +522,33 @@
                 <div class="p-2.5 rounded-lg bg-[#191726] border border-white/[0.06] space-y-1">
                   <div class="flex items-center justify-between">
                     <span class="font-bold text-emerald-400 font-mono">{tool.name}</span>
-                    <span class="text-[9px] px-1.5 py-0.5 rounded bg-white/[0.04] text-zinc-400 font-mono">tool</span>
+                    <button
+                      type="button"
+                      onclick={() => handleExecuteTool(mcp.id, tool.name)}
+                      disabled={executingToolName === tool.name}
+                      class="flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 text-[10px] font-mono cursor-pointer transition-colors disabled:opacity-40"
+                    >
+                      <Play class="w-2.5 h-2.5 {executingToolName === tool.name ? 'animate-spin' : ''}" />
+                      <span>{executingToolName === tool.name ? 'Executando...' : 'Testar'}</span>
+                    </button>
                   </div>
                   {#if tool.description}
                     <p class="text-[11px] text-zinc-300 font-sans whitespace-pre-line leading-relaxed">
                       {tool.description}
                     </p>
+                  {/if}
+                  {#if toolExecutionResult && toolExecutionResult.toolName === tool.name}
+                    <div class="mt-2 p-2.5 rounded bg-black/50 border border-emerald-500/40 text-[10px] text-zinc-200 font-mono space-y-1 animate-fade-in">
+                      <div class="flex items-center justify-between text-emerald-300 font-semibold border-b border-white/[0.08] pb-1">
+                        <span>Resultado ({tool.name}):</span>
+                        <button
+                          type="button"
+                          onclick={() => (toolExecutionResult = null)}
+                          class="text-zinc-400 hover:text-zinc-200 cursor-pointer"
+                        >✕</button>
+                      </div>
+                      <pre class="max-h-48 overflow-y-auto whitespace-pre-wrap leading-relaxed text-zinc-300 custom-scrollbar">{toolExecutionResult.resultText}</pre>
+                    </div>
                   {/if}
                 </div>
               {/each}

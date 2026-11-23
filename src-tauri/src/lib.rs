@@ -1851,6 +1851,15 @@ async fn call_mcp_tool(
 
         tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
+        // Drain initialize response (id: 1)
+        let _ = tokio::time::timeout(std::time::Duration::from_secs(3), async {
+            while let Some(msg) = rx.recv().await {
+                if msg.get("id").and_then(|i| i.as_i64()) == Some(1) {
+                    break;
+                }
+            }
+        }).await;
+
         // Notification
         let notif_payload = serde_json::json!({
             "jsonrpc": "2.0",
@@ -1879,7 +1888,7 @@ async fn call_mcp_tool(
         if call_res.status().is_success() {
             let text = call_res.text().await.unwrap_or_default();
             if let Ok(val) = serde_json::from_str::<serde_json::Value>(&text) {
-                if val.get("result").is_some() || val.get("error").is_some() {
+                if val.get("id").and_then(|i| i.as_i64()) == Some(99) {
                     return Ok(val);
                 }
             }
@@ -1887,9 +1896,7 @@ async fn call_mcp_tool(
 
         let wait_call = tokio::time::timeout(std::time::Duration::from_secs(12), async {
             while let Some(msg) = rx.recv().await {
-                if msg.get("id").and_then(|i| i.as_i64()) == Some(99)
-                    || msg.get("result").is_some()
-                    || msg.get("error").is_some() {
+                if msg.get("id").and_then(|i| i.as_i64()) == Some(99) {
                     return Some(msg);
                 }
             }

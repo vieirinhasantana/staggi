@@ -192,6 +192,46 @@ ${targetSkill.systemPrompt}`;
       }).join("\n\n");
   }
 
+  let liveMcpData = "";
+  for (const mcp of activeMcps) {
+    if (!mcp.active || !mcp.tools || mcp.tools.length === 0) continue;
+
+    for (const tool of mcp.tools) {
+      const toolName = tool.name.toLowerCase();
+      let shouldExecute = false;
+
+      if (cleanPrompt.toLowerCase().includes(toolName)) {
+        shouldExecute = true;
+      } else if (toolName === "list_clients" && /\b(clientes?|clients?|investidores?|carteira de clientes)\b/i.test(cleanPrompt)) {
+        shouldExecute = true;
+      } else if (toolName === "list_trade_ideas" && /\b(trade ideas?|ideias? de trade|teses?|recomendações?|oportunidades?)\b/i.test(cleanPrompt)) {
+        shouldExecute = true;
+      } else if (toolName === "list_indexed_documents" && /\b(documentos?|pdfs?|relat[oó]rios? indexados?)\b/i.test(cleanPrompt)) {
+        shouldExecute = true;
+      }
+
+      if (shouldExecute) {
+        activeToolName = `${mcp.name} • ${tool.name}`;
+        const statusText = activeSkillName
+          ? `Thinking... [${activeToolName} • Skill: ${activeSkillName}]`
+          : `Thinking... [${activeToolName}]`;
+        onProgress?.(statusText);
+
+        try {
+          const res = await pluginsStore.callTool(mcp.id, tool.name, {});
+          if (res) {
+            const rawContent = res.result?.content || res.result || res;
+            const contentStr = typeof rawContent === "string" ? rawContent : JSON.stringify(rawContent, null, 2);
+            const trimmed = contentStr.length > 5000 ? contentStr.slice(0, 5000) + "\n...[truncated]" : contentStr;
+            liveMcpData += `\n\n[DADOS AUDITADOS RETORNADOS DO MCP LOCAL: ${mcp.name} • FERRAMENTA: ${tool.name}]:\n${trimmed}\nATENÇÃO: Utilize com rigor fiduciário esses dados factuais reais retornados pelo servidor MCP para responder à consulta do usuário.`;
+          }
+        } catch (e: any) {
+          console.warn(`[MCP] Failed to call ${tool.name}:`, e);
+        }
+      }
+    }
+  }
+
   const memoryAndFormattingInstruction = `\n\nDiretrizes Universais de Execução & Padrão de Resposta:
 1. DIRETRIZ GERAL & TOM EXECUTIVO:
    - Responda como Staggi, motor analítico e copiloto fiduciário de alta inteligência para assessores de investimento e wealth managers.
@@ -234,7 +274,7 @@ O usuário configurou o nível de enforcement para HIGH. Você DEVE operar com r
 Equilibre profundidade técnica, dados reais auditados e contextualização executiva com tabelas claras e conclusões numéricas.`;
   }
 
-  const systemInstruction = `Você é o Staggi, o motor de inteligência e copiloto executivo para assessores de investimento e wealth managers no Brasil. Suas respostas devem ser de alto padrão, numéricas, concisas, sem rodeios desnecessários, com foco em alocação patrimonial, governança offshore, tributação (Lei 14.754/23) e fluxo de proventos.${dateContext}${enforcementDirective}${explicitSkillDirective}${skillsInstructions}${mcpsContext}${liveMarketDataContext}${liveNewsContext}${memoryAndFormattingInstruction}${portfolioContext ? `\n\nContexto do Portfólio: ${JSON.stringify(portfolioContext)}` : ""}`;
+  const systemInstruction = `Você é o Staggi, o motor de inteligência e copiloto executivo para assessores de investimento e wealth managers no Brasil. Suas respostas devem ser de alto padrão, numéricas, concisas, sem rodeios desnecessários, com foco em alocação patrimonial, governança offshore, tributação (Lei 14.754/23) e fluxo de proventos.${dateContext}${enforcementDirective}${explicitSkillDirective}${skillsInstructions}${mcpsContext}${liveMcpData}${liveMarketDataContext}${liveNewsContext}${memoryAndFormattingInstruction}${portfolioContext ? `\n\nContexto do Portfólio: ${JSON.stringify(portfolioContext)}` : ""}`;
 
   const cleanHistory = (history || [])
     .filter(h => h.text && !(h.text.trim().startsWith("{") && h.text.includes('"candidates"')))
