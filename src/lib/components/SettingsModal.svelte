@@ -54,11 +54,11 @@
 
 {#if open}
   <div
-    class="w-full h-full rounded-[24px] border border-white/[0.14] ring-1 ring-white/[0.05] bg-[#1a1926]/98 backdrop-blur-2xl shadow-[0_4px_20px_rgba(0,0,0,0.35),0_16px_40px_-6px_rgba(0,0,0,0.55),inset_0_1px_0_0_rgba(255,255,255,0.08)] overflow-hidden flex flex-col animate-fade-in relative z-30 select-none"
+    class="w-full h-full rounded-[24px] border border-white/[0.14] ring-1 ring-white/[0.05] bg-[#1c1c1c]/98 backdrop-blur-2xl shadow-[0_4px_20px_rgba(0,0,0,0.35),0_16px_40px_-6px_rgba(0,0,0,0.55),inset_0_1px_0_0_rgba(255,255,255,0.08)] overflow-hidden flex flex-col animate-fade-in relative z-30 select-none"
   >
     <div
       data-tauri-drag-region
-      class="flex items-center justify-between px-6 py-3.5 border-b border-white/[0.08] bg-[#141320]/85 shrink-0 cursor-move"
+      class="flex items-center justify-between px-6 py-3.5 border-b border-white/[0.08] bg-[#141414]/85 shrink-0 cursor-move"
     >
       <div data-tauri-drag-region class="flex items-center gap-2.5 pointer-events-none">
         <img
@@ -70,7 +70,7 @@
           <h3 class="text-sm font-semibold text-zinc-100">
             {t("settings.title")}
           </h3>
-          <p class="text-[11px] text-zinc-400 font-mono">
+          <p class="text-[11px] text-zinc-400">
             AI Engine, Model Context Protocol (MCP) & Analytical Skills
           </p>
         </div>
@@ -87,7 +87,7 @@
 
     <div
       data-tauri-drag-region
-      class="flex items-center justify-between px-5 py-2 border-b border-white/[0.06] bg-[#141320]/75 text-[12px] font-mono shrink-0 gap-2 overflow-x-auto scrollbar-none cursor-move"
+      class="flex items-center justify-between px-5 py-2 border-b border-white/[0.06] bg-[#141414]/75 text-[12px] shrink-0 gap-2 overflow-x-auto scrollbar-none cursor-move"
     >
       <div class="flex items-center gap-1.5 min-w-0">
         <button
@@ -147,14 +147,14 @@
           <button
             type="button"
             onclick={() => updaterStore.startDownloadAndInstall()}
-            class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-[11px] font-mono transition-all cursor-pointer shadow-sm animate-pulse"
+            class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-[11px] transition-all cursor-pointer shadow-sm animate-pulse"
             title="Nova versão encontrada! Clique para baixar agora"
           >
             <ArrowDownCircle class="w-3.5 h-3.5 text-emerald-400" />
             <span>Baixar v{updaterStore.availableVersion}</span>
           </button>
         {:else if updaterStore.status === "downloading"}
-          <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sky-500/20 text-sky-300 border border-sky-500/30 text-[11px] font-mono">
+          <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sky-500/20 text-sky-300 border border-sky-500/30 text-[11px]">
             <RefreshCw class="w-3 h-3 animate-spin text-sky-400" />
             <span>Baixando {updaterStore.downloadProgress}%</span>
           </div>
@@ -162,14 +162,14 @@
           <button
             type="button"
             onclick={() => updaterStore.relaunch()}
-            class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black font-semibold text-[11px] font-mono transition-all cursor-pointer shadow-sm"
+            class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black font-semibold text-[11px] transition-all cursor-pointer shadow-sm"
             title="Atualização instalada. Clique para reiniciar"
           >
             <CheckCircle2 class="w-3.5 h-3.5" />
             <span>Reiniciar</span>
           </button>
         {:else if updaterStore.status === "checking"}
-          <div class="flex items-center gap-1.5 px-2 py-1 text-[11px] font-mono text-zinc-400">
+          <div class="flex items-center gap-1.5 px-2 py-1 text-[11px] text-zinc-400">
             <RefreshCw class="w-3 h-3 animate-spin" />
             <span>Checando...</span>
           </div>
@@ -177,7 +177,7 @@
           <button
             type="button"
             onclick={() => updaterStore.checkForUpdates()}
-            class="flex items-center gap-1 px-2 py-1 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.04] text-[10px] font-mono transition-colors cursor-pointer"
+            class="flex items-center gap-1 px-2 py-1 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.04] text-[10px] transition-colors cursor-pointer"
             title="Versão instalada: v{updaterStore.currentVersion}. Clique para verificar atualizações."
           >
             <span>v{updaterStore.currentVersion}</span>

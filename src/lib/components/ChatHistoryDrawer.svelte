@@ -137,10 +137,10 @@
 
 {#if open}
   <div
-    class="absolute inset-0 z-40 bg-[#161424]/98 backdrop-blur-2xl flex flex-col rounded-[24px] overflow-hidden animate-fade-in text-zinc-100"
+    class="absolute inset-0 z-40 bg-[#181818]/98 backdrop-blur-2xl flex flex-col rounded-[24px] overflow-hidden animate-fade-in text-zinc-100"
   >
     <div
-      class="flex items-center justify-between px-5 py-3.5 border-b border-white/[0.08] bg-[#12101e]/80 shrink-0 font-mono"
+      class="flex items-center justify-between px-5 py-3.5 border-b border-white/[0.08] bg-[#141414]/80 shrink-0"
     >
       <div class="flex items-center gap-2.5 min-w-0">
         <button
@@ -187,14 +187,14 @@
       </div>
     </div>
 
-    <div class="px-5 py-3 border-b border-white/[0.06] bg-[#1a1829]/60 shrink-0">
+    <div class="px-5 py-3 border-b border-white/[0.06] bg-[#1a1a1a]/60 shrink-0">
       <div class="relative flex items-center">
         <Search class="w-4 h-4 text-zinc-400 absolute left-3 pointer-events-none" />
         <input
           type="text"
           bind:value={searchQuery}
           placeholder="Search conversations by ticker, prompt, or keywords (e.g. BBAS3, Valuation, ETFs)..."
-          class="w-full rounded-xl bg-[#201d32] border border-white/[0.1] pl-9.5 pr-8 py-2 text-xs text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-sky-400/60 font-sans shadow-inner transition-colors"
+          class="w-full rounded-xl bg-[#262626] border border-white/[0.1] pl-9.5 pr-8 py-2 text-xs text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-sky-400/60 font-sans shadow-inner transition-colors"
         />
         {#if searchQuery}
           <button
@@ -210,7 +210,7 @@
 
     <div class="flex-1 overflow-y-auto px-5 py-3 space-y-4 font-sans">
       {#if filteredSessions.length === 0}
-        <div class="py-12 flex flex-col items-center justify-center text-center space-y-2 font-mono">
+        <div class="py-12 flex flex-col items-center justify-center text-center space-y-2">
           <MessageSquare class="w-8 h-8 text-zinc-600 mb-1" />
           <p class="text-xs text-zinc-400">
             {searchQuery
@@ -235,7 +235,7 @@
       {:else}
         {#each groupedSessions as group}
           <div class="space-y-2">
-            <div class="flex items-center gap-2 px-1 text-[11px] font-mono text-zinc-400 font-semibold tracking-wider uppercase">
+            <div class="flex items-center gap-2 px-1 text-[11px] text-zinc-400 font-semibold tracking-wider uppercase">
               <Calendar class="w-3 h-3 text-sky-400/80" />
               <span>{group.label}</span>
               <span class="text-zinc-600 text-[10px]">({group.items.length})</span>
@@ -253,7 +253,7 @@
                   class="group relative w-full p-3 rounded-2xl border transition-all cursor-pointer text-left {s.id ===
                   currentSessionId
                     ? 'bg-sky-500/10 border-sky-500/40 shadow-[0_0_20px_rgba(14,165,233,0.15)] ring-1 ring-sky-500/30'
-                    : 'bg-[#1f1d30]/75 hover:bg-[#28253e] border-white/[0.06] hover:border-white/[0.15] shadow-sm'}"
+                    : 'bg-[#232323]/75 hover:bg-[#282828] border-white/[0.06] hover:border-white/[0.15] shadow-sm'}"
                 >
                   <div class="flex items-start justify-between gap-3">
                     <div class="flex items-start gap-2.5 min-w-0 flex-1">
@@ -279,7 +279,7 @@
 
                           {#if s.id === currentSessionId}
                             <span
-                              class="inline-flex items-center gap-1 text-[9px] font-mono px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/30 shrink-0 font-medium"
+                              class="inline-flex items-center gap-1 text-[9px] px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/30 shrink-0 font-medium"
                             >
                               <Check class="w-2.5 h-2.5" /> Active Now
                             </span>
@@ -291,7 +291,7 @@
                         </p>
 
                         <div
-                          class="flex items-center gap-3 text-[10px] text-zinc-500 font-mono pt-0.5"
+                          class="flex items-center gap-3 text-[10px] text-zinc-500 pt-0.5"
                         >
                           <span class="flex items-center gap-1">
                             <Clock class="w-2.5 h-2.5 text-zinc-500" />
@@ -324,7 +324,7 @@
     </div>
 
     <div
-      class="px-5 py-3 border-t border-white/[0.08] bg-[#12101e]/90 flex items-center justify-between text-xs font-mono shrink-0"
+      class="px-5 py-3 border-t border-white/[0.08] bg-[#141414]/90 flex items-center justify-between text-xs shrink-0"
     >
       <div class="text-[11px] text-zinc-500">
         <span>Staggi Local Storage • Private data isolated on your machine</span>

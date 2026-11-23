@@ -50,7 +50,7 @@
 </script>
 
 <div
-  class="w-full rounded-2xl border border-white/[0.12] bg-[#1d1b2a]/95 backdrop-blur-2xl shadow-xl p-5 space-y-4 select-text animate-fade-in"
+  class="w-full rounded-2xl border border-white/[0.12] bg-[#212121]/95 backdrop-blur-2xl shadow-xl p-5 space-y-4 select-text animate-fade-in"
 >
   <div class="flex items-start justify-between pb-3.5 border-b border-white/[0.08] flex-wrap gap-3">
     <div class="flex items-start gap-3">
@@ -76,7 +76,7 @@
             type="button"
             onclick={copyIdentifier}
             title="Click to copy identifier"
-            class="px-2 py-0.5 rounded-md bg-teal-500/20 text-teal-300 font-mono text-xs font-bold border border-teal-500/35 hover:bg-teal-500/30 transition-all flex items-center gap-1.5 cursor-pointer"
+            class="px-2 py-0.5 rounded-md bg-teal-500/20 text-teal-300 text-xs font-bold border border-teal-500/35 hover:bg-teal-500/30 transition-all flex items-center gap-1.5 cursor-pointer"
           >
             <span>{data.identifier}</span>
             {#if copied}
@@ -88,7 +88,7 @@
 
           {#if data.assetType}
             <span
-              class="px-2 py-0.5 rounded-md bg-white/[0.06] text-zinc-300 font-mono text-[11px] border border-white/[0.08]"
+              class="px-2 py-0.5 rounded-md bg-white/[0.06] text-zinc-300 text-[11px] border border-white/[0.08]"
             >
               {data.assetType}
             </span>
@@ -96,7 +96,7 @@
 
           {#if isUcits}
             <span
-              class="px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-300 font-mono text-[10px] font-semibold border border-emerald-500/30 flex items-center gap-1"
+              class="px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-300 text-[10px] font-semibold border border-emerald-500/30 flex items-center gap-1"
             >
               <ShieldCheck class="w-3 h-3 text-emerald-400" />
               UCITS Compliant
@@ -109,7 +109,7 @@
         </h3>
 
         {#if data.manager || data.domicile}
-          <p class="text-xs text-zinc-400 font-mono flex items-center gap-2">
+          <p class="text-xs text-zinc-400 flex items-center gap-2">
             {#if data.manager}
               <span class="text-zinc-300">{data.manager}</span>
             {/if}
@@ -126,7 +126,7 @@
 
     {#if data.mcpSource}
       <span
-        class="px-2.5 py-1 rounded-lg bg-white/[0.04] border border-white/[0.08] text-[10px] font-mono text-zinc-400 flex items-center gap-1.5 shrink-0"
+        class="px-2.5 py-1 rounded-lg bg-white/[0.04] border border-white/[0.08] text-[10px] text-zinc-400 flex items-center gap-1.5 shrink-0"
       >
         <Globe class="w-3 h-3 text-sky-400" />
         {data.mcpSource}
@@ -139,15 +139,15 @@
       class="p-3.5 rounded-xl bg-gradient-to-r from-emerald-500/[0.12] via-teal-500/[0.08] to-transparent border border-emerald-500/30 flex items-center justify-between flex-wrap gap-3"
     >
       <div class="space-y-0.5">
-        <span class="text-[10px] text-zinc-400 font-mono uppercase tracking-wider block">
+        <span class="text-[10px] text-zinc-400 uppercase tracking-wider block">
           Cotação Atual / NAV (Valor Oficial da Cota)
         </span>
         <div class="flex items-baseline gap-2">
-          <span class="text-lg sm:text-xl font-bold font-mono text-emerald-300">
+          <span class="text-lg sm:text-xl font-bold text-emerald-300">
             {data.price}
           </span>
           {#if data.currency}
-            <span class="text-xs font-mono text-zinc-400 font-semibold">
+            <span class="text-xs text-zinc-400 font-semibold">
               {data.currency}
             </span>
           {/if}
@@ -156,9 +156,9 @@
 
       {#if data.change}
         <div class="text-right">
-          <span class="text-[10px] text-zinc-400 font-mono uppercase block">Variação Recente</span>
+          <span class="text-[10px] text-zinc-400 uppercase block">Variação Recente</span>
           <span
-            class="text-xs sm:text-sm font-bold font-mono px-2 py-0.5 rounded-md {data.change.startsWith('-')
+            class="text-xs sm:text-sm font-bold  px-2 py-0.5 rounded-md {data.change.startsWith('-')
               ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
               : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'}"
           >
@@ -173,9 +173,9 @@
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
       {#each data.fields as field}
         <div
-          class="p-3 rounded-xl bg-[#242232]/75 border border-white/[0.06] hover:border-white/[0.12] transition-all space-y-1"
+          class="p-3 rounded-xl bg-[#262626]/75 border border-white/[0.06] hover:border-white/[0.12] transition-all space-y-1"
         >
-          <span class="text-[10px] text-zinc-400 uppercase tracking-wider font-mono block">
+          <span class="text-[10px] text-zinc-400 uppercase tracking-wider block">
             {field.label}
           </span>
           <div class="text-xs font-semibold text-zinc-100 font-sans leading-relaxed">
@@ -200,9 +200,9 @@
 
   {#if data.summary}
     <div
-      class="p-3.5 rounded-xl bg-[#161522] border border-white/[0.06] space-y-1.5 text-xs text-zinc-300 font-sans leading-relaxed"
+      class="p-3.5 rounded-xl bg-[#181818] border border-white/[0.06] space-y-1.5 text-xs text-zinc-300 font-sans leading-relaxed"
     >
-      <div class="flex items-center gap-1.5 text-teal-300 font-semibold font-mono text-xs">
+      <div class="flex items-center gap-1.5 text-teal-300 font-semibold text-xs">
         <Sparkles class="w-3.5 h-3.5 text-teal-400" />
         <span>Investment Thesis & Strategy</span>
       </div>
@@ -212,7 +212,7 @@
     </div>
   {/if}
 
-  <div class="flex items-center justify-between pt-2 border-t border-white/[0.06] text-[10px] font-mono text-zinc-400 flex-wrap gap-2">
+  <div class="flex items-center justify-between pt-2 border-t border-white/[0.06] text-[10px] text-zinc-400 flex-wrap gap-2">
     <div class="flex items-center gap-1.5">
       <ShieldCheck class="w-3.5 h-3.5 text-emerald-400 shrink-0" />
       <span class="text-zinc-400">Audited Source:</span>

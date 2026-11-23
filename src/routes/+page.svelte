@@ -272,8 +272,8 @@
     </div>
 
     {#if messages.length > 0 || showHistoryDrawer}
-      <div class="w-full flex-1 flex flex-col mt-3.5 rounded-[24px] border border-white/[0.12] ring-1 ring-white/[0.05] bg-[#1a1926]/95 backdrop-blur-2xl shadow-[0_4px_20px_rgba(0,0,0,0.35),0_16px_40px_-6px_rgba(0,0,0,0.55),inset_0_1px_0_0_rgba(255,255,255,0.08)] overflow-hidden transition-all animate-fade-in relative z-10">
-      <div class="w-full flex items-center justify-between px-4 py-2.5 bg-[#141320]/75 border-b border-white/[0.06] text-[11px] font-mono shrink-0">
+      <div class="w-full flex-1 flex flex-col mt-3.5 rounded-[24px] border border-white/[0.12] ring-1 ring-white/[0.05] bg-[#1c1c1c]/95 backdrop-blur-2xl shadow-[0_4px_20px_rgba(0,0,0,0.35),0_16px_40px_-6px_rgba(0,0,0,0.55),inset_0_1px_0_0_rgba(255,255,255,0.08)] overflow-hidden transition-all animate-fade-in relative z-10">
+      <div class="w-full flex items-center justify-between px-4 py-2.5 bg-[#141414]/75 border-b border-white/[0.06] text-[11px] shrink-0">
         <button
           type="button"
           onclick={() => showHistoryDrawer = !showHistoryDrawer}
@@ -282,7 +282,7 @@
         >
           <History class="w-3.5 h-3.5 text-sky-400" />
           <span class="font-medium max-w-[260px] truncate">{currentSessionTitle}</span>
-          <span class="text-[10px] px-1.5 py-0.2 rounded bg-sky-500/20 text-sky-300 font-mono">
+          <span class="text-[10px] px-1.5 py-0.2 rounded bg-sky-500/20 text-sky-300">
             {sessions.length}
           </span>
           <ChevronDown class="w-3 h-3 text-zinc-400 transition-transform {showHistoryDrawer ? 'rotate-180' : ''}" />
@@ -336,7 +336,7 @@
 
   {#if tasksStore.activeAlert}
     <div
-      class="fixed top-3 left-1/2 -translate-x-1/2 z-50 w-[92%] max-w-[620px] rounded-2xl border p-3 shadow-2xl backdrop-blur-2xl flex items-center justify-between gap-3 animate-fade-in font-sans {tasksStore.activeAlert.status === 'success' ? 'bg-[#182124]/95 border-emerald-500/40 text-emerald-200 shadow-[0_8px_30px_rgba(16,185,129,0.2)]' : 'bg-[#25171e]/95 border-rose-500/40 text-rose-200 shadow-[0_8px_30px_rgba(244,63,94,0.2)]'}"
+      class="fixed top-3 left-1/2 -translate-x-1/2 z-50 w-[92%] max-w-[620px] rounded-2xl border p-3 shadow-2xl backdrop-blur-2xl flex items-center justify-between gap-3 animate-fade-in font-sans {tasksStore.activeAlert.status === 'success' ? 'bg-[#1a1a1a]/95 border-emerald-500/40 text-emerald-200 shadow-[0_8px_30px_rgba(16,185,129,0.2)]' : 'bg-[#1a1a1a]/95 border-rose-500/40 text-rose-200 shadow-[0_8px_30px_rgba(244,63,94,0.2)]'}"
     >
       <div class="flex items-center gap-2.5 min-w-0 flex-1">
         <div class="h-8 w-8 rounded-xl flex items-center justify-center shrink-0 {tasksStore.activeAlert.status === 'success' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}">
@@ -349,7 +349,7 @@
         <div class="truncate text-left min-w-0">
           <div class="flex items-center gap-2">
             <span class="font-semibold text-xs text-zinc-100 truncate">{tasksStore.activeAlert.taskName}</span>
-            <span class="text-[10px] font-mono opacity-75">{tasksStore.activeAlert.status === 'success' ? 'Finalizada com sucesso' : 'Falha na execução'}</span>
+            <span class="text-[10px] opacity-75">{tasksStore.activeAlert.status === 'success' ? 'Finalizada com sucesso' : 'Falha na execução'}</span>
           </div>
           <p class="text-[11px] text-zinc-300 font-normal truncate opacity-90">{tasksStore.activeAlert.summary}</p>
         </div>
@@ -387,7 +387,7 @@
       class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in"
     >
       <div
-        class="w-full max-w-[660px] rounded-2xl border border-sky-500/30 bg-[#1e1c2e] shadow-[0_20px_50px_rgba(0,0,0,0.8)] p-5 space-y-4 max-h-[84vh] flex flex-col"
+        class="w-full max-w-[660px] rounded-2xl border border-sky-500/30 bg-[#212121] shadow-[0_20px_50px_rgba(0,0,0,0.8)] p-5 space-y-4 max-h-[84vh] flex flex-col"
       >
         <div class="flex items-center justify-between pb-3 border-b border-white/[0.08]">
           <div class="flex items-center gap-2.5">
@@ -398,7 +398,7 @@
               <h4 class="font-semibold text-zinc-100 text-sm">
                 {tasksStore.viewingTaskResult.name}
               </h4>
-              <span class="text-[11px] text-zinc-400 font-mono">
+              <span class="text-[11px] text-zinc-400">
                 Executed at {tasksStore.viewingTaskResult.lastRun ? new Date(tasksStore.viewingTaskResult.lastRun).toLocaleString('en-US') : t("settings.tasks.never")} • Interval: {tasksStore.viewingTaskResult.intervalMinutes} min
               </span>
             </div>
@@ -414,12 +414,12 @@
         </div>
 
         <div
-          class="flex-1 overflow-y-auto pr-1 text-sm text-zinc-200 leading-relaxed select-text space-y-2.5 [&_p]:my-1.5 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-2 [&_li]:my-1 [&_strong]:text-zinc-100 [&_strong]:font-semibold [&_h1]:text-base [&_h2]:text-sm [&_h3]:text-xs [&_h1]:font-bold [&_h2]:font-bold [&_code]:bg-white/[0.08] [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:font-mono [&_code]:text-xs [&_pre]:bg-[#141320] [&_pre]:p-3 [&_pre]:rounded-xl [&_pre]:overflow-x-auto"
+          class="flex-1 overflow-y-auto pr-1 text-sm text-zinc-200 leading-relaxed select-text space-y-2.5 [&_p]:my-1.5 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:my-2 [&_li]:my-1 [&_strong]:text-zinc-100 [&_strong]:font-semibold [&_h1]:text-base [&_h2]:text-sm [&_h3]:text-xs [&_h1]:font-bold [&_h2]:font-bold [&_code]:bg-white/[0.08] [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:font-mono [&_code]:text-xs [&_pre]:bg-[#141414] [&_pre]:p-3 [&_pre]:rounded-xl [&_pre]:overflow-x-auto"
         >
           {@html renderMarkdown(tasksStore.viewingTaskResult.lastResult || t("settings.tasks.noResultRecorded"))}
         </div>
 
-        <div class="flex items-center justify-between pt-3 border-t border-white/[0.08] font-mono text-xs">
+        <div class="flex items-center justify-between pt-3 border-t border-white/[0.08] text-xs">
           <div class="flex items-center gap-2">
             <button
               type="button"

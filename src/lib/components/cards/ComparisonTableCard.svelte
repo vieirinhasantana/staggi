@@ -53,7 +53,7 @@
   }
 </script>
 
-<div class="w-full rounded-2xl border border-white/[0.12] bg-[#1d1b2a]/95 backdrop-blur-2xl shadow-xl p-4.5 space-y-3.5 select-text">
+<div class="w-full rounded-2xl border border-white/[0.12] bg-[#212121]/95 backdrop-blur-2xl shadow-xl p-4.5 space-y-3.5 select-text">
   <div class="flex items-center justify-between pb-2.5 border-b border-white/[0.08]">
     <div class="flex items-center gap-2.5">
       <div class="h-9 w-9 rounded-xl bg-violet-500/15 border border-violet-500/25 flex items-center justify-center text-violet-400">
@@ -62,28 +62,28 @@
       <div>
         <div class="flex items-center gap-2">
           <span class="text-sm font-semibold text-zinc-100">Peer Benchmarking & Comparison Matrix</span>
-          <span class="px-2 py-0.5 rounded-md bg-violet-500/15 text-violet-300 font-mono text-[11px] font-bold border border-violet-500/30">
+          <span class="px-2 py-0.5 rounded-md bg-violet-500/15 text-violet-300 text-[11px] font-bold border border-violet-500/30">
             {data.headers.length - 1} Assets
           </span>
         </div>
-        <div class="text-[11px] text-zinc-400 font-mono">
+        <div class="text-[11px] text-zinc-400">
           Structured comparison of business models, valuation multiples, and projections
         </div>
       </div>
     </div>
 
-    <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/[0.04] border border-white/[0.06] text-[10px] font-mono text-zinc-400">
+    <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/[0.04] border border-white/[0.06] text-[10px] text-zinc-400">
       <Layers class="w-3 h-3 text-violet-400" />
       <span>Multi-Asset</span>
     </div>
   </div>
 
-  <div class="relative w-full rounded-xl border border-white/[0.08] bg-[#171524]/70 overflow-x-auto shadow-inner">
-    <table class="w-full border-collapse text-left text-xs font-mono">
+  <div class="relative w-full rounded-xl border border-white/[0.08] bg-[#1c1c1c]/70 overflow-x-auto shadow-inner">
+    <table class="w-full border-collapse text-left text-xs">
       <thead>
         <tr class="bg-white/[0.06] border-b border-white/[0.08]">
           {#each data.headers as header, colIdx}
-            <th class="p-3 font-semibold text-zinc-200 {colIdx === 0 ? 'sticky left-0 bg-[#211f32] z-20 min-w-[160px] border-r border-white/[0.08]' : 'min-w-[220px]'}">
+            <th class="p-3 font-semibold text-zinc-200 {colIdx === 0 ? 'sticky left-0 bg-[#262626] z-20 min-w-[160px] border-r border-white/[0.08]' : 'min-w-[220px]'}">
               {#if colIdx === 0}
                 <span class="text-zinc-400 uppercase tracking-wider text-[10px]">{header}</span>
               {:else}
@@ -99,7 +99,7 @@
       <tbody class="divide-y divide-white/[0.04]">
         {#each data.rows as row}
           <tr class="hover:bg-white/[0.02] transition-colors">
-            <td class="p-3 font-semibold text-zinc-100 sticky left-0 bg-[#1c1a2b] z-10 border-r border-white/[0.08] text-xs">
+            <td class="p-3 font-semibold text-zinc-100 sticky left-0 bg-[#232323] z-10 border-r border-white/[0.08] text-xs">
               <div class="flex items-center gap-1.5">
                 <span class={getMetricIconColor(row.metric)}>•</span>
                 <span>{row.metric}</span>
@@ -111,7 +111,7 @@
               <td class="p-3 text-zinc-300 align-top leading-relaxed text-xs">
                 {#if recBadge}
                   <div class="space-y-1">
-                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md font-mono text-[11px] font-semibold border {recBadge}">
+                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-semibold border {recBadge}">
                       <Check class="w-3 h-3" />
                       {val.split("-")[0]?.trim() || val}
                     </span>
@@ -122,9 +122,9 @@
                     {/if}
                   </div>
                 {:else if val === "N/D" || val === "N/A"}
-                  <span class="text-zinc-500 font-mono text-[11px]">N/D</span>
+                  <span class="text-zinc-500 text-[11px]">N/D</span>
                 {:else if isNumericOrCurrency(val) && val.length < 50}
-                  <span class="font-bold text-zinc-100 font-mono text-xs bg-white/[0.05] px-2 py-0.5 rounded border border-white/[0.06]">
+                  <span class="font-bold text-zinc-100 text-xs bg-white/[0.05] px-2 py-0.5 rounded border border-white/[0.06]">
                     {val}
                   </span>
                 {:else}
@@ -138,7 +138,7 @@
     </table>
   </div>
 
-  <div class="flex items-center justify-between pt-2 border-t border-white/[0.06] text-[10px] font-mono text-zinc-400 flex-wrap gap-2">
+  <div class="flex items-center justify-between pt-2 border-t border-white/[0.06] text-[10px] text-zinc-400 flex-wrap gap-2">
     <div class="flex items-center gap-1.5">
       <ShieldCheck class="w-3.5 h-3.5 text-emerald-400 shrink-0" />
       <span class="text-zinc-400">Audited Source:</span>

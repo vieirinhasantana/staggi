@@ -112,7 +112,7 @@ You are Staggi's specialized financial intelligence advisor.
     <button
       type="button"
       onclick={startCreateSkill}
-      class="w-full p-3.5 rounded-2xl bg-gradient-to-r from-violet-500/15 via-[#232034] to-[#1c1a28] border border-violet-500/30 hover:border-violet-500/50 flex items-center justify-between text-left transition-all cursor-pointer group shadow-sm"
+      class="w-full p-3.5 rounded-2xl bg-gradient-to-r from-violet-500/15 via-[#262626] to-[#232323] border border-violet-500/30 hover:border-violet-500/50 flex items-center justify-between text-left transition-all cursor-pointer group shadow-sm"
     >
       <div class="flex items-center gap-3">
         <div
@@ -122,7 +122,7 @@ You are Staggi's specialized financial intelligence advisor.
         </div>
         <div>
           <h5
-            class="text-xs font-semibold text-zinc-100 font-mono flex items-center gap-1.5"
+            class="text-xs font-semibold text-zinc-100 flex items-center gap-1.5"
           >
             {t("settings.skills.createNew")}
           </h5>
@@ -132,7 +132,7 @@ You are Staggi's specialized financial intelligence advisor.
         </div>
       </div>
       <span
-        class="px-3 py-1.5 rounded-xl bg-violet-500/20 text-violet-200 text-xs font-mono font-semibold border border-violet-500/35 group-hover:bg-violet-500/30 transition-all shrink-0"
+        class="px-3 py-1.5 rounded-xl bg-violet-500/20 text-violet-200 text-xs font-semibold border border-violet-500/35 group-hover:bg-violet-500/30 transition-all shrink-0"
       >
         {t("settings.skills.createBtn")}
       </span>
@@ -141,7 +141,7 @@ You are Staggi's specialized financial intelligence advisor.
 
   {#if editingSkillId || isCreatingSkill}
     <div
-      class="p-4 rounded-2xl bg-[#1e1c2b] border border-violet-500/30 space-y-3 text-xs font-mono animate-fade-in shadow-lg"
+      class="p-4 rounded-2xl bg-[#232323] border border-violet-500/30 space-y-3 text-xs animate-fade-in shadow-lg"
     >
       <div
         class="flex items-center justify-between border-b border-white/[0.08] pb-2 text-violet-300 font-semibold"
@@ -155,7 +155,7 @@ You are Staggi's specialized financial intelligence advisor.
         <button
           type="button"
           onclick={handleCancelSkill}
-          class="text-zinc-400 hover:text-zinc-100 text-xs font-mono cursor-pointer"
+          class="text-zinc-400 hover:text-zinc-100 text-xs cursor-pointer"
         >
           {t("common.cancel")}
         </button>
@@ -173,7 +173,7 @@ You are Staggi's specialized financial intelligence advisor.
             type="text"
             bind:value={editName}
             placeholder={t("settings.skills.skillNamePlaceholder")}
-            class="w-full rounded-xl bg-[#2a273b] border border-white/[0.1] px-3 py-2 text-zinc-100 focus:outline-none"
+            class="w-full rounded-xl bg-[#282828] border border-white/[0.1] px-3 py-2 text-zinc-100 focus:outline-none"
           />
         </div>
         <div class="space-y-1">
@@ -183,7 +183,7 @@ You are Staggi's specialized financial intelligence advisor.
               class="text-[10px] text-zinc-400 uppercase"
               >{t("settings.skills.slugLabel")}</label
             >
-            <span class="text-[9px] text-violet-400 font-mono">
+            <span class="text-[9px] text-violet-400">
               /{editSlug.trim() ? editSlug.trim().toLowerCase().replace(/^\/+/, '') : (editName ? editName.toLowerCase().replace(/[^a-z0-9_-]+/g, '-') : 'command')}
             </span>
           </div>
@@ -192,7 +192,7 @@ You are Staggi's specialized financial intelligence advisor.
             type="text"
             bind:value={editSlug}
             placeholder={t("settings.skills.slugPlaceholder")}
-            class="w-full rounded-xl bg-[#2a273b] border border-white/[0.1] px-3 py-2 text-zinc-100 focus:outline-none"
+            class="w-full rounded-xl bg-[#282828] border border-white/[0.1] px-3 py-2 text-zinc-100 focus:outline-none"
           />
         </div>
       </div>
@@ -209,7 +209,7 @@ You are Staggi's specialized financial intelligence advisor.
             type="text"
             bind:value={editDesc}
             placeholder={t("settings.skills.descriptionPlaceholder")}
-            class="w-full rounded-xl bg-[#2a273b] border border-white/[0.1] px-3 py-2 text-zinc-100 focus:outline-none"
+            class="w-full rounded-xl bg-[#282828] border border-white/[0.1] px-3 py-2 text-zinc-100 focus:outline-none"
           />
         </div>
         <div class="space-y-1">
@@ -223,7 +223,7 @@ You are Staggi's specialized financial intelligence advisor.
             type="text"
             bind:value={editMcp}
             placeholder={t("settings.skills.authorizedMcpsPlaceholder")}
-            class="w-full rounded-xl bg-[#2a273b] border border-white/[0.1] px-3 py-2 text-zinc-100 focus:outline-none"
+            class="w-full rounded-xl bg-[#282828] border border-white/[0.1] px-3 py-2 text-zinc-100 focus:outline-none"
           />
         </div>
       </div>
@@ -239,7 +239,7 @@ You are Staggi's specialized financial intelligence advisor.
           bind:value={editPrompt}
           rows={6}
           placeholder={t("settings.skills.systemPromptPlaceholder")}
-          class="w-full rounded-xl bg-[#181624] border border-white/[0.12] p-3 text-xs text-zinc-200 font-mono focus:outline-none leading-relaxed resize-y"
+          class="w-full rounded-xl bg-[#181818] border border-white/[0.12] p-3 text-xs text-zinc-200 focus:outline-none leading-relaxed resize-y"
         ></textarea>
       </div>
 
@@ -247,7 +247,7 @@ You are Staggi's specialized financial intelligence advisor.
         <button
           type="button"
           onclick={handleCancelSkill}
-          class="px-4 py-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] text-zinc-300 text-xs font-mono transition-colors cursor-pointer"
+          class="px-4 py-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] text-zinc-300 text-xs transition-colors cursor-pointer"
         >
           {t("common.cancel")}
         </button>
@@ -266,10 +266,10 @@ You are Staggi's specialized financial intelligence advisor.
 
   <div class="flex items-center justify-between pt-1">
     <div class="flex items-center gap-2">
-      <h5 class="text-xs font-semibold text-zinc-300 font-mono">
+      <h5 class="text-xs font-semibold text-zinc-300">
         {t("settings.skills.installedSkills", { count: pluginsStore.skills.length })}
       </h5>
-      <span class="text-[10px] text-zinc-400 font-mono">
+      <span class="text-[10px] text-zinc-400">
         • {t("settings.skills.activeSkillsCount", { count: pluginsStore.activeSkillsCount })}
       </span>
     </div>
@@ -277,7 +277,7 @@ You are Staggi's specialized financial intelligence advisor.
       type="button"
       onclick={handleRestoreDefaults}
       title="Restore original built-in reference skills"
-      class="flex items-center gap-1 text-[10px] text-zinc-400 hover:text-violet-300 transition-colors font-mono cursor-pointer"
+      class="flex items-center gap-1 text-[10px] text-zinc-400 hover:text-violet-300 transition-colors cursor-pointer"
     >
       <RotateCcw class="w-3 h-3" />
       <span>{t("settings.skills.restoreDefaults")}</span>
@@ -287,7 +287,7 @@ You are Staggi's specialized financial intelligence advisor.
   <div class="space-y-3.5">
     {#if pluginsStore.skills.length === 0}
       <div
-        class="p-8 text-center space-y-3 rounded-2xl bg-[#1d1b2a]/60 border border-white/[0.06]"
+        class="p-8 text-center space-y-3 rounded-2xl bg-[#212121]/60 border border-white/[0.06]"
       >
         <div
           class="h-10 w-10 rounded-xl bg-violet-500/15 text-violet-400 mx-auto flex items-center justify-center border border-violet-500/20"
@@ -316,7 +316,7 @@ You are Staggi's specialized financial intelligence advisor.
     {#each pluginsStore.skills as skill (skill.id)}
       {@const slug = getSkillSlug(skill)}
       <div
-        class="p-4 rounded-2xl bg-[#221f33]/90 hover:bg-[#252238] border transition-all space-y-3 {skill.active
+        class="p-4 rounded-2xl bg-[#262626]/90 hover:bg-[#262626] border transition-all space-y-3 {skill.active
           ? 'border-white/[0.08] hover:border-violet-500/35 shadow-sm'
           : 'border-white/[0.04] opacity-75'}"
       >
@@ -334,13 +334,13 @@ You are Staggi's specialized financial intelligence advisor.
                   >{skill.name}</span
                 >
                 <span
-                  class="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-violet-500/20 text-violet-300 border border-violet-500/30"
+                  class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-violet-500/20 text-violet-300 border border-violet-500/30"
                 >
                   /{slug}
                 </span>
                 {#if skill.mcpDependency}
                   <span
-                    class="px-2 py-0.5 rounded-md text-[10px] font-mono bg-white/[0.06] text-zinc-300 border border-white/[0.08]"
+                    class="px-2 py-0.5 rounded-md text-[10px] bg-white/[0.06] text-zinc-300 border border-white/[0.08]"
                   >
                     {skill.mcpDependency}
                   </span>
@@ -358,14 +358,14 @@ You are Staggi's specialized financial intelligence advisor.
             <button
               type="button"
               onclick={() => startEditSkill(skill)}
-              class="px-3 py-1.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] text-zinc-300 text-xs font-mono transition-colors cursor-pointer"
+              class="px-3 py-1.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] text-zinc-300 text-xs transition-colors cursor-pointer"
             >
               {t("settings.skills.editDirectives")}
             </button>
             <button
               type="button"
               onclick={() => pluginsStore.toggleSkill(skill.id)}
-              class="px-3 py-1.5 rounded-xl text-xs font-mono font-semibold transition-all cursor-pointer {skill.active
+              class="px-3 py-1.5 rounded-xl text-xs  font-semibold transition-all cursor-pointer {skill.active
                 ? 'bg-violet-500/20 text-violet-300 border border-violet-500/30'
                 : 'bg-white/[0.06] text-zinc-500 border border-white/[0.06]'}"
             >

@@ -75,24 +75,24 @@
   });
 </script>
 
-<div class="w-full rounded-2xl border border-white/[0.12] bg-[#1d1b2a]/95 backdrop-blur-2xl shadow-xl p-4.5 space-y-4 select-text animate-fade-in">
+<div class="w-full rounded-2xl border border-white/[0.12] bg-[#212121]/95 backdrop-blur-2xl shadow-xl p-4.5 space-y-4 select-text animate-fade-in">
   <div class="flex items-center justify-between pb-3 border-b border-white/[0.08] flex-wrap gap-2">
     <div class="flex items-center gap-2.5">
-      <div class="h-9 w-9 rounded-xl bg-teal-500/15 border border-teal-500/25 flex items-center justify-center text-teal-400 font-bold text-xs font-mono">
+      <div class="h-9 w-9 rounded-xl bg-teal-500/15 border border-teal-500/25 flex items-center justify-center text-teal-400 font-bold text-xs">
         <Coins class="w-4 h-4" />
       </div>
       <div>
         <div class="flex items-center gap-2">
           <span class="text-sm font-semibold text-zinc-100">{data.companyName}</span>
-          <span class="px-2 py-0.5 rounded-md bg-teal-500/15 text-teal-300 font-mono text-[11px] font-bold border border-teal-500/30">
+          <span class="px-2 py-0.5 rounded-md bg-teal-500/15 text-teal-300 text-[11px] font-bold border border-teal-500/30">
             {data.ticker}
           </span>
         </div>
-        <div class="text-[11px] text-zinc-400 font-mono">Dividend Payouts & Historical Yield</div>
+        <div class="text-[11px] text-zinc-400">Dividend Payouts & Historical Yield</div>
       </div>
     </div>
 
-    <div class="flex items-center gap-1 p-1 rounded-xl bg-[#141320] border border-white/[0.06] text-xs font-mono">
+    <div class="flex items-center gap-1 p-1 rounded-xl bg-[#141414] border border-white/[0.06] text-xs">
       <button
         type="button"
         onclick={() => (activeView = "history")}
@@ -115,32 +115,32 @@
   </div>
 
   {#if data.intro}
-    <div class="p-3 rounded-xl bg-[#242232]/60 border border-white/[0.06] text-xs text-zinc-300 font-sans leading-relaxed">
+    <div class="p-3 rounded-xl bg-[#262626]/60 border border-white/[0.06] text-xs text-zinc-300 font-sans leading-relaxed">
       {data.intro}
     </div>
   {/if}
 
   {#if activeView === "history" && data.annualHistory.length > 0}
     <div class="space-y-3">
-      <div class="flex items-center justify-between text-xs font-mono text-zinc-400 flex-wrap gap-2">
+      <div class="flex items-center justify-between text-xs text-zinc-400 flex-wrap gap-2">
         <span class="flex items-center gap-1.5 text-teal-300 font-semibold">
           <BarChart3 class="w-3.5 h-3.5 text-teal-400" /> Annual Dividend Yield (DY) History
         </span>
         <div class="flex items-center gap-3 text-[11px]">
           {#if peakItem}
             <span class="text-zinc-400">
-              Peak: <strong class="text-emerald-400 font-mono">{peakItem.dy}</strong> ({peakItem.year})
+              Peak: <strong class="text-emerald-400">{peakItem.dy}</strong> ({peakItem.year})
             </span>
           {/if}
           {#if avgDyText}
             <span class="text-zinc-400">
-              Average: <strong class="text-teal-300 font-mono">{avgDyText}</strong>
+              Average: <strong class="text-teal-300">{avgDyText}</strong>
             </span>
           {/if}
         </div>
       </div>
 
-      <div class="p-4 rounded-2xl bg-[#161522]/90 border border-white/[0.08] relative overflow-hidden space-y-2">
+      <div class="p-4 rounded-2xl bg-[#181818]/90 border border-white/[0.08] relative overflow-hidden space-y-2">
         
         <div class="absolute inset-x-4 top-10 bottom-20 flex flex-col justify-between pointer-events-none opacity-15">
           <div class="border-b border-dashed border-white"></div>
@@ -163,7 +163,7 @@
                     High
                   </span>
                 {/if}
-                <span class="font-mono font-bold text-xs sm:text-sm {isDestaque ? 'text-emerald-400' : hasValidDy ? 'text-teal-300' : 'text-zinc-500'}">
+                <span class="font-bold text-xs sm:text-sm {isDestaque ? 'text-emerald-400' : hasValidDy ? 'text-teal-300' : 'text-zinc-500'}">
                   {item.dy}
                 </span>
               </div>
@@ -185,10 +185,10 @@
               </div>
 
               <div class="w-full pt-2.5 mt-1 border-t border-white/[0.1] text-center flex flex-col items-center gap-0.5">
-                <span class="font-mono font-bold text-xs sm:text-sm text-zinc-100 group-hover:text-teal-300 transition-colors">
+                <span class="font-bold text-xs sm:text-sm text-zinc-100 group-hover:text-teal-300 transition-colors">
                   {item.year}
                 </span>
-                <span class="text-[10px] text-zinc-400 font-mono truncate max-w-full" title={item.totalPaid}>
+                <span class="text-[10px] text-zinc-400 truncate max-w-full" title={item.totalPaid}>
                   {item.totalPaid}
                 </span>
                 {#if item.avgPrice && item.avgPrice !== "N/D"}
@@ -202,7 +202,7 @@
           {/each}
         </div>
 
-        <div class="flex items-center justify-between pt-3 mt-1 border-t border-white/[0.06] text-[10px] font-mono text-zinc-400">
+        <div class="flex items-center justify-between pt-3 mt-1 border-t border-white/[0.06] text-[10px] text-zinc-400">
           <div class="flex items-center gap-3">
             <span class="flex items-center gap-1.5">
               <span class="h-2 w-2 rounded-full bg-emerald-400"></span> High Yield (&ge; 8%)
@@ -220,21 +220,21 @@
 
   {#if activeView === "payouts" || data.annualHistory.length === 0}
     <div class="space-y-2.5">
-      <div class="flex items-center justify-between text-xs font-mono text-zinc-400">
+      <div class="flex items-center justify-between text-xs text-zinc-400">
         <span class="flex items-center gap-1.5 text-teal-300 font-semibold">
           <Calendar class="w-3.5 h-3.5 text-teal-400" /> Declared & Paid Distributions
         </span>
         {#if totalRecentSum}
           <span class="text-[11px] text-zinc-300">
-            Recent distributions: <strong class="text-emerald-400 font-mono">{totalRecentSum}</strong>/share
+            Recent distributions: <strong class="text-emerald-400">{totalRecentSum}</strong>/share
           </span>
         {/if}
       </div>
 
-      <div class="rounded-xl border border-white/[0.08] bg-[#161522] overflow-hidden">
+      <div class="rounded-xl border border-white/[0.08] bg-[#181818] overflow-hidden">
         <div class="max-h-64 overflow-y-auto pr-1">
-          <table class="w-full text-left border-collapse text-xs font-mono">
-            <thead class="sticky top-0 bg-[#242232] border-b border-white/[0.08] text-[10px] text-zinc-400 uppercase tracking-wider">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead class="sticky top-0 bg-[#262626] border-b border-white/[0.08] text-[10px] text-zinc-400 uppercase tracking-wider">
               <tr>
                 <th class="py-2 px-3">Type</th>
                 <th class="py-2 px-3">Amount per Share</th>
@@ -283,12 +283,12 @@
   </div>
 
   {#if data.footer}
-    <div class="text-[10px] text-zinc-500 font-mono leading-tight">
+    <div class="text-[10px] text-zinc-500 leading-tight">
       {data.footer}
     </div>
   {/if}
 
-  <div class="flex items-center justify-between pt-2 border-t border-white/[0.06] text-[10px] font-mono text-zinc-400 flex-wrap gap-2">
+  <div class="flex items-center justify-between pt-2 border-t border-white/[0.06] text-[10px] text-zinc-400 flex-wrap gap-2">
     <div class="flex items-center gap-1.5">
       <ShieldCheck class="w-3.5 h-3.5 text-emerald-400 shrink-0" />
       <span class="text-zinc-400">Audited Source:</span>

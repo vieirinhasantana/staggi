@@ -154,7 +154,7 @@
   role="presentation"
   data-tauri-drag-region
   onmousedown={handleMouseDown}
-  class="relative z-30 w-full rounded-[28px] border border-white/[0.14] ring-1 ring-white/[0.06] bg-[#24222f]/98 shadow-[0_2px_10px_rgba(0,0,0,0.35),0_12px_32px_-4px_rgba(0,0,0,0.55),0_24px_50px_-6px_rgba(0,0,0,0.65),inset_0_1px_0_0_rgba(255,255,255,0.15)] backdrop-blur-2xl transition-all duration-200 select-none cursor-grab active:cursor-grabbing"
+  class="relative z-30 w-full rounded-[28px] border border-white/[0.14] ring-1 ring-white/[0.06] bg-[#212121]/98 shadow-[0_2px_10px_rgba(0,0,0,0.35),0_12px_32px_-4px_rgba(0,0,0,0.55),0_24px_50px_-6px_rgba(0,0,0,0.65),inset_0_1px_0_0_rgba(255,255,255,0.15)] backdrop-blur-2xl transition-all duration-200 select-none cursor-grab active:cursor-grabbing"
 >
   <div data-tauri-drag-region class="px-5 pt-4 pb-2 flex items-center">
     <textarea
@@ -176,7 +176,7 @@
           type="button"
           onclick={() => togglePopover("mcp")}
           title="Click to view {pluginsStore.activeMcpsCount} Connected MCP Servers"
-          class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border transition-all cursor-pointer text-[11px] font-mono {activePopover === 'mcp' ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.25)]' : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/15'}"
+          class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border transition-all cursor-pointer text-[11px] {activePopover === 'mcp' ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.25)]' : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/15'}"
         >
           <Server class="h-3.5 w-3.5 text-emerald-400" />
           <span class="font-semibold">{pluginsStore.activeMcpsCount} {pluginsStore.activeMcpsCount === 1 ? 'MCP' : 'MCPs'}</span>
@@ -188,7 +188,7 @@
           type="button"
           onclick={() => togglePopover("skills")}
           title="Click to view {pluginsStore.activeSkillsCount} Active Specialized Skills ({pluginsStore.skills.length} registered)"
-          class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border transition-all cursor-pointer text-[11px] font-mono {activePopover === 'skills' ? 'bg-violet-500/20 border-violet-500/40 text-violet-300 shadow-[0_0_12px_rgba(139,92,246,0.25)]' : 'bg-violet-500/10 border-violet-500/20 text-violet-400 hover:bg-violet-500/15'}"
+          class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border transition-all cursor-pointer text-[11px] {activePopover === 'skills' ? 'bg-violet-500/20 border-violet-500/40 text-violet-300 shadow-[0_0_12px_rgba(139,92,246,0.25)]' : 'bg-violet-500/10 border-violet-500/20 text-violet-400 hover:bg-violet-500/15'}"
         >
           <Zap class="h-3.5 w-3.5 text-violet-400" />
           <span class="font-semibold">{pluginsStore.activeSkillsCount} {pluginsStore.activeSkillsCount === 1 ? 'Skill' : 'Skills'}</span>
@@ -200,7 +200,7 @@
           type="button"
           onclick={() => togglePopover("tasks")}
           title="Click to view {tasksStore.totalCount} Scheduled Background Automations"
-          class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border transition-all cursor-pointer text-[11px] font-mono {activePopover === 'tasks' ? 'bg-sky-500/20 border-sky-500/40 text-sky-300 shadow-[0_0_12px_rgba(14,165,233,0.25)]' : tasksStore.activeAlert ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.3)]' : 'bg-sky-500/10 border-sky-500/20 text-sky-400 hover:bg-sky-500/15'}"
+          class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border transition-all cursor-pointer text-[11px] {activePopover === 'tasks' ? 'bg-sky-500/20 border-sky-500/40 text-sky-300 shadow-[0_0_12px_rgba(14,165,233,0.25)]' : tasksStore.activeAlert ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.3)]' : 'bg-sky-500/10 border-sky-500/20 text-sky-400 hover:bg-sky-500/15'}"
         >
           <Clock class="h-3.5 w-3.5 text-sky-400" />
           <span class="font-semibold">{tasksStore.activeCount}/{tasksStore.totalCount} {tasksStore.totalCount === 1 ? 'Task' : 'Tasks'}</span>
@@ -223,7 +223,7 @@
             }
           }}
           title={updaterStore.status === 'downloaded' ? 'Update downloaded! Click to restart' : updaterStore.status === 'downloading' ? `Downloading update (${updaterStore.downloadProgress}%)...` : `New version v${updaterStore.availableVersion} available! Click to update`}
-          class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border transition-all cursor-pointer text-[11px] font-mono bg-emerald-500/20 border-emerald-500/40 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.3)] animate-pulse"
+          class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border transition-all cursor-pointer text-[11px] bg-emerald-500/20 border-emerald-500/40 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.3)] animate-pulse"
         >
           {#if updaterStore.status === "downloading"}
             <RefreshCw class="h-3.5 w-3.5 text-emerald-400 animate-spin" />
@@ -244,7 +244,7 @@
         type="button"
         onclick={() => onOpenSettings("ai")}
         title="Provider: {aiStore.provider.toUpperCase()} • Model: {aiStore.currentModelInfo?.name || aiStore.model}. Click to configure."
-        class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border transition-all cursor-pointer text-[11px] font-mono {aiStore.isConfigured
+        class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border transition-all cursor-pointer text-[11px]  {aiStore.isConfigured
           ? 'bg-amber-500/10 border-amber-500/20 text-amber-300 hover:bg-amber-500/20'
           : 'bg-rose-500/10 border-rose-500/20 text-rose-300 hover:bg-rose-500/20 animate-pulse'}"
       >
@@ -274,7 +274,7 @@
 
   {#if isSlashCommandActive && matchingSkills.length > 0}
     <div
-      class="absolute left-3 right-3 top-[102%] z-50 rounded-2xl border border-violet-500/35 bg-[#181628]/98 p-2.5 shadow-[0_16px_40px_rgba(0,0,0,0.7)] backdrop-blur-2xl space-y-1.5 animate-fade-in text-xs font-mono select-none"
+      class="absolute left-3 right-3 top-[102%] z-50 rounded-2xl border border-violet-500/35 bg-[#1c1c1c]/98 p-2.5 shadow-[0_16px_40px_rgba(0,0,0,0.7)] backdrop-blur-2xl space-y-1.5 animate-fade-in text-xs select-none"
     >
       <div class="flex items-center justify-between px-2 py-1 border-b border-white/[0.08] text-[11px] text-zinc-400">
         <span class="flex items-center gap-1.5 text-violet-300 font-semibold">
@@ -303,12 +303,12 @@
           >
             <div class="space-y-0.5 min-w-0 flex-1">
               <div class="flex items-center gap-2">
-                <span class="px-2 py-0.5 rounded-md text-[11px] font-bold font-mono {selectedSlashIndex === idx ? 'bg-violet-500 text-white shadow-sm' : 'bg-white/[0.08] text-violet-300'}">
+                <span class="px-2 py-0.5 rounded-md text-[11px] font-bold {selectedSlashIndex === idx ? 'bg-violet-500 text-white shadow-sm' : 'bg-white/[0.08] text-violet-300'}">
                   /{slug}
                 </span>
                 <span class="font-semibold text-xs text-zinc-200 truncate">{skill.name}</span>
                 {#if skill.mcpDependency}
-                  <span class="text-[9px] px-1.5 py-0.5 rounded bg-white/[0.04] text-zinc-400 border border-white/[0.06] font-mono">
+                  <span class="text-[9px] px-1.5 py-0.5 rounded bg-white/[0.04] text-zinc-400 border border-white/[0.06]">
                     {skill.mcpDependency}
                   </span>
                 {/if}
@@ -329,8 +329,8 @@
   {/if}
 
   {#if activePopover === "mcp" && pluginsStore.activeMcpsCount > 0}
-    <div class="absolute left-4 top-[102%] z-50 w-72 rounded-xl border border-white/[0.12] bg-[#1a1926]/95 p-3 shadow-[0_12px_32px_rgba(0,0,0,0.6)] backdrop-blur-2xl space-y-2 animate-fade-in">
-      <div class="flex items-center justify-between pb-1.5 border-b border-white/[0.08] text-[11px] font-mono text-zinc-300">
+    <div class="absolute left-4 top-[102%] z-50 w-72 rounded-xl border border-white/[0.12] bg-[#1c1c1c]/95 p-3 shadow-[0_12px_32px_rgba(0,0,0,0.6)] backdrop-blur-2xl space-y-2 animate-fade-in">
+      <div class="flex items-center justify-between pb-1.5 border-b border-white/[0.08] text-[11px] text-zinc-300">
         <span class="flex items-center gap-1.5 text-emerald-400 font-semibold">
           <Server class="w-3.5 h-3.5" /> Active MCP Servers ({pluginsStore.activeMcpsCount})
         </span>
@@ -338,9 +338,9 @@
           <X class="h-3 w-3" />
         </button>
       </div>
-      <div class="space-y-1.5 text-[11px] font-mono">
+      <div class="space-y-1.5 text-[11px]">
         {#each pluginsStore.activeMcps as mcp}
-          <div class="p-1.5 rounded-lg bg-[#2a273b]/50 border border-white/[0.04] space-y-0.5">
+          <div class="p-1.5 rounded-lg bg-[#282828]/50 border border-white/[0.04] space-y-0.5">
             <div class="flex items-center justify-between text-zinc-200 font-semibold">
               <span>{mcp.name}</span>
               <span class="flex items-center gap-1 text-[9px] text-emerald-400 font-normal">
@@ -354,7 +354,7 @@
       <button
         type="button"
         onclick={() => { activePopover = 'none'; onOpenSettings("mcps"); }}
-        class="w-full mt-1 py-1.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] text-zinc-300 text-[10px] font-mono flex items-center justify-center gap-1 transition-colors cursor-pointer"
+        class="w-full mt-1 py-1.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] text-zinc-300 text-[10px] flex items-center justify-center gap-1 transition-colors cursor-pointer"
       >
         <span>Manage MCP Servers</span>
         <ExternalLink class="w-3 h-3" />
@@ -363,8 +363,8 @@
   {/if}
 
   {#if activePopover === "skills" && pluginsStore.skills.length > 0}
-    <div class="absolute left-24 top-[102%] z-50 w-80 rounded-xl border border-white/[0.12] bg-[#1a1926]/95 p-3 shadow-[0_12px_32px_rgba(0,0,0,0.6)] backdrop-blur-2xl space-y-2 animate-fade-in">
-      <div class="flex items-center justify-between pb-1.5 border-b border-white/[0.08] text-[11px] font-mono text-zinc-300">
+    <div class="absolute left-24 top-[102%] z-50 w-80 rounded-xl border border-white/[0.12] bg-[#1c1c1c]/95 p-3 shadow-[0_12px_32px_rgba(0,0,0,0.6)] backdrop-blur-2xl space-y-2 animate-fade-in">
+      <div class="flex items-center justify-between pb-1.5 border-b border-white/[0.08] text-[11px] text-zinc-300">
         <span class="flex items-center gap-1.5 text-violet-400 font-semibold">
           <Zap class="w-3.5 h-3.5" /> Registered Skills ({pluginsStore.activeSkillsCount}/{pluginsStore.totalSkillsCount})
         </span>
@@ -372,12 +372,12 @@
           <X class="h-3 w-3" />
         </button>
       </div>
-      <div class="grid grid-cols-1 gap-1 text-[11px] font-mono max-h-60 overflow-y-auto">
+      <div class="grid grid-cols-1 gap-1 text-[11px] max-h-60 overflow-y-auto">
         {#each pluginsStore.skills as skill}
           {@const slug = getSkillSlug(skill)}
-          <div class="p-1.5 rounded-lg bg-[#2a273b]/50 border border-white/[0.04] flex items-center justify-between gap-2">
+          <div class="p-1.5 rounded-lg bg-[#282828]/50 border border-white/[0.04] flex items-center justify-between gap-2">
             <div class="flex items-center gap-1.5 truncate">
-              <span class="px-1 py-0.2 rounded text-[9px] bg-violet-500/20 text-violet-300 font-bold font-mono">/{slug}</span>
+              <span class="px-1 py-0.2 rounded text-[9px] bg-violet-500/20 text-violet-300 font-bold">/{slug}</span>
               <span class="text-zinc-200 truncate">{skill.name}</span>
             </div>
             <div class="flex items-center gap-1 shrink-0">
@@ -392,7 +392,7 @@
       <button
         type="button"
         onclick={() => { activePopover = 'none'; onOpenSettings("skills"); }}
-        class="w-full mt-1 py-1.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] text-zinc-300 text-[10px] font-mono flex items-center justify-center gap-1 transition-colors cursor-pointer"
+        class="w-full mt-1 py-1.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] text-zinc-300 text-[10px] flex items-center justify-center gap-1 transition-colors cursor-pointer"
       >
         <span>Manage Analytical Skills</span>
         <ExternalLink class="w-3 h-3" />
@@ -401,8 +401,8 @@
   {/if}
 
   {#if activePopover === "tasks"}
-    <div class="absolute left-40 top-[102%] z-50 w-96 rounded-xl border border-white/[0.12] bg-[#1a1926]/95 p-3 shadow-[0_12px_32px_rgba(0,0,0,0.6)] backdrop-blur-2xl space-y-2 animate-fade-in">
-      <div class="flex items-center justify-between pb-1.5 border-b border-white/[0.08] text-[11px] font-mono text-zinc-300">
+    <div class="absolute left-40 top-[102%] z-50 w-96 rounded-xl border border-white/[0.12] bg-[#1c1c1c]/95 p-3 shadow-[0_12px_32px_rgba(0,0,0,0.6)] backdrop-blur-2xl space-y-2 animate-fade-in">
+      <div class="flex items-center justify-between pb-1.5 border-b border-white/[0.08] text-[11px] text-zinc-300">
         <span class="flex items-center gap-1.5 text-sky-400 font-semibold">
           <Clock class="w-3.5 h-3.5" /> Scheduled Automations ({tasksStore.activeCount}/{tasksStore.totalCount})
         </span>
@@ -412,7 +412,7 @@
       </div>
 
       {#if tasksStore.tasks.length === 0}
-        <div class="py-4 text-center space-y-2 font-mono text-[11px] text-zinc-400">
+        <div class="py-4 text-center space-y-2 text-[11px] text-zinc-400">
           <p>No scheduled tasks found.</p>
           <button
             type="button"
@@ -423,9 +423,9 @@
           </button>
         </div>
       {:else}
-        <div class="space-y-1.5 max-h-64 overflow-y-auto pr-1 text-[11px] font-mono">
+        <div class="space-y-1.5 max-h-64 overflow-y-auto pr-1 text-[11px]">
           {#each tasksStore.tasks as task}
-            <div class="p-2 rounded-lg bg-[#2a273b]/50 border border-white/[0.04] space-y-1.5">
+            <div class="p-2 rounded-lg bg-[#282828]/50 border border-white/[0.04] space-y-1.5">
               <div class="flex items-center justify-between text-zinc-200 font-semibold gap-2">
                 <span class="truncate">{task.name}</span>
                 <span class="px-1.5 py-0.2 rounded text-[9px] bg-sky-500/15 text-sky-300 border border-sky-500/20 shrink-0">
@@ -436,13 +436,13 @@
               <div class="flex items-center justify-between text-[10px] text-zinc-400 font-sans">
                 <span>Last: {task.lastRun ? new Date(task.lastRun).toLocaleTimeString().slice(0, 5) : 'Pending'}</span>
                 {#if task.lastStatus === 'running'}
-                  <span class="text-amber-400 animate-pulse font-mono text-[9px] flex items-center gap-1">
+                  <span class="text-amber-400 animate-pulse text-[9px] flex items-center gap-1">
                     <RefreshCw class="w-2.5 h-2.5 animate-spin" /> Running...
                   </span>
                 {:else if task.lastStatus === 'success'}
-                  <span class="text-emerald-400 font-mono text-[9px]">✓ Ok</span>
+                  <span class="text-emerald-400 text-[9px]">✓ Ok</span>
                 {:else if task.lastStatus === 'error'}
-                  <span class="text-rose-400 font-mono text-[9px]">✗ Error</span>
+                  <span class="text-rose-400 text-[9px]">✗ Error</span>
                 {/if}
               </div>
 
@@ -477,7 +477,7 @@
       <button
         type="button"
         onclick={() => { activePopover = 'none'; onOpenSettings("tasks"); }}
-        class="w-full mt-1 py-1.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] text-zinc-300 text-[10px] font-mono flex items-center justify-center gap-1 transition-colors cursor-pointer"
+        class="w-full mt-1 py-1.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] text-zinc-300 text-[10px] flex items-center justify-center gap-1 transition-colors cursor-pointer"
       >
         <span>Full Automations Panel</span>
         <ExternalLink class="w-3 h-3" />
