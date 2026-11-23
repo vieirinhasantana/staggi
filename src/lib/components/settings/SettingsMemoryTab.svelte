@@ -7,6 +7,7 @@
     Trash2,
     Save,
     Tag,
+    ChevronDown,
   } from "@lucide/svelte";
   import { memoryStore } from "$lib/services/memoryState.svelte";
   import { toastStore } from "$lib/services/toastService.svelte";
@@ -17,19 +18,18 @@
 
   let formTitle = $state("");
   let formContent = $state("");
-  let formCategory = $state<MemoryCategory>("preference");
+  let formCategory = $state<string>("general");
   let formTags = $state("");
   let formPinned = $state(false);
   let formActive = $state(true);
 
-  function getCategoryLabel(category: MemoryCategory) {
+  function getCategoryLabel(category: string) {
     switch (category) {
-      case "preference":
-        return "Preferência";
-      case "mandate":
-        return "Política da Mesa";
-      case "working_note":
-        return "Nota de Trabalho";
+      case "formatting":
+        return "Formatação";
+      case "valuation":
+        return "Metodologia";
+      case "general":
       default:
         return "Geral";
     }
@@ -40,7 +40,7 @@
     editingId = null;
     formTitle = "";
     formContent = "";
-    formCategory = "preference";
+    formCategory = "general";
     formTags = "";
     formPinned = false;
     formActive = true;
@@ -182,15 +182,20 @@
           >
             Categoria
           </label>
-          <select
-            id="form-memory-category"
-            bind:value={formCategory}
-            class="w-full rounded-xl bg-[#282828] border border-white/[0.1] px-3 py-2 text-zinc-100 text-xs focus:outline-none focus:border-pink-500/50 cursor-pointer"
-          >
-            <option value="preference">Preferência (Estilo & Métricas)</option>
-            <option value="mandate">Política da Mesa / Consultoria</option>
-            <option value="working_note">Nota de Trabalho & Contexto</option>
-          </select>
+          <div class="relative">
+            <select
+              id="form-memory-category"
+              bind:value={formCategory}
+              class="w-full appearance-none rounded-xl bg-[#282828] border border-white/[0.1] hover:border-white/[0.2] pl-3 pr-8 py-2 text-zinc-200 text-xs focus:outline-none focus:border-pink-500/50 transition-colors cursor-pointer"
+            >
+              <option value="general" class="bg-[#282828] text-zinc-100">Geral</option>
+              <option value="formatting" class="bg-[#282828] text-zinc-100">Formatação & Estilo</option>
+              <option value="valuation" class="bg-[#282828] text-zinc-100">Metodologia & Cálculos</option>
+            </select>
+            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2.5 text-zinc-400">
+              <ChevronDown class="w-3.5 h-3.5" />
+            </div>
+          </div>
         </div>
       </div>
 

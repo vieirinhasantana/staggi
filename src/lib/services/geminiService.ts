@@ -96,27 +96,26 @@ Quando o usuário utilizar expressões temporais como "desse ano", "deste ano", 
   const memoryCmdMatch = cleanPrompt.match(/^\/(?:remember|lembrar|memoria|memory)\s+(.+)$/is);
   if (memoryCmdMatch) {
     const rawContent = memoryCmdMatch[1].trim();
-    let category: "preference" | "mandate" | "working_note" = "preference";
-    if (/\b(politica|política|mandato|mesa|risco|derivativo|compliance|regra geral)\b/i.test(rawContent)) category = "mandate";
-    else if (/\b(trabalho|nota|contexto|trimestre|comite|comitê|reuniao|reunião|hoje|semana)\b/i.test(rawContent)) category = "working_note";
-    else category = "preference";
+    let category = "general";
+    if (/\b(format|moeda|tabela|estilo|tom|decima)/i.test(rawContent)) category = "formatting";
+    else if (/\b(bazin|graham|calcul|fórmula|valuation|desconto)/i.test(rawContent)) category = "valuation";
 
     const title = rawContent.slice(0, 45).replace(/[:;.,]$/, "");
     const saved = memoryStore.addMemory({
       title: title.charAt(0).toUpperCase() + title.slice(1),
       content: rawContent,
       category,
-      tags: [category],
+      tags: [],
       pinned: false,
       active: true,
       source: "user"
     });
 
     return {
-      text: `🧠 **Diretriz Registrada no Second Brain com Sucesso!**\n\n- **Identificador**: \`${saved.id}\`\n- **Categoria**: **${category.toUpperCase()}**\n- **Diretriz**: *"${rawContent}"*\n\nEssa preferência pessoal foi gravada no índice de memória de longo prazo do Staggi com recuperação instantânea (< 1ms) e será respeitada em todas as suas próximas conversas e análises consultivas.`,
+      text: `🧠 **Diretriz Registrada no Second Brain com Sucesso!**\n\n- **Identificador**: \`${saved.id}\`\n- **Diretriz**: *"${rawContent}"*\n\nEssa instrução foi gravada no índice de memória de longo prazo do Staggi com recuperação instantânea (< 1ms) e será respeitada em todas as suas próximas conversas e análises consultivas.`,
       success: true,
       isConfigured: true,
-      source: "Second Brain (Advisor Preferences)"
+      source: "Second Brain"
     };
   }
 

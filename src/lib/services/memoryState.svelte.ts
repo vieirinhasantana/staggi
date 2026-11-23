@@ -56,16 +56,10 @@ function loadStoredMemories(): MemoryItem[] {
           !m.id?.startsWith("mem-client-")
       );
 
-      return userOnly.map((m: any) => {
-        let cat: MemoryCategory = "preference";
-        if (m.category === "mandate" || m.category === "profile") cat = "mandate";
-        else if (m.category === "working_note" || m.category === "thesis") cat = "working_note";
-        else if (m.category === "preference") cat = "preference";
-        return {
-          ...m,
-          category: cat,
-        };
-      });
+      return userOnly.map((m: any) => ({
+        ...m,
+        category: m.category || "general",
+      }));
     }
     return DEFAULT_MEMORIES;
   } catch {
