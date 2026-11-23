@@ -179,8 +179,15 @@ NUNCA diga que não tem dados em tempo real ou que não tem acesso a notícias r
 
   let mcpsContext = "";
   if (activeMcps.length > 0) {
-    mcpsContext = "\n\nConnected MCP Servers in Staggi:\n" + 
-      activeMcps.map(m => `- ${m.name} (${m.type}) [Transport: ${m.transport}]: ${m.desc}`).join("\n");
+    mcpsContext = "\n\nConnected MCP Servers & Tools in Staggi (Full Protocol Discovery Active):\n" + 
+      activeMcps.map(m => {
+        let text = `- ${m.name} (${m.type}) [Transport: ${m.transport}]: ${m.desc}`;
+        if (m.tools && m.tools.length > 0) {
+          text += `\n  Available MCP Tools (${m.tools.length}):\n` + 
+            m.tools.map(t => `    * ${t.name}: ${t.description || "No description provided"}`).join("\n");
+        }
+        return text;
+      }).join("\n\n");
   }
 
   const memoryAndFormattingInstruction = `\n\nDiretrizes de Contexto, Ativo & Formatação Executiva:

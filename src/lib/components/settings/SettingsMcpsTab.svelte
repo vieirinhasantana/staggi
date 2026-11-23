@@ -9,6 +9,8 @@
     Key,
     RefreshCw,
     Lock,
+    Wrench,
+    FileCode,
   } from "@lucide/svelte";
   import { pluginsStore } from "$lib/services/pluginsState.svelte";
   import { toastStore } from "$lib/services/toastService.svelte";
@@ -18,9 +20,20 @@
 
   let newMcpName = $state("");
   let newMcpEndpoint = $state("");
-  let newMcpTransport = $state<"stdio" | "sse">("stdio");
+  let newMcpTransport = $state<"stdio" | "sse">("sse");
   let newMcpApiKey = $state("");
   let newMcpAuthHeader = $state("Authorization");
+  let createMode = $state<"form" | "json">("form");
+  let jsonInput = $state(`{
+  "mcpServers": {
+    "staggi-portfolio": {
+      "url": "http://localhost:8000/sse",
+      "headers": {
+        "Authorization": "Bearer staggi-secret-api-key-2026"
+      }
+    }
+  }
+}`);
 
   let mcpTickerTest = $state("PETR4.SA");
   let mcpQuoteResult = $state<StockQuote | null>(null);
@@ -29,6 +42,7 @@
 
   let testingMcpId = $state<string | null>(null);
   let openAuthMcpId = $state<string | null>(null);
+  let expandedToolsMcpId = $state<string | null>(null);
   let tempApiKey = $state<string>("");
   let tempAuthHeader = $state<string>("Authorization");
 
@@ -48,10 +62,16 @@
     try {
       const res = await pluginsStore.testMcp(id);
       if (res.success) {
+        const toolMsg = res.tools && res.tools.length > 0 
+          ? ` • ${res.tools.length} ferramentas descobertas` 
+          : "";
         toastStore.success(
           t("settings.mcps.statusConnected"),
-          res.message
+          `${res.message}${toolMsg}`
         );
+        if (res.tools && res.tools.length > 0) {
+          expandedToolsMcpId = id;
+        }
       } else if (res.status === "auth_error") {
         toastStore.error(
           t("settings.mcps.statusAuthError"),
@@ -79,8 +99,9 @@
   }
 
   function handleSaveAuth(id: string) {
+    const cleanKey = tempApiKey.trim().replace(/^Bearer\s+/i, "");
     pluginsStore.updateMcp(id, {
-      apiKey: tempApiKey.trim() || undefined,
+      apiKey: cleanKey || undefined,
       authHeader: tempAuthHeader.trim() || "Authorization",
     });
     toastStore.success(
@@ -88,19 +109,21 @@
       "Authentication settings updated."
     );
     openAuthMcpId = null;
+    handleTestMcp(id);
   }
 
   function handleAddMcp() {
     if (!newMcpName.trim() || !newMcpEndpoint.trim()) return;
     const name = newMcpName.trim();
-    pluginsStore.addMcp({
+    const cleanKey = newMcpApiKey.trim().replace(/^Bearer\s+/i, "");
+    const added = pluginsStore.addMcp({
       name,
       type: "Custom MCP Server",
       transport: newMcpTransport,
       endpoint: newMcpEndpoint.trim(),
       active: true,
       desc: "User-registered custom MCP Server",
-      apiKey: newMcpApiKey.trim() || undefined,
+      apiKey: cleanKey || undefined,
       authHeader: newMcpAuthHeader.trim() || "Authorization",
     });
     toastStore.success(
@@ -112,39 +135,82 @@
     newMcpApiKey = "";
     newMcpAuthHeader = "Authorization";
     isCreatingMcp = false;
+    handleTestMcp(added.id);
+  }
+
+  function handleImportJson() {
+    if (!jsonInput.trim()) return;
+    try {
+      const added = pluginsStore.importMcpJson(jsonInput.trim());
+      if (added.length > 0) {
+        toastStore.success(
+          "Configuração MCP Importada",
+          `${added.length} servidor(es) registrado(s). Conectando e descobrindo ferramentas...`
+        );
+        isCreatingMcp = false;
+        for (const item of added) {
+          handleTestMcp(item.id);
+        }
+      } else {
+        toastStore.error("Erro na importação", "Nenhum servidor válido encontrado no JSON.");
+      }
+    } catch (e: any) {
+      toastStore.error("JSON Inválido", e?.message || "Verifique a sintaxe do JSON.");
+    }
   }
 </script>
 
 <div class="space-y-4">
   {#if !isCreatingMcp}
-    <button
-      type="button"
-      onclick={() => (isCreatingMcp = true)}
-      class="w-full p-3.5 rounded-2xl bg-gradient-to-r from-emerald-500/15 via-[#232034] to-[#1c1a28] border border-emerald-500/30 hover:border-emerald-500/50 flex items-center justify-between text-left transition-all cursor-pointer group shadow-sm"
-    >
-      <div class="flex items-center gap-3">
-        <div
-          class="h-9 w-9 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-300 group-hover:scale-105 transition-transform"
-        >
-          <Plus class="w-5 h-5 text-emerald-400" />
-        </div>
-        <div>
-          <h5
-            class="text-xs font-semibold text-zinc-100 font-mono flex items-center gap-1.5"
-          >
-            {t("settings.mcps.connectNew")}
-          </h5>
-          <p class="text-[11px] text-zinc-400 font-sans">
-            {t("settings.mcps.connectNewDesc")}
-          </p>
-        </div>
-      </div>
-      <span
-        class="px-3 py-1.5 rounded-xl bg-emerald-500/20 text-emerald-200 text-xs font-mono font-semibold border border-emerald-500/35 group-hover:bg-emerald-500/30 transition-all shrink-0"
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+      <button
+        type="button"
+        onclick={() => { isCreatingMcp = true; createMode = "form"; }}
+        class="p-3.5 rounded-2xl bg-gradient-to-r from-emerald-500/15 via-[#232034] to-[#1c1a28] border border-emerald-500/30 hover:border-emerald-500/50 flex items-center justify-between text-left transition-all cursor-pointer group shadow-sm"
       >
-        {t("settings.mcps.connectBtn")}
-      </span>
-    </button>
+        <div class="flex items-center gap-3">
+          <div
+            class="h-9 w-9 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-300 group-hover:scale-105 transition-transform"
+          >
+            <Plus class="w-5 h-5 text-emerald-400" />
+          </div>
+          <div>
+            <h5
+              class="text-xs font-semibold text-zinc-100 font-mono flex items-center gap-1.5"
+            >
+              {t("settings.mcps.connectNew")}
+            </h5>
+            <p class="text-[11px] text-zinc-400 font-sans">
+              Formulário manual (SSE / stdio)
+            </p>
+          </div>
+        </div>
+      </button>
+
+      <button
+        type="button"
+        onclick={() => { isCreatingMcp = true; createMode = "json"; }}
+        class="p-3.5 rounded-2xl bg-gradient-to-r from-purple-500/15 via-[#232034] to-[#1c1a28] border border-purple-500/30 hover:border-purple-500/50 flex items-center justify-between text-left transition-all cursor-pointer group shadow-sm"
+      >
+        <div class="flex items-center gap-3">
+          <div
+            class="h-9 w-9 rounded-xl bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-purple-300 group-hover:scale-105 transition-transform"
+          >
+            <FileCode class="w-5 h-5 text-purple-400" />
+          </div>
+          <div>
+            <h5
+              class="text-xs font-semibold text-zinc-100 font-mono flex items-center gap-1.5"
+            >
+              Colar JSON (mcpServers)
+            </h5>
+            <p class="text-[11px] text-zinc-400 font-sans">
+              Configuração JSON do Claude / MCP
+            </p>
+          </div>
+        </div>
+      </button>
+    </div>
   {/if}
 
   {#if isCreatingMcp}
@@ -154,11 +220,22 @@
       <div
         class="flex items-center justify-between pb-1 border-b border-white/[0.06]"
       >
-        <span
-          class="text-xs font-mono text-emerald-300 font-semibold flex items-center gap-1.5"
-        >
-          <Plus class="w-3.5 h-3.5 text-emerald-400" /> {t("settings.mcps.modalTitle")}
-        </span>
+        <div class="flex items-center gap-2">
+          <button
+            type="button"
+            onclick={() => (createMode = "form")}
+            class="px-2.5 py-1 rounded-lg text-xs font-mono font-semibold transition-colors cursor-pointer {createMode === 'form' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'text-zinc-400 hover:text-zinc-200'}"
+          >
+            Formulário
+          </button>
+          <button
+            type="button"
+            onclick={() => (createMode = "json")}
+            class="px-2.5 py-1 rounded-lg text-xs font-mono font-semibold transition-colors cursor-pointer {createMode === 'json' ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40' : 'text-zinc-400 hover:text-zinc-200'}"
+          >
+            Colar JSON (mcpServers)
+          </button>
+        </div>
         <button
           type="button"
           onclick={() => {
@@ -172,74 +249,106 @@
           {t("common.cancel")}
         </button>
       </div>
-      <div class="grid grid-cols-2 gap-2 text-xs font-mono">
-        <input
-          type="text"
-          aria-label={t("settings.mcps.serverName")}
-          bind:value={newMcpName}
-          placeholder={t("settings.mcps.namePlaceholder")}
-          class="rounded-xl bg-[#2a273b] border border-white/[0.1] px-3.5 py-2 text-zinc-100 focus:outline-none focus:border-emerald-500/60"
-        />
-        <div class="relative">
-          <select
-            aria-label={t("settings.mcps.transportType")}
-            bind:value={newMcpTransport}
-            class="w-full appearance-none rounded-xl bg-[#2a273b] border border-white/[0.1] hover:border-white/[0.2] pl-3 pr-8 py-2 text-zinc-200 focus:outline-none focus:border-emerald-500/60 font-mono transition-colors cursor-pointer"
-          >
-            <option value="stdio" class="bg-[#2a273b] text-zinc-100">{t("settings.mcps.transportStdio")}</option>
-            <option value="sse" class="bg-[#2a273b] text-zinc-100">{t("settings.mcps.transportSse")}</option>
-          </select>
-          <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2.5 text-zinc-400">
-            <ChevronDown class="w-3.5 h-3.5" />
+
+      {#if createMode === "form"}
+        <div class="grid grid-cols-2 gap-2 text-xs font-mono">
+          <input
+            type="text"
+            aria-label={t("settings.mcps.serverName")}
+            bind:value={newMcpName}
+            placeholder={t("settings.mcps.namePlaceholder")}
+            class="rounded-xl bg-[#2a273b] border border-white/[0.1] px-3.5 py-2 text-zinc-100 focus:outline-none focus:border-emerald-500/60"
+          />
+          <div class="relative">
+            <select
+              aria-label={t("settings.mcps.transportType")}
+              bind:value={newMcpTransport}
+              class="w-full appearance-none rounded-xl bg-[#2a273b] border border-white/[0.1] hover:border-white/[0.2] pl-3 pr-8 py-2 text-zinc-200 focus:outline-none focus:border-emerald-500/60 font-mono transition-colors cursor-pointer"
+            >
+              <option value="sse" class="bg-[#2a273b] text-zinc-100">{t("settings.mcps.transportSse")}</option>
+              <option value="stdio" class="bg-[#2a273b] text-zinc-100">{t("settings.mcps.transportStdio")}</option>
+            </select>
+            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2.5 text-zinc-400">
+              <ChevronDown class="w-3.5 h-3.5" />
+            </div>
           </div>
         </div>
-      </div>
-      <input
-        type="text"
-        aria-label={t("settings.mcps.endpointUrl")}
-        bind:value={newMcpEndpoint}
-        placeholder={t("settings.mcps.endpointPlaceholder")}
-        class="w-full rounded-xl bg-[#2a273b] border border-white/[0.1] px-3.5 py-2 text-xs text-zinc-100 font-mono focus:outline-none focus:border-emerald-500/60"
-      />
-
-      <div class="space-y-1 pt-1">
-        <label for="new-mcp-key" class="text-[11px] text-zinc-300 font-mono flex items-center gap-1.5">
-          <Key class="w-3 h-3 text-amber-400" /> {t("settings.mcps.apiKeyLabel")}
-        </label>
         <input
-          id="new-mcp-key"
-          type="password"
-          bind:value={newMcpApiKey}
-          placeholder={t("settings.mcps.apiKeyPlaceholder")}
+          type="text"
+          aria-label={t("settings.mcps.endpointUrl")}
+          bind:value={newMcpEndpoint}
+          placeholder="http://localhost:8000/sse"
           class="w-full rounded-xl bg-[#2a273b] border border-white/[0.1] px-3.5 py-2 text-xs text-zinc-100 font-mono focus:outline-none focus:border-emerald-500/60"
         />
-        <p class="text-[10px] text-zinc-400 font-sans">
-          {t("settings.mcps.authOptional")}
-        </p>
-      </div>
 
-      <div class="flex items-center gap-2 pt-1">
-        <button
-          type="button"
-          onclick={() => {
-            isCreatingMcp = false;
-            newMcpName = "";
-            newMcpEndpoint = "";
-            newMcpApiKey = "";
-          }}
-          class="px-4 py-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] text-zinc-300 text-xs font-mono transition-colors cursor-pointer"
-        >
-          {t("common.cancel")}
-        </button>
-        <button
-          type="button"
-          onclick={handleAddMcp}
-          disabled={!newMcpName.trim() || !newMcpEndpoint.trim()}
-          class="flex-1 py-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 text-xs font-mono font-semibold transition-all cursor-pointer disabled:opacity-40"
-        >
-          {t("settings.mcps.registerBtn")}
-        </button>
-      </div>
+        <div class="space-y-1 pt-1">
+          <label for="new-mcp-key" class="text-[11px] text-zinc-300 font-mono flex items-center gap-1.5">
+            <Key class="w-3 h-3 text-amber-400" /> {t("settings.mcps.apiKeyLabel")}
+          </label>
+          <input
+            id="new-mcp-key"
+            type="password"
+            bind:value={newMcpApiKey}
+            placeholder="Token ou Chave de API (ex: staggi-secret-api-key-2026)"
+            class="w-full rounded-xl bg-[#2a273b] border border-white/[0.1] px-3.5 py-2 text-xs text-zinc-100 font-mono focus:outline-none focus:border-emerald-500/60"
+          />
+          <p class="text-[10px] text-zinc-400 font-sans">
+            {t("settings.mcps.authOptional")}
+          </p>
+        </div>
+
+        <div class="flex items-center gap-2 pt-1">
+          <button
+            type="button"
+            onclick={() => {
+              isCreatingMcp = false;
+              newMcpName = "";
+              newMcpEndpoint = "";
+              newMcpApiKey = "";
+            }}
+            class="px-4 py-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] text-zinc-300 text-xs font-mono transition-colors cursor-pointer"
+          >
+            {t("common.cancel")}
+          </button>
+          <button
+            type="button"
+            onclick={handleAddMcp}
+            disabled={!newMcpName.trim() || !newMcpEndpoint.trim()}
+            class="flex-1 py-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 text-xs font-mono font-semibold transition-all cursor-pointer disabled:opacity-40"
+          >
+            {t("settings.mcps.registerBtn")}
+          </button>
+        </div>
+      {:else}
+        <div class="space-y-2">
+          <p class="text-[11px] text-zinc-300 font-sans">
+            Cole a configuração do seu servidor no formato padrão MCP (<code class="text-purple-300">mcpServers</code>):
+          </p>
+          <textarea
+            bind:value={jsonInput}
+            rows={7}
+            placeholder={`{\n  "mcpServers": {\n    "staggi-portfolio": {\n      "url": "http://localhost:8000/sse",\n      "headers": {\n        "Authorization": "Bearer ..."\n      }\n    }\n  }\n}`}
+            class="w-full rounded-xl bg-[#2a273b] border border-white/[0.12] p-3 text-xs text-zinc-100 font-mono focus:outline-none focus:border-purple-400 leading-relaxed custom-scrollbar"
+          ></textarea>
+          <div class="flex items-center gap-2 pt-1">
+            <button
+              type="button"
+              onclick={() => (isCreatingMcp = false)}
+              class="px-4 py-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] text-zinc-300 text-xs font-mono transition-colors cursor-pointer"
+            >
+              {t("common.cancel")}
+            </button>
+            <button
+              type="button"
+              onclick={handleImportJson}
+              disabled={!jsonInput.trim()}
+              class="flex-1 py-2 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/40 text-purple-300 text-xs font-mono font-semibold transition-all cursor-pointer disabled:opacity-40"
+            >
+              Importar e Conectar Servidor
+            </button>
+          </div>
+        </div>
+      {/if}
     </div>
   {/if}
 
@@ -276,6 +385,17 @@
               <span class="px-1.5 py-0.5 rounded text-[9px] bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 flex items-center gap-1 shrink-0">
                 <Lock class="w-2.5 h-2.5 text-emerald-400" /> Auth
               </span>
+            {/if}
+            {#if mcp.tools && mcp.tools.length > 0}
+              <button
+                type="button"
+                onclick={() => expandedToolsMcpId = expandedToolsMcpId === mcp.id ? null : mcp.id}
+                class="px-2 py-0.5 rounded text-[10px] bg-purple-500/15 text-purple-300 border border-purple-500/30 flex items-center gap-1 shrink-0 hover:bg-purple-500/25 transition-all cursor-pointer font-mono"
+              >
+                <Wrench class="w-2.5 h-2.5 text-purple-400" />
+                <span>{mcp.tools.length} Tools</span>
+                <ChevronDown class="w-2.5 h-2.5 transition-transform {expandedToolsMcpId === mcp.id ? 'rotate-180' : ''}" />
+              </button>
             {/if}
           </div>
 
@@ -366,6 +486,33 @@
               <AlertTriangle class="w-3 h-3 shrink-0" />
             {/if}
             <span class="truncate">{mcp.lastTestedMessage}</span>
+          </div>
+        {/if}
+
+        {#if expandedToolsMcpId === mcp.id && mcp.tools && mcp.tools.length > 0}
+          <div class="mt-2 p-3 rounded-xl bg-[#232034]/95 border border-purple-500/35 space-y-2 animate-fade-in text-xs font-mono">
+            <div class="flex items-center justify-between pb-1.5 border-b border-white/[0.08]">
+              <span class="font-semibold text-purple-300 flex items-center gap-1.5">
+                <Wrench class="w-3.5 h-3.5 text-purple-400" />
+                Ferramentas Disponíveis ({mcp.tools.length})
+              </span>
+              <span class="text-[10px] text-zinc-400 font-sans">Protocolo MCP Ativo</span>
+            </div>
+            <div class="max-h-60 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+              {#each mcp.tools as tool}
+                <div class="p-2.5 rounded-lg bg-[#191726] border border-white/[0.06] space-y-1">
+                  <div class="flex items-center justify-between">
+                    <span class="font-bold text-emerald-400 font-mono">{tool.name}</span>
+                    <span class="text-[9px] px-1.5 py-0.5 rounded bg-white/[0.04] text-zinc-400 font-mono">tool</span>
+                  </div>
+                  {#if tool.description}
+                    <p class="text-[11px] text-zinc-300 font-sans whitespace-pre-line leading-relaxed">
+                      {tool.description}
+                    </p>
+                  {/if}
+                </div>
+              {/each}
+            </div>
           </div>
         {/if}
 

@@ -308,9 +308,12 @@ class PluginsStore {
             ? "auth_error"
             : "unreachable";
 
+      const updatedTools = res.tools && res.tools.length > 0 ? res.tools : (mcp.tools || []);
+
       this.updateMcp(id, {
         lastTestedStatus: testedStatus,
         lastTestedMessage: res.message,
+        tools: updatedTools,
       });
 
       return res;
@@ -324,8 +327,22 @@ class PluginsStore {
         success: false,
         status: "unreachable",
         message: msg,
+        tools: mcp.tools || [],
       };
     }
+  }
+
+  async callTool(mcpId: string, toolName: string, args: Record<string, unknown> = {}) {
+    const mcp = this.mcps.find(m => m.id === mcpId);
+    if (!mcp) throw new Error("MCP server not found");
+    return await invoke<any>("call_mcp_tool", {
+      endpoint: mcp.endpoint,
+      transport: mcp.transport,
+      toolName,
+      arguments: args,
+      apiKey: mcp.apiKey ? mcp.apiKey.trim() : null,
+      authHeader: mcp.authHeader || "Authorization",
+    });
   }
 
   toggleSkill(id: string) {
@@ -333,13 +350,67 @@ class PluginsStore {
     this.saveSkills();
   }
 
-  addMcp(mcp: Omit<McpServerItem, "id">) {
+  addMcp(mcp: Omit<McpServerItem, "id">): McpServerItem {
     const newItem: McpServerItem = {
       ...mcp,
       id: `mcp-${Date.now()}`
     };
     this.mcps = [...this.mcps, newItem];
     this.saveMcps();
+    return newItem;
+  }
+
+  importMcpJson(rawJson: string): McpServerItem[] {
+    const parsed = JSON.parse(rawJson);
+    const added: McpServerItem[] = [];
+
+    const serversObj = parsed.mcpServers || parsed;
+    for (const [key, val] of Object.entries(serversObj)) {
+      if (typeof val !== "object" || val === null) continue;
+      const v = val as any;
+      const endpoint = v.url || v.endpoint || "";
+      if (!endpoint) continue;
+
+      let apiKey = "";
+      let authHeader = "Authorization";
+      if (v.headers && typeof v.headers === "object") {
+        for (const [hKey, hVal] of Object.entries(v.headers)) {
+          if (typeof hVal === "string") {
+            authHeader = hKey;
+            apiKey = hVal.replace(/^Bearer\s+/i, "");
+            break;
+          }
+        }
+      }
+
+      const transport = endpoint.includes("/sse") || v.transport === "sse" ? "sse" : (v.command ? "stdio" : "sse");
+      const name = key || "mcp-server";
+
+      const existing = this.mcps.find(m => m.name === name || m.endpoint === endpoint);
+      if (existing) {
+        this.updateMcp(existing.id, {
+          name,
+          endpoint,
+          transport,
+          apiKey: apiKey || existing.apiKey,
+          authHeader: authHeader || existing.authHeader,
+        });
+        added.push(existing);
+      } else {
+        const newItem = this.addMcp({
+          name,
+          type: "Custom MCP Server",
+          transport,
+          endpoint,
+          active: true,
+          desc: `Configured via MCP JSON (${name})`,
+          apiKey: apiKey || undefined,
+          authHeader,
+        });
+        added.push(newItem);
+      }
+    }
+    return added;
   }
 
   removeMcp(id: string) {
