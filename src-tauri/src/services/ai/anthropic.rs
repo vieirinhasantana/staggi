@@ -1,65 +1,6 @@
-use crate::models::ai::{ChatTurn, DiscoveredModel};
+use crate::models::ai::{AIModel, ChatTurn};
 
-pub fn get_fallback_anthropic_models() -> Vec<DiscoveredModel> {
-    vec![
-        DiscoveredModel {
-            id: "claude-3-7-sonnet-latest".to_string(),
-            name: "Claude 3.7 Sonnet (Hybrid)".to_string(),
-            description: "Recommended • State-of-the-art hybrid model with Extended Thinking".to_string(),
-            context_window: "200k tokens".to_string(),
-            supports_tools: true,
-            supports_reasoning: true,
-            is_recommended: true,
-        },
-        DiscoveredModel {
-            id: "claude-3-5-sonnet-latest".to_string(),
-            name: "Claude 3.5 Sonnet".to_string(),
-            description: "Benchmark for financial reasoning, coding, and tool use".to_string(),
-            context_window: "200k tokens".to_string(),
-            supports_tools: true,
-            supports_reasoning: false,
-            is_recommended: false,
-        },
-        DiscoveredModel {
-            id: "claude-3-5-haiku-latest".to_string(),
-            name: "Claude 3.5 Haiku".to_string(),
-            description: "Ultra-fast responses with high contextual intelligence".to_string(),
-            context_window: "200k tokens".to_string(),
-            supports_tools: true,
-            supports_reasoning: false,
-            is_recommended: false,
-        },
-        DiscoveredModel {
-            id: "claude-3-opus-latest".to_string(),
-            name: "Claude 3 Opus".to_string(),
-            description: "Deep strategic and institutional analytical model".to_string(),
-            context_window: "200k tokens".to_string(),
-            supports_tools: true,
-            supports_reasoning: false,
-            is_recommended: false,
-        },
-        DiscoveredModel {
-            id: "claude-3-sonnet-20240229".to_string(),
-            name: "Claude 3 Sonnet".to_string(),
-            description: "Balanced traditional Claude 3 generation model".to_string(),
-            context_window: "200k tokens".to_string(),
-            supports_tools: true,
-            supports_reasoning: false,
-            is_recommended: false,
-        },
-        DiscoveredModel {
-            id: "claude-3-haiku-20240307".to_string(),
-            name: "Claude 3 Haiku".to_string(),
-            description: "Compact traditional generation model".to_string(),
-            context_window: "200k tokens".to_string(),
-            supports_tools: true,
-            supports_reasoning: false,
-            is_recommended: false,
-        },
-    ]
-}
-
-pub async fn list_anthropic_models_api(key: &str) -> Result<Vec<DiscoveredModel>, String> {
+pub async fn list_anthropic_models_api(key: &str) -> Result<Vec<AIModel>, String> {
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(12))
         .build()
@@ -70,49 +11,37 @@ pub async fn list_anthropic_models_api(key: &str) -> Result<Vec<DiscoveredModel>
         .header("x-api-key", key)
         .header("anthropic-version", "2023-06-01")
         .send()
-        .await;
+        .await
+        .map_err(|e| format!("Network error querying Anthropic models: {}", e))?;
+
+    let status = res.status();
+    let body = res.text().await.unwrap_or_default();
+    if !status.is_success() {
+        return Err(format!("Anthropic API returned status {}: {}", status, body));
+    }
+
+    let json: serde_json::Value = serde_json::from_str(&body)
+        .map_err(|e| format!("Error parsing Anthropic models response: {}", e))?;
 
     let mut results = Vec::new();
+    if let Some(models) = json.get("data").and_then(|d| d.as_array()) {
+        for m in models {
+            if let Some(id) = m.get("id").and_then(|i| i.as_str()) {
+                let display = m
+                    .get("display_name")
+                    .and_then(|d| d.as_str())
+                    .unwrap_or(id);
 
-    if let Ok(response) = res {
-        if response.status().is_success() {
-            if let Ok(body) = response.text().await {
-                if let Ok(json) = serde_json::from_str::<serde_json::Value>(&body) {
-                    if let Some(models) = json.get("data").and_then(|d| d.as_array()) {
-                        for m in models {
-                            if let Some(id) = m.get("id").and_then(|i| i.as_str()) {
-                                let display = m
-                                    .get("display_name")
-                                    .and_then(|d| d.as_str())
-                                    .unwrap_or(id);
-                                let is_reasoning = id.contains("3-7") || id.contains("thinking");
-                                let is_rec = id.contains("claude-3-7-sonnet");
-
-                                results.push(DiscoveredModel {
-                                    id: id.to_string(),
-                                    name: display.to_string(),
-                                    description: if is_reasoning {
-                                        "Hybrid State-of-the-Art with Extended Thinking"
-                                    } else {
-                                        "Anthropic Claude Production Model"
-                                    }
-                                    .to_string(),
-                                    context_window: "200k tokens".to_string(),
-                                    supports_tools: true,
-                                    supports_reasoning: is_reasoning,
-                                    is_recommended: is_rec,
-                                });
-                            }
-                        }
-                    }
-                }
+                results.push(AIModel {
+                    id: id.to_string(),
+                    name: display.to_string(),
+                    description: None,
+                });
             }
         }
     }
 
-    if results.is_empty() {
-        results = get_fallback_anthropic_models();
-    }
+    results.sort_by(|a, b| a.id.cmp(&b.id));
 
     Ok(results)
 }

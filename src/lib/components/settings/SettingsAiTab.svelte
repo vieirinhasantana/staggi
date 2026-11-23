@@ -258,7 +258,7 @@
       >
         {#each aiStore.availableModelOptions as opt}
           <option value={opt.id} class="bg-[#1c1a28] text-zinc-100 py-1">
-            {opt.name} — {opt.description} ({opt.contextWindow}) {opt.supportsReasoning ? '[Reasoning ⚡]' : ''}
+            {opt.name}{opt.description ? ` — ${opt.description}` : ''}
           </option>
         {/each}
       </select>

@@ -1,14 +1,11 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct DiscoveredModel {
+pub struct AIModel {
     pub id: String,
     pub name: String,
-    pub description: String,
-    pub context_window: String,
-    pub supports_tools: bool,
-    pub supports_reasoning: bool,
-    pub is_recommended: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]

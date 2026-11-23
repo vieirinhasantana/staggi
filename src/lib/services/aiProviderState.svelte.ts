@@ -2,213 +2,32 @@ import { invoke } from "@tauri-apps/api/core";
 import type { AIProvider, EnforcementLevel, AIModelOption } from "$lib/types";
 export type { AIProvider, EnforcementLevel, AIModelOption };
 
-export interface DiscoveredModelPayload {
+export interface AIModelPayload {
   id: string;
   name: string;
-  description: string;
-  context_window?: string;
-  supports_tools: boolean;
-  supports_reasoning: boolean;
-  is_recommended?: boolean;
+  description?: string;
 }
 
 export const AI_MODELS: Record<AIProvider, AIModelOption[]> = {
   gemini: [
     {
       id: "gemini-2.0-flash",
-      name: "Gemini 2.0 Flash (Recommended)",
-      provider: "gemini",
-      description: "Flagship • High Speed, Native Tool Calling & Search Grounding",
-      supportsTools: true,
-      supportsReasoning: false,
-      isRecommended: true,
-      contextWindow: "1M tokens"
-    },
-    {
-      id: "gemini-2.0-flash-lite",
-      name: "Gemini 2.0 Flash-Lite",
-      provider: "gemini",
-      description: "Lightweight & Fast • Minimal Latency & High Cost Efficiency",
-      supportsTools: true,
-      supportsReasoning: false,
-      contextWindow: "1M tokens"
-    },
-    {
-      id: "gemini-2.0-pro-exp-02-05",
-      name: "Gemini 2.0 Pro Experimental",
-      provider: "gemini",
-      description: "Highest Cognitive Capacity • Excellent for quant, code, and finance",
-      supportsTools: true,
-      supportsReasoning: false,
-      contextWindow: "2M tokens"
-    },
-    {
-      id: "gemini-2.0-flash-thinking-exp-01-21",
-      name: "Gemini 2.0 Flash Thinking",
-      provider: "gemini",
-      description: "Deep Reasoning • Transparent step-by-step chain-of-thought",
-      supportsTools: false,
-      supportsReasoning: true,
-      contextWindow: "1M tokens"
-    },
-    {
-      id: "gemini-1.5-pro",
-      name: "Gemini 1.5 Pro",
-      provider: "gemini",
-      description: "Long-Form Analysis • Massive 2M Tokens context window",
-      supportsTools: true,
-      supportsReasoning: false,
-      contextWindow: "2M tokens"
-    },
-    {
-      id: "gemini-1.5-flash",
-      name: "Gemini 1.5 Flash",
-      provider: "gemini",
-      description: "Fast & Balanced • Proven reliability across financial prompts",
-      supportsTools: true,
-      supportsReasoning: false,
-      contextWindow: "1M tokens"
-    },
-    {
-      id: "gemini-1.5-flash-8b",
-      name: "Gemini 1.5 Flash-8B",
-      provider: "gemini",
-      description: "Ultra Compact • Built for high-frequency telemetry",
-      supportsTools: true,
-      supportsReasoning: false,
-      contextWindow: "1M tokens"
+      name: "Gemini 2.0 Flash",
+      provider: "gemini"
     }
   ],
   openai: [
     {
       id: "gpt-4o",
-      name: "GPT-4o (Recommended)",
-      provider: "openai",
-      description: "Flagship • Intelligent, fast, multimodal flagship",
-      supportsTools: true,
-      supportsReasoning: false,
-      isRecommended: true,
-      contextWindow: "128k tokens"
-    },
-    {
-      id: "gpt-4o-mini",
-      name: "GPT-4o Mini",
-      provider: "openai",
-      description: "Fast & Economical • Ideal for telemetry and repetitive tasks",
-      supportsTools: true,
-      supportsReasoning: false,
-      contextWindow: "128k tokens"
-    },
-    {
-      id: "o3-mini",
-      name: "o3-mini (Reasoning)",
-      provider: "openai",
-      description: "Quantitative & Logic • Native reasoning effort parameter",
-      supportsTools: true,
-      supportsReasoning: true,
-      contextWindow: "200k tokens"
-    },
-    {
-      id: "o1",
-      name: "o1 (Full Reasoning)",
-      provider: "openai",
-      description: "Max Reasoning • Deep analytical problem solving",
-      supportsTools: true,
-      supportsReasoning: true,
-      contextWindow: "200k tokens"
-    },
-    {
-      id: "o1-mini",
-      name: "o1-mini",
-      provider: "openai",
-      description: "Fast Reasoning • Code and mathematical modeling",
-      supportsTools: true,
-      supportsReasoning: true,
-      contextWindow: "128k tokens"
-    },
-    {
-      id: "gpt-4.5-preview",
-      name: "GPT-4.5 Preview (Orion)",
-      provider: "openai",
-      description: "Next-Gen Frontier • Encyclopedic knowledge & deep context",
-      supportsTools: true,
-      supportsReasoning: false,
-      contextWindow: "128k tokens"
-    },
-    {
-      id: "chatgpt-4o-latest",
-      name: "ChatGPT-4o Latest",
-      provider: "openai",
-      description: "Continuous Dynamic Model • Always points to latest 4o version",
-      supportsTools: true,
-      supportsReasoning: false,
-      contextWindow: "128k tokens"
-    },
-    {
-      id: "gpt-4-turbo",
-      name: "GPT-4 Turbo",
-      provider: "openai",
-      description: "Structured Data • Native JSON mode and multiple tool support",
-      supportsTools: true,
-      supportsReasoning: false,
-      contextWindow: "128k tokens"
+      name: "GPT-4o",
+      provider: "openai"
     }
   ],
   anthropic: [
     {
       id: "claude-3-7-sonnet-latest",
-      name: "Claude 3.7 Sonnet (Hybrid)",
-      provider: "anthropic",
-      description: "Recommended • State-of-the-art hybrid model with Extended Thinking",
-      supportsTools: true,
-      supportsReasoning: true,
-      isRecommended: true,
-      contextWindow: "200k tokens"
-    },
-    {
-      id: "claude-3-5-sonnet-latest",
-      name: "Claude 3.5 Sonnet",
-      provider: "anthropic",
-      description: "Global Benchmark for Financial Analysis, Reasoning & MCPs",
-      supportsTools: true,
-      supportsReasoning: false,
-      contextWindow: "200k tokens"
-    },
-    {
-      id: "claude-3-5-haiku-latest",
-      name: "Claude 3.5 Haiku",
-      provider: "anthropic",
-      description: "Ultra Fast • Immediate responses with high intelligence",
-      supportsTools: true,
-      supportsReasoning: false,
-      contextWindow: "200k tokens"
-    },
-    {
-      id: "claude-3-opus-latest",
-      name: "Claude 3 Opus",
-      provider: "anthropic",
-      description: "Institutional Depth • Strategic multi-tier advisory analysis",
-      supportsTools: true,
-      supportsReasoning: false,
-      contextWindow: "200k tokens"
-    },
-    {
-      id: "claude-3-sonnet-20240229",
-      name: "Claude 3 Sonnet",
-      provider: "anthropic",
-      description: "Balanced traditional Claude 3 generation model",
-      supportsTools: true,
-      supportsReasoning: false,
-      contextWindow: "200k tokens"
-    },
-    {
-      id: "claude-3-haiku-20240307",
-      name: "Claude 3 Haiku",
-      provider: "anthropic",
-      description: "Compact traditional Claude 3 generation model",
-      supportsTools: true,
-      supportsReasoning: false,
-      contextWindow: "200k tokens"
+      name: "Claude 3.7 Sonnet",
+      provider: "anthropic"
     }
   ]
 };
@@ -242,7 +61,7 @@ function setStorage(key: string, value: string) {
   }
 }
 
-function loadCachedDiscoveredModels(p: AIProvider): AIModelOption[] {
+function loadCachedModels(p: AIProvider): AIModelOption[] {
   if (typeof window === "undefined") return [];
   try {
     const raw = localStorage.getItem(`${DYNAMIC_MODELS_STORAGE_PREFIX}${p}`);
@@ -284,9 +103,9 @@ export class AIProviderStore {
   );
 
   discoveredModels = $state<Record<AIProvider, AIModelOption[]>>({
-    gemini: loadCachedDiscoveredModels("gemini"),
-    openai: loadCachedDiscoveredModels("openai"),
-    anthropic: loadCachedDiscoveredModels("anthropic"),
+    gemini: loadCachedModels("gemini"),
+    openai: loadCachedModels("openai"),
+    anthropic: loadCachedModels("anthropic"),
   });
 
   isFetchingModels = $state<boolean>(false);
@@ -344,7 +163,7 @@ export class AIProviderStore {
     if (list.length === 0) return;
     const current = this.model;
     if (!list.some(m => m.id === current)) {
-      const fallback = list.find(m => m.isRecommended) || list[0];
+      const fallback = list[0];
       if (fallback) {
         this.setModel(fallback.id);
       }
@@ -441,7 +260,7 @@ export class AIProviderStore {
 
     this.isFetchingModels = true;
     try {
-      const result = await invoke<DiscoveredModelPayload[]>("list_ai_models", {
+      const result = await invoke<AIModelPayload[]>("list_ai_models", {
         provider: prov,
         apiKey: key.trim(),
       });
@@ -451,11 +270,7 @@ export class AIProviderStore {
           id: m.id,
           name: m.name,
           provider: prov,
-          description: m.description || "Provider language model",
-          supportsTools: m.supports_tools,
-          supportsReasoning: m.supports_reasoning,
-          isRecommended: m.is_recommended,
-          contextWindow: m.context_window || "128k tokens",
+          description: m.description,
         }));
 
         this.discoveredModels[prov] = mapped;
@@ -464,12 +279,12 @@ export class AIProviderStore {
         return mapped;
       }
     } catch {
-      // Fallback to static catalog if network request fails
+      // Return existing discovered or default models
     } finally {
       this.isFetchingModels = false;
     }
 
-    return AI_MODELS[prov] || [];
+    return this.discoveredModels[prov] || AI_MODELS[prov] || [];
   }
 
   save() {

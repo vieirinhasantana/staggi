@@ -2,12 +2,12 @@ pub mod anthropic;
 pub mod gemini;
 pub mod openai;
 
-use crate::models::ai::{ChatTurn, DiscoveredModel};
+use crate::models::ai::{AIModel, ChatTurn};
 
 pub async fn list_ai_models(
     provider: String,
     api_key: String,
-) -> Result<Vec<DiscoveredModel>, String> {
+) -> Result<Vec<AIModel>, String> {
     let key = api_key.trim();
     if key.is_empty() {
         return Err("API key not provided".to_string());

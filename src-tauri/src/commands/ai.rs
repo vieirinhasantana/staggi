@@ -1,4 +1,4 @@
-use crate::models::ai::{ChatTurn, DiscoveredModel};
+use crate::models::ai::{AIModel, ChatTurn};
 use crate::services::ai;
 
 #[tauri::command]
@@ -10,7 +10,7 @@ pub async fn list_gemini_models(api_key: String) -> Result<Vec<String>, String> 
 pub async fn list_ai_models(
     provider: String,
     api_key: String,
-) -> Result<Vec<DiscoveredModel>, String> {
+) -> Result<Vec<AIModel>, String> {
     ai::list_ai_models(provider, api_key).await
 }
 
