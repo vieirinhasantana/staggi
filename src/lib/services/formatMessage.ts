@@ -13,6 +13,8 @@ import type {
   ParsedComparisonTable,
   AssetProfileField,
   ParsedAssetProfile,
+  PortfolioAllocationItem,
+  ParsedPortfolioDistribution,
 } from "$lib/types";
 
 export type {
@@ -29,6 +31,8 @@ export type {
   ParsedComparisonTable,
   AssetProfileField,
   ParsedAssetProfile,
+  PortfolioAllocationItem,
+  ParsedPortfolioDistribution,
 };
 
 export function parseSingleAssetProfile(rawText: string): ParsedAssetProfile | null {
@@ -691,6 +695,145 @@ export function parseComparisonTable(_rawText: string): ParsedComparisonTable | 
   // Markdown tables are rendered natively and accurately via renderMarkdown
   // without intercepting or replacing generic tabular data (clients, portfolios, products, etc.)
   return null;
+}
+
+export function parsePortfolioDistribution(rawText: string): ParsedPortfolioDistribution | null {
+  if (!rawText || rawText.length < 40) return null;
+
+  const hasKeywords = /\b(portf[oó]lio|carteira|aloca[çc][aã]o|distribui[çc][aã]o|classes?\s+de\s+ativos|patrim[oô]nio)\b/i.test(rawText);
+  if (!hasKeywords) return null;
+
+  // Exclude dividend payout histories
+  if (/proventos?\s+declarados|dividend\s*yield\s*\(dy\)\s*hist[óo]rico/i.test(rawText)) {
+    return null;
+  }
+
+  // Extract client or portfolio title
+  let clientName: string | undefined;
+  const clientMatch = rawText.match(/(?:cliente|investidor|titular|carteira\s+de|portf[oó]lio\s+de)\s*[:\-–—]?\s*\*?\*?([A-ZÀ-ÿ][A-Za-zÀ-ÿ\s]{2,30})\*?\*?/i);
+  if (clientMatch) {
+    const candidate = clientMatch[1].trim();
+    if (!/^(total|renda|ativos|ações|fiis|resumo|consolidado|alocação|distribuição)/i.test(candidate)) {
+      clientName = candidate;
+    }
+  }
+
+  let totalValue: string | undefined;
+  const totalMatch = rawText.match(/(?:patrim[oô]nio\s+total|total\s+da\s+carteira|valor\s+total|patrim[oô]nio)\s*[:\-–—]?\s*\*?\*?([R$US€£\s\d.,]+)/i);
+  if (totalMatch) {
+    const candidate = totalMatch[1].trim();
+    if (/\d/.test(candidate) && (candidate.includes("R$") || candidate.includes("$") || candidate.length >= 4)) {
+      totalValue = candidate.replace(/\*+/g, "").trim();
+    }
+  }
+
+  const palette = [
+    "#10b981", // emerald
+    "#14b8a6", // teal
+    "#0ea5e9", // sky
+    "#6366f1", // indigo
+    "#8b5cf6", // violet
+    "#a855f7", // purple
+    "#f59e0b", // amber
+    "#f97316", // orange
+    "#ec4899", // pink
+    "#06b6d4", // cyan
+    "#84cc16"  // lime
+  ];
+
+  const items: PortfolioAllocationItem[] = [];
+
+  // Parse lines (table or list)
+  const lines = rawText.split("\n").map(l => l.trim()).filter(Boolean);
+
+  for (const line of lines) {
+    if (line.includes("---")) continue;
+
+    // Check if line contains a percentage
+    const pctMatch = line.match(/\b(\d+(?:[.,]\d+)?)\s*%/);
+    if (!pctMatch) continue;
+
+    const percentage = parseFloat(pctMatch[1].replace(",", "."));
+    if (isNaN(percentage) || percentage <= 0 || percentage > 100) continue;
+
+    // Check table row format
+    if (line.includes("|")) {
+      const cells = line.split("|").map(c => c.trim()).filter(Boolean);
+      if (cells.length >= 2) {
+        // Exclude header row
+        const headerTest = cells.join(" ").toLowerCase();
+        if (headerTest.includes("ativo") && headerTest.includes("classe") && headerTest.includes("%")) continue;
+        if (headerTest.includes("ativo") && headerTest.includes("alocação")) continue;
+
+        let label = "";
+        let category: string | undefined;
+        let value: string | undefined;
+
+        // Extract label from the first cell that is text
+        const col0 = cells[0].replace(/\*\*/g, "").replace(/^#+\s*/, "").trim();
+        if (col0 && !col0.includes("%")) {
+          label = col0;
+        }
+
+        for (let c = 1; c < cells.length; c++) {
+          const cell = cells[c].replace(/\*\*/g, "").trim();
+          if (cell.includes("%")) continue;
+          if (/(?:R\$|US\$|\$)\s*[\d.,]+/i.test(cell) || /^\d{1,3}(?:\.\d{3})*(?:,\d{2})?$/.test(cell)) {
+            value = cell.startsWith("R$") || cell.startsWith("$") ? cell : `R$ ${cell}`;
+          } else if (cell.length > 1 && !category && cell !== label) {
+            category = cell;
+          }
+        }
+
+        if (label && label.length >= 2 && !/^(total|soma|consolidado)/i.test(label)) {
+          items.push({
+            label,
+            category,
+            value,
+            percentage,
+            percentageFormatted: `${percentage.toFixed(1).replace(".", ",")}%`,
+            color: palette[items.length % palette.length]
+          });
+        }
+      }
+    } else {
+      // Bullet list format: e.g. - **Renda Fixa**: 40% (R$ 400.000)
+      const listMatch = line.match(/^[-*•]\s*\*?\*?([^:*]+?)\*?\*?\s*:\s*.*?\b(\d+(?:[.,]\d+)?)\s*%/);
+      if (listMatch) {
+        const label = listMatch[1].trim();
+        const valueMatch = line.match(/(?:R\$|US\$|\$)\s*[\d.,]+/i);
+        const value = valueMatch ? valueMatch[0].trim() : undefined;
+
+        if (label && !/^(total|soma|consolidado)/i.test(label)) {
+          items.push({
+            label,
+            value,
+            percentage,
+            percentageFormatted: `${percentage.toFixed(1).replace(".", ",")}%`,
+            color: palette[items.length % palette.length]
+          });
+        }
+      }
+    }
+  }
+
+  // Must have at least 2 allocation items and total percentage >= 50%
+  if (items.length < 2) return null;
+
+  const totalPercentage = items.reduce((sum, it) => sum + it.percentage, 0);
+  if (totalPercentage < 50 || totalPercentage > 115) return null;
+
+  const title = clientName
+    ? `Distribuição de Carteira • ${clientName}`
+    : "Distribuição e Alocação de Portfólio";
+
+  return {
+    title,
+    clientName,
+    totalValue,
+    items,
+    intro: "Alocação patrimonial consolidada por classes de ativos e posições estratégicas."
+  };
 }
 
 export function renderMarkdown(content: string): string {

@@ -159,6 +159,9 @@ ${targetSkill.systemPrompt}`;
       } else if ((toolName.includes("news") || toolName.includes("noticia")) &&
                  /\b(not[ií]cias?|manchetes?|fatos? relevantes?|notici[aá]rio)\b/i.test(cleanPrompt)) {
         shouldExecute = true;
+      } else if ((toolName.includes("portfolio") || toolName.includes("carteira") || toolName.includes("alocacao") || toolName.includes("posicao") || toolName.includes("position") || toolName.includes("asset")) &&
+                 /\b(portf[oó]lio|carteira|aloca[çc][aã]o|posi[çc][oõ]es|posicao|patrim[oô]nio|distribui[çc][aã]o)\b/i.test(cleanPrompt)) {
+        shouldExecute = true;
       }
 
       if (shouldExecute) {
@@ -211,7 +214,11 @@ ${targetSkill.systemPrompt}`;
      Você DEVE citar EXATAMENTE o servidor MCP e a ferramenta consultada no rodapé da resposta: "Fonte Auditada: <NomeDoMcp> • <NomeDaTool>".
      Exemplo real: se consultou o MCP "staggi-portfolio" com a ferramenta "list_clients", finalize estritamente com: "Fonte Auditada: staggi-portfolio • list_clients".
      É ESTRITAMENTE PROIBIDO inventar fontes como "B3", "SEC EDGAR", "Market Consensus" ou "Consenso Sell-Side" quando os dados vieram de um MCP local do usuário ou ferramenta específica.
-   - Se nenhuma ferramenta/MCP foi consultada, NÃO inclua nenhum rodapé de "Fonte Auditada".`;
+   - Se nenhuma ferramenta/MCP foi consultada, NÃO inclua nenhum rodapé de "Fonte Auditada".
+ 
+6. APRESENTAÇÃO DE PORTFÓLIO E DISTRIBUIÇÃO DE CARTEIRA:
+   - Ao apresentar o portfólio, posições ou carteira de um cliente, estruture os dados em formato claro com Ativo/Classe, Categoria, Valor e Percentual (%) da carteira.
+   - Isso permite ao Staggi renderizar automaticamente o gráfico visual interativo de distribuição de portfólio (Donut Chart & Alocações) em conjunto com a tabela analítica completa.`;
 
   let enforcementDirective = "";
   if (aiStore.enforcementLevel === "low") {

@@ -185,3 +185,20 @@ export interface ParsedAssetProfile {
   summary?: string;
   mcpSource?: string;
 }
+
+export interface PortfolioAllocationItem {
+  label: string;
+  category?: string;
+  value?: string;
+  percentage: number;
+  percentageFormatted: string;
+  color: string;
+}
+
+export interface ParsedPortfolioDistribution {
+  title: string;
+  clientName?: string;
+  totalValue?: string;
+  items: PortfolioAllocationItem[];
+  intro?: string;
+}

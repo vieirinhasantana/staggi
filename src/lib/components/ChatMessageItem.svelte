@@ -6,6 +6,7 @@
     ValuationProjectionCard,
     AssetDividendsCard,
     AssetProfileCard,
+    PortfolioDistributionCard,
   } from "./cards";
   import { 
     parseAssetQuote, 
@@ -14,6 +15,7 @@
     parseAssetDividends, 
     parseAssetProfile,
     parseAssetProfiles,
+    parsePortfolioDistribution,
     detectAuditedSource,
     renderMarkdown 
   } from "$lib/services/formatMessage";
@@ -50,6 +52,10 @@
 
   let corporateEvents = $derived(
     message.sender === "staggi" && !message.isLoading && !message.isStreaming ? parseCorporateEvents(message.text) : null
+  );
+
+  let portfolioDistribution = $derived(
+    message.sender === "staggi" && !message.isLoading && !message.isStreaming ? parsePortfolioDistribution(message.text) : null
   );
 </script>
 
@@ -93,6 +99,9 @@
 
     {:else if corporateEvents}
       <CorporateEventsCard eventsData={corporateEvents} />
+
+    {:else if portfolioDistribution}
+      <PortfolioDistributionCard data={portfolioDistribution} rawText={message.text} source={auditedSource || undefined} />
 
     {:else if assetQuote}
       <AssetQuoteCard quote={assetQuote} />
