@@ -4,6 +4,11 @@
     ChevronDown,
     ExternalLink,
     Trash2,
+    CheckCircle2,
+    AlertTriangle,
+    Key,
+    RefreshCw,
+    Lock,
   } from "@lucide/svelte";
   import { pluginsStore } from "$lib/services/pluginsState.svelte";
   import { toastStore } from "$lib/services/toastService.svelte";
@@ -14,11 +19,18 @@
   let newMcpName = $state("");
   let newMcpEndpoint = $state("");
   let newMcpTransport = $state<"stdio" | "sse">("stdio");
+  let newMcpApiKey = $state("");
+  let newMcpAuthHeader = $state("Authorization");
 
   let mcpTickerTest = $state("PETR4.SA");
   let mcpQuoteResult = $state<StockQuote | null>(null);
   let isTestingMcpYahoo = $state(false);
   let isCreatingMcp = $state(false);
+
+  let testingMcpId = $state<string | null>(null);
+  let openAuthMcpId = $state<string | null>(null);
+  let tempApiKey = $state<string>("");
+  let tempAuthHeader = $state<string>("Authorization");
 
   async function testMcpYahooQuote() {
     isTestingMcpYahoo = true;
@@ -31,6 +43,53 @@
     }
   }
 
+  async function handleTestMcp(id: string) {
+    testingMcpId = id;
+    try {
+      const res = await pluginsStore.testMcp(id);
+      if (res.success) {
+        toastStore.success(
+          t("settings.mcps.statusConnected"),
+          res.message
+        );
+      } else if (res.status === "auth_error") {
+        toastStore.error(
+          t("settings.mcps.statusAuthError"),
+          res.message
+        );
+      } else {
+        toastStore.warning(
+          t("settings.mcps.statusUnreachable"),
+          res.message
+        );
+      }
+    } finally {
+      testingMcpId = null;
+    }
+  }
+
+  function handleOpenAuth(mcp: any) {
+    if (openAuthMcpId === mcp.id) {
+      openAuthMcpId = null;
+    } else {
+      openAuthMcpId = mcp.id;
+      tempApiKey = mcp.apiKey || "";
+      tempAuthHeader = mcp.authHeader || "Authorization";
+    }
+  }
+
+  function handleSaveAuth(id: string) {
+    pluginsStore.updateMcp(id, {
+      apiKey: tempApiKey.trim() || undefined,
+      authHeader: tempAuthHeader.trim() || "Authorization",
+    });
+    toastStore.success(
+      t("settings.mcps.savedAuth"),
+      "Authentication settings updated."
+    );
+    openAuthMcpId = null;
+  }
+
   function handleAddMcp() {
     if (!newMcpName.trim() || !newMcpEndpoint.trim()) return;
     const name = newMcpName.trim();
@@ -41,6 +100,8 @@
       endpoint: newMcpEndpoint.trim(),
       active: true,
       desc: "User-registered custom MCP Server",
+      apiKey: newMcpApiKey.trim() || undefined,
+      authHeader: newMcpAuthHeader.trim() || "Authorization",
     });
     toastStore.success(
       t("toasts.mcpRegisteredTitle"),
@@ -48,6 +109,8 @@
     );
     newMcpName = "";
     newMcpEndpoint = "";
+    newMcpApiKey = "";
+    newMcpAuthHeader = "Authorization";
     isCreatingMcp = false;
   }
 </script>
@@ -102,6 +165,7 @@
             isCreatingMcp = false;
             newMcpName = "";
             newMcpEndpoint = "";
+            newMcpApiKey = "";
           }}
           class="text-zinc-400 hover:text-zinc-100 text-xs font-mono cursor-pointer"
         >
@@ -137,6 +201,23 @@
         placeholder={t("settings.mcps.endpointPlaceholder")}
         class="w-full rounded-xl bg-[#2a273b] border border-white/[0.1] px-3.5 py-2 text-xs text-zinc-100 font-mono focus:outline-none focus:border-emerald-500/60"
       />
+
+      <div class="space-y-1 pt-1">
+        <label for="new-mcp-key" class="text-[11px] text-zinc-300 font-mono flex items-center gap-1.5">
+          <Key class="w-3 h-3 text-amber-400" /> {t("settings.mcps.apiKeyLabel")}
+        </label>
+        <input
+          id="new-mcp-key"
+          type="password"
+          bind:value={newMcpApiKey}
+          placeholder={t("settings.mcps.apiKeyPlaceholder")}
+          class="w-full rounded-xl bg-[#2a273b] border border-white/[0.1] px-3.5 py-2 text-xs text-zinc-100 font-mono focus:outline-none focus:border-emerald-500/60"
+        />
+        <p class="text-[10px] text-zinc-400 font-sans">
+          {t("settings.mcps.authOptional")}
+        </p>
+      </div>
+
       <div class="flex items-center gap-2 pt-1">
         <button
           type="button"
@@ -144,6 +225,7 @@
             isCreatingMcp = false;
             newMcpName = "";
             newMcpEndpoint = "";
+            newMcpApiKey = "";
           }}
           class="px-4 py-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] text-zinc-300 text-xs font-mono transition-colors cursor-pointer"
         >
@@ -170,26 +252,58 @@
   <div class="space-y-2.5">
     {#each pluginsStore.mcps as mcp}
       <div
-        class="p-3.5 rounded-2xl bg-[#1c1a28]/80 border border-white/[0.08] space-y-2 text-xs font-mono"
+        class="p-3.5 rounded-2xl bg-[#1c1a28]/80 border border-white/[0.08] space-y-2.5 text-xs font-mono transition-all"
       >
         <div class="flex items-center justify-between">
-          <div class="flex items-center gap-2">
+          <div class="flex items-center gap-2 min-w-0 flex-wrap">
             <div
-              class="h-2 w-2 rounded-full {mcp.active
-                ? 'bg-emerald-400 animate-pulse'
+              class="h-2 w-2 rounded-full shrink-0 {mcp.active
+                ? mcp.lastTestedStatus === 'connected'
+                  ? 'bg-emerald-400 animate-pulse'
+                  : mcp.lastTestedStatus === 'auth_error'
+                    ? 'bg-rose-400'
+                    : mcp.lastTestedStatus === 'unreachable'
+                      ? 'bg-amber-400'
+                      : 'bg-emerald-400/80'
                 : 'bg-zinc-600'}"
             ></div>
-            <span class="font-bold text-zinc-100">{mcp.name}</span>
+            <span class="font-bold text-zinc-100 truncate">{mcp.name}</span>
             <span
-              class="px-2 py-0.5 rounded text-[10px] bg-white/[0.06] text-zinc-300 border border-white/[0.06]"
+              class="px-2 py-0.5 rounded text-[10px] bg-white/[0.06] text-zinc-300 border border-white/[0.06] shrink-0"
               >{mcp.type}</span
             >
+            {#if mcp.apiKey}
+              <span class="px-1.5 py-0.5 rounded text-[9px] bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 flex items-center gap-1 shrink-0">
+                <Lock class="w-2.5 h-2.5 text-emerald-400" /> Auth
+              </span>
+            {/if}
           </div>
 
-          <div class="flex items-center gap-2">
-            <span class="text-[10px] text-zinc-500"
+          <div class="flex items-center gap-1.5 shrink-0">
+            <span class="text-[10px] text-zinc-500 mr-1 hidden sm:inline"
               >{mcp.transport}</span
             >
+
+            <button
+              type="button"
+              onclick={() => handleTestMcp(mcp.id)}
+              disabled={testingMcpId === mcp.id}
+              title={t("settings.mcps.testConnection")}
+              class="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-semibold bg-sky-500/15 hover:bg-sky-500/25 text-sky-300 border border-sky-500/30 transition-all cursor-pointer disabled:opacity-50"
+            >
+              <RefreshCw class="w-2.5 h-2.5 {testingMcpId === mcp.id ? 'animate-spin' : ''}" />
+              <span>{testingMcpId === mcp.id ? t("settings.mcps.testing") : t("settings.mcps.testConnection")}</span>
+            </button>
+
+            <button
+              type="button"
+              onclick={() => handleOpenAuth(mcp)}
+              title={t("settings.mcps.apiKeyLabel")}
+              class="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold transition-all cursor-pointer {mcp.apiKey ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-white/[0.06] text-zinc-400 border border-white/[0.08] hover:text-zinc-200'}"
+            >
+              <Key class="w-3 h-3 text-amber-400" />
+            </button>
+
             <button
               type="button"
               onclick={() => pluginsStore.toggleMcp(mcp.id)}
@@ -199,6 +313,7 @@
             >
               {mcp.active ? t("common.online") : t("common.disabled")}
             </button>
+
             {#if !mcp.id.startsWith("mcp-yahoo")}
               <button
                 type="button"
@@ -211,6 +326,48 @@
             {/if}
           </div>
         </div>
+
+        {#if openAuthMcpId === mcp.id}
+          <div class="mt-2 p-3 rounded-xl bg-[#232034] border border-amber-500/35 space-y-2 animate-fade-in text-xs font-mono">
+            <div class="flex items-center justify-between text-zinc-200">
+              <span class="font-semibold flex items-center gap-1.5 text-amber-300">
+                <Key class="w-3.5 h-3.5 text-amber-400" /> {t("settings.mcps.apiKeyLabel")}
+              </span>
+              <span class="text-[10px] text-zinc-400">Header: {tempAuthHeader || "Authorization"}</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <input
+                type="password"
+                bind:value={tempApiKey}
+                placeholder={t("settings.mcps.apiKeyPlaceholder")}
+                class="flex-1 rounded-lg bg-[#191726] border border-white/[0.12] px-3 py-1.5 text-xs text-zinc-100 focus:outline-none focus:border-amber-400 font-mono"
+              />
+              <button
+                type="button"
+                onclick={() => handleSaveAuth(mcp.id)}
+                class="px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-200 text-xs font-semibold cursor-pointer transition-colors shrink-0"
+              >
+                {t("common.save")}
+              </button>
+            </div>
+            <p class="text-[10px] text-zinc-400 font-sans">
+              {t("settings.mcps.authOptional")}
+            </p>
+          </div>
+        {/if}
+
+        {#if mcp.lastTestedMessage}
+          <div class="flex items-center gap-1.5 text-[10px] font-mono {mcp.lastTestedStatus === 'connected' ? 'text-emerald-400' : mcp.lastTestedStatus === 'auth_error' ? 'text-rose-400' : 'text-amber-400'}">
+            {#if mcp.lastTestedStatus === 'connected'}
+              <CheckCircle2 class="w-3 h-3 shrink-0" />
+            {:else if mcp.lastTestedStatus === 'auth_error'}
+              <Key class="w-3 h-3 shrink-0" />
+            {:else}
+              <AlertTriangle class="w-3 h-3 shrink-0" />
+            {/if}
+            <span class="truncate">{mcp.lastTestedMessage}</span>
+          </div>
+        {/if}
 
         <p
           class="text-[11px] text-zinc-300 font-sans leading-relaxed"

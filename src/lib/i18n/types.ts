@@ -132,6 +132,18 @@ export interface TranslationDictionary {
       usCurve: string;
       smartMoney: string;
       deleteConfirm: string;
+      authSectionTitle: string;
+      authOptional: string;
+      apiKeyLabel: string;
+      apiKeyPlaceholder: string;
+      authHeaderLabel: string;
+      testConnection: string;
+      testing: string;
+      statusConnected: string;
+      statusAuthError: string;
+      statusUnreachable: string;
+      statusUntested: string;
+      savedAuth: string;
     };
     skills: {
       createNew: string;

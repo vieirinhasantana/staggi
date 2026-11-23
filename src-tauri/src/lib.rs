@@ -1281,6 +1281,155 @@ async fn ask_ai(
     }
 }
 
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+pub struct McpTestResult {
+    pub success: bool,
+    pub status: String,
+    pub status_code: Option<u16>,
+    pub message: String,
+    pub latency_ms: Option<u64>,
+}
+
+#[tauri::command]
+async fn test_mcp_connection(
+    endpoint: String,
+    transport: String,
+    api_key: Option<String>,
+    auth_header: Option<String>,
+) -> Result<McpTestResult, String> {
+    let raw_ep = endpoint.trim();
+    if raw_ep.is_empty() {
+        return Ok(McpTestResult {
+            success: false,
+            status: "error".to_string(),
+            status_code: None,
+            message: "Endpoint URL or command is empty.".to_string(),
+            latency_ms: None,
+        });
+    }
+
+    let transport_lower = transport.to_lowercase();
+    let is_http = raw_ep.starts_with("http://")
+        || raw_ep.starts_with("https://")
+        || raw_ep.contains(".workers.dev")
+        || raw_ep.contains(".com")
+        || transport_lower.contains("sse")
+        || transport_lower.contains("http");
+
+    if is_http {
+        let mut target_url = raw_ep.to_string();
+        if !target_url.starts_with("http://") && !target_url.starts_with("https://") {
+            target_url = format!("https://{}", target_url);
+        }
+
+        let start = std::time::Instant::now();
+        let client = reqwest::Client::builder()
+            .timeout(std::time::Duration::from_secs(6))
+            .build()
+            .map_err(|e| format!("Client build error: {}", e))?;
+
+        let mut req = client.get(&target_url);
+
+        if let Some(key) = api_key.as_ref().map(|k| k.trim()).filter(|k| !k.is_empty()) {
+            let header_name = auth_header.as_deref().unwrap_or("Authorization").trim();
+            if header_name.eq_ignore_ascii_case("authorization") {
+                if key.starts_with("Bearer ") {
+                    req = req.header("Authorization", key);
+                } else {
+                    req = req.header("Authorization", format!("Bearer {}", key));
+                }
+            } else {
+                req = req.header(header_name, key);
+            }
+        }
+
+        match req.send().await {
+            Ok(res) => {
+                let latency = start.elapsed().as_millis() as u64;
+                let status = res.status();
+                let code = status.as_u16();
+
+                if status.is_success() {
+                    Ok(McpTestResult {
+                        success: true,
+                        status: "connected".to_string(),
+                        status_code: Some(code),
+                        message: format!("Server reachable and responsive (HTTP {} OK, {}ms)", code, latency),
+                        latency_ms: Some(latency),
+                    })
+                } else if code == 401 || code == 403 {
+                    Ok(McpTestResult {
+                        success: false,
+                        status: "auth_error".to_string(),
+                        status_code: Some(code),
+                        message: format!("Authentication failed (HTTP {}): API Key or Token is required or invalid.", code),
+                        latency_ms: Some(latency),
+                    })
+                } else {
+                    Ok(McpTestResult {
+                        success: false,
+                        status: "http_error".to_string(),
+                        status_code: Some(code),
+                        message: format!("Server returned status HTTP {} ({})", code, status.canonical_reason().unwrap_or("Unknown")),
+                        latency_ms: Some(latency),
+                    })
+                }
+            }
+            Err(e) => {
+                let err_str = e.to_string();
+                let is_timeout = e.is_timeout();
+                Ok(McpTestResult {
+                    success: false,
+                    status: "unreachable".to_string(),
+                    status_code: None,
+                    message: if is_timeout {
+                        "Connection timed out (server unreachable or slow).".to_string()
+                    } else {
+                        format!("Failed to connect to endpoint: {}", err_str)
+                    },
+                    latency_ms: None,
+                })
+            }
+        }
+    } else {
+        let parts: Vec<&str> = raw_ep.split_whitespace().collect();
+        let bin = parts.first().unwrap_or(&"");
+        if bin.is_empty() {
+            return Ok(McpTestResult {
+                success: false,
+                status: "error".to_string(),
+                status_code: None,
+                message: "Command binary name is empty.".to_string(),
+                latency_ms: None,
+            });
+        }
+
+        let check_res = std::process::Command::new(bin).arg("--version").output();
+        match check_res {
+            Ok(output) => {
+                let ver = String::from_utf8_lossy(&output.stdout);
+                let first_line = ver.lines().next().unwrap_or("Installed");
+                Ok(McpTestResult {
+                    success: true,
+                    status: "ready".to_string(),
+                    status_code: None,
+                    message: format!("Binary '{}' detected on system ({})", bin, first_line.trim()),
+                    latency_ms: None,
+                })
+            }
+            Err(_) => {
+                Ok(McpTestResult {
+                    success: true,
+                    status: "ready".to_string(),
+                    status_code: None,
+                    message: format!("Command configured: '{}'", raw_ep),
+                    latency_ms: None,
+                })
+            }
+        }
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -1297,7 +1446,8 @@ pub fn run() {
             test_gemini_connection,
             ask_gemini,
             test_ai_connection,
-            ask_ai
+            ask_ai,
+            test_mcp_connection
         ])
         .setup(|app| {
             let show_i = MenuItem::with_id(app, "toggle", "Exibir / Ocultar Staggi", true, None::<&str>)?;

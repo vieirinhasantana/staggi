@@ -1,5 +1,6 @@
-import type { McpServerItem, SkillDefinition } from "$lib/types";
-export type { McpServerItem, SkillDefinition };
+import { invoke } from "@tauri-apps/api/core";
+import type { McpServerItem, McpTestResult, SkillDefinition } from "$lib/types";
+export type { McpServerItem, McpTestResult, SkillDefinition };
 
 export function getSkillSlug(skill: SkillDefinition): string {
   if (skill.slug) return skill.slug;
@@ -309,6 +310,52 @@ class PluginsStore {
   toggleMcp(id: string) {
     this.mcps = this.mcps.map(m => m.id === id ? { ...m, active: !m.active } : m);
     this.saveMcps();
+  }
+
+  updateMcp(id: string, updated: Partial<McpServerItem>) {
+    this.mcps = this.mcps.map(m => m.id === id ? { ...m, ...updated } : m);
+    this.saveMcps();
+  }
+
+  async testMcp(id: string): Promise<McpTestResult> {
+    const mcp = this.mcps.find(m => m.id === id);
+    if (!mcp) {
+      throw new Error("MCP not found");
+    }
+
+    try {
+      const res = await invoke<McpTestResult>("test_mcp_connection", {
+        endpoint: mcp.endpoint,
+        transport: mcp.transport,
+        apiKey: mcp.apiKey ? mcp.apiKey.trim() : null,
+        authHeader: mcp.authHeader || "Authorization",
+      });
+
+      const testedStatus: McpServerItem["lastTestedStatus"] =
+        res.status === "connected" || res.status === "ready"
+          ? "connected"
+          : res.status === "auth_error"
+            ? "auth_error"
+            : "unreachable";
+
+      this.updateMcp(id, {
+        lastTestedStatus: testedStatus,
+        lastTestedMessage: res.message,
+      });
+
+      return res;
+    } catch (e: any) {
+      const msg = String(e || "Connection failed");
+      this.updateMcp(id, {
+        lastTestedStatus: "unreachable",
+        lastTestedMessage: msg,
+      });
+      return {
+        success: false,
+        status: "unreachable",
+        message: msg,
+      };
+    }
   }
 
   toggleSkill(id: string) {
