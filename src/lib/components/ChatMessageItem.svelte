@@ -5,7 +5,6 @@
     CorporateEventsCard,
     ValuationProjectionCard,
     AssetDividendsCard,
-    ComparisonTableCard,
     AssetProfileCard,
   } from "./cards";
   import { 
@@ -13,7 +12,6 @@
     parseCorporateEvents, 
     parseValuationProjection, 
     parseAssetDividends, 
-    parseComparisonTable,
     parseAssetProfile,
     parseAssetProfiles,
     detectAuditedSource,
@@ -38,10 +36,6 @@
 
   let assetDividends = $derived(
     message.sender === "staggi" && !message.isLoading && !message.isStreaming ? parseAssetDividends(message.text) : null
-  );
-
-  let comparisonTable = $derived(
-    message.sender === "staggi" && !message.isLoading && !message.isStreaming ? parseComparisonTable(message.text) : null
   );
 
   let valuationProjection = $derived(
@@ -91,9 +85,6 @@
 
     {:else if assetDividends}
       <AssetDividendsCard data={assetDividends} />
-
-    {:else if comparisonTable}
-      <ComparisonTableCard data={comparisonTable} />
 
     {:else if valuationProjection}
       <ValuationProjectionCard data={valuationProjection} />

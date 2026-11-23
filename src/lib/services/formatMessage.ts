@@ -770,98 +770,10 @@ export function parseAssetDividends(rawText: string): ParsedAssetDividends | nul
   };
 }
 
-function guessCompanyNameFromColumn(colValues: string[], index: number): string {
-  const combined = colValues.join(" ").toLowerCase();
-  if (combined.includes("claude") || combined.includes("anthropic")) return "Anthropic (Claude)";
-  if (combined.includes("nubank") || combined.includes("roxo34") || combined.includes("cartões") || combined.includes("contas, empréstimos")) return "Nubank (ROXO34)";
-  if (combined.includes("spacex") || combined.includes("starlink") || combined.includes("starship") || combined.includes("foguetes")) return "SpaceX";
-  if (combined.includes("petrobras") || combined.includes("petr4") || combined.includes("petr3")) return "Petrobras (PETR4)";
-  if (combined.includes("vale") || combined.includes("vale3") || combined.includes("minério")) return "Vale (VALE3)";
-  if (combined.includes("itau") || combined.includes("itaú") || combined.includes("itub4")) return "Itaú (ITUB4)";
-  if (combined.includes("bradesco") || combined.includes("bbdc4")) return "Bradesco (BBDC4)";
-  if (combined.includes("banco do brasil") || combined.includes("bbas3")) return "Banco do Brasil (BBAS3)";
-  if (combined.includes("microsoft") || combined.includes("msft") || combined.includes("azure")) return "Microsoft (MSFT)";
-  if (combined.includes("apple") || combined.includes("aapl") || combined.includes("iphone")) return "Apple (AAPL)";
-  if (combined.includes("nvidia") || combined.includes("nvda")) return "Nvidia (NVDA)";
-  if (combined.includes("tesla") || combined.includes("tsla")) return "Tesla (TSLA)";
-  return `Ativo ${String.fromCharCode(65 + index)}`;
-}
-
-export function parseComparisonTable(rawText: string): ParsedComparisonTable | null {
-  if (!rawText || rawText.length < 30) return null;
-
-  const normalized = rawText.replace(/\|\s*\|\s*(?=[A-Za-z0-9\*\_\#])/g, "|\n|");
-  const rawLines = normalized.split("\n").map(l => l.trim()).filter(Boolean);
-
-  const tableLines: string[] = [];
-  let curr = "";
-
-  for (const l of rawLines) {
-    if (curr) {
-      curr += " " + l;
-      if (curr.endsWith("|")) {
-        tableLines.push(curr);
-        curr = "";
-      }
-    } else if (l.startsWith("|") && l.endsWith("|")) {
-      tableLines.push(l);
-    } else if (l.startsWith("|")) {
-      curr = l;
-    }
-  }
-
-  if (tableLines.length < 2) return null;
-
-  const parsedRows: { metric: string; values: string[] }[] = [];
-  let explicitHeaders: string[] | null = null;
-
-  for (let i = 0; i < tableLines.length; i++) {
-    const line = tableLines[i];
-    if (line.includes("---")) continue;
-
-    const cells = line
-      .split("|")
-      .map(c => c.trim())
-      .filter((_, idx, arr) => idx > 0 && idx < arr.length - 1);
-
-    if (cells.length < 3) continue;
-
-    const col0Clean = cells[0].replace(/\*\*/g, "").replace(/^#+\s*/, "").trim();
-
-    if (i === 0 && (col0Clean.toLowerCase().includes("métrica") || col0Clean.toLowerCase().includes("aspecto") || col0Clean.toLowerCase().includes("indicador") || col0Clean.toLowerCase().includes("empresa") || col0Clean.toLowerCase().includes("ativo"))) {
-      explicitHeaders = cells.map(c => c.replace(/\*\*/g, "").trim());
-      continue;
-    }
-
-    parsedRows.push({
-      metric: col0Clean,
-      values: cells.slice(1)
-    });
-  }
-
-  if (parsedRows.length < 2) return null;
-
-  const numCols = parsedRows[0].values.length;
-  if (numCols < 2) return null;
-
-  let headers: string[] = [];
-  if (explicitHeaders && explicitHeaders.length === numCols + 1) {
-    headers = explicitHeaders;
-  } else {
-    headers = [
-      "Métrica / Indicador",
-      ...Array.from({ length: numCols }, (_, idx) => {
-        const colVals = parsedRows.map(r => r.values[idx] || "");
-        return guessCompanyNameFromColumn(colVals, idx);
-      })
-    ];
-  }
-
-  return {
-    headers,
-    rows: parsedRows,
-    intro: "Quadro comparativo de ativos e múltiplos de mercado."
-  };
+export function parseComparisonTable(_rawText: string): ParsedComparisonTable | null {
+  // Markdown tables are rendered natively and accurately via renderMarkdown
+  // without intercepting or replacing generic tabular data (clients, portfolios, products, etc.)
+  return null;
 }
 
 export function renderMarkdown(content: string): string {
