@@ -18,7 +18,6 @@
   import type { MemoryItem, MemoryCategory } from "$lib/types";
 
   let searchQuery = $state("");
-  let selectedCategory = $state<string>("all");
 
   let isCreating = $state(false);
   let editingId = $state<string | null>(null);
@@ -29,14 +28,6 @@
   let formTags = $state("");
   let formPinned = $state(false);
   let formActive = $state(true);
-
-  const categories: { id: string; label: string; color: string }[] = [
-    { id: "all", label: "Todas", color: "text-zinc-300" },
-    { id: "preference", label: "Preferências de Resposta", color: "text-pink-400" },
-    { id: "mandate", label: "Políticas da Mesa / Casa", color: "text-amber-400" },
-    { id: "working_note", label: "Notas de Trabalho & Contexto", color: "text-sky-400" },
-    { id: "pinned", label: "Fixadas 📌", color: "text-amber-300" },
-  ];
 
   function getCategoryBadge(category: MemoryCategory) {
     switch (category) {
@@ -53,12 +44,6 @@
 
   const filteredMemories = $derived.by(() => {
     let list = memoryStore.memories;
-
-    if (selectedCategory === "pinned") {
-      list = list.filter((m) => m.pinned);
-    } else if (selectedCategory !== "all") {
-      list = list.filter((m) => m.category === selectedCategory);
-    }
 
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
@@ -231,21 +216,6 @@
         </button>
       {/if}
     </div>
-  </div>
-
-  <!-- Category Filter Pills -->
-  <div class="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none text-[11px]">
-    {#each categories as cat}
-      <button
-        type="button"
-        onclick={() => (selectedCategory = cat.id)}
-        class="px-2.5 py-1 rounded-lg font-medium transition-all cursor-pointer whitespace-nowrap {selectedCategory === cat.id
-          ? 'bg-pink-500/20 text-pink-200 border border-pink-500/35 shadow-sm'
-          : 'bg-white/[0.03] text-zinc-400 border border-white/[0.05] hover:text-zinc-200 hover:bg-white/[0.06]'}"
-      >
-        {cat.label}
-      </button>
-    {/each}
   </div>
 
   <!-- Form for Create or Edit -->
