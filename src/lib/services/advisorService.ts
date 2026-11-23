@@ -7,7 +7,7 @@ export const quickPrompts: QuickPrompt[] = [
   { id: "allocation", label: "📊 Asset Allocation", prompt: "What is the recommended multi-asset fiduciary allocation for a conservative wealth portfolio?" },
   { id: "etfs", label: "🌐 Global ETFs & Holdings", prompt: "Show top holdings, sector weightings, and expense ratios of ETF IVVB11 / SPY." },
   { id: "rates", label: "⚡ Treasury Yields", prompt: "What are the current US Treasury yield curve rates across all maturities today?" },
-  { id: "memory", label: "🧠 Second Brain", prompt: "/lembrar Cliente Família Silveira: foco em proventos e evitar empresas estatais" }
+  { id: "memory", label: "🧠 Second Brain", prompt: "/lembrar Nas ações de dividendos, sempre incluir cálculo comparativo de Teto Bazin e Margem de Graham" }
 ];
 
 export function detectMessageType(userPrompt: string): MessageType | undefined {

@@ -27,33 +27,29 @@
 
   let formTitle = $state("");
   let formContent = $state("");
-  let formCategory = $state<MemoryCategory>("client");
+  let formCategory = $state<MemoryCategory>("preference");
   let formTags = $state("");
   let formPinned = $state(false);
   let formActive = $state(true);
 
   const categories: { id: string; label: string; color: string }[] = [
     { id: "all", label: "Todas", color: "text-zinc-300" },
-    { id: "client", label: "Clientes", color: "text-emerald-400" },
-    { id: "thesis", label: "Teses Macro", color: "text-violet-400" },
-    { id: "rule", label: "Regras & Compliance", color: "text-amber-400" },
-    { id: "profile", label: "Perfil & Mandato", color: "text-sky-400" },
-    { id: "preference", label: "Preferências", color: "text-pink-400" },
+    { id: "preference", label: "Preferências de Resposta", color: "text-pink-400" },
+    { id: "mandate", label: "Políticas da Mesa / Casa", color: "text-amber-400" },
+    { id: "working_note", label: "Notas de Trabalho & Contexto", color: "text-sky-400" },
     { id: "pinned", label: "Fixadas 📌", color: "text-amber-300" },
   ];
 
   function getCategoryBadge(category: MemoryCategory) {
     switch (category) {
-      case "client":
-        return { label: "Cliente", class: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30" };
-      case "thesis":
-        return { label: "Tese Macro", class: "bg-violet-500/15 text-violet-300 border-violet-500/30" };
-      case "rule":
-        return { label: "Regra / Compliance", class: "bg-amber-500/15 text-amber-300 border-amber-500/30" };
-      case "profile":
-        return { label: "Perfil Assessor", class: "bg-sky-500/15 text-sky-300 border-sky-500/30" };
-      default:
+      case "preference":
         return { label: "Preferência", class: "bg-pink-500/15 text-pink-300 border-pink-500/30" };
+      case "mandate":
+        return { label: "Política da Casa", class: "bg-amber-500/15 text-amber-300 border-amber-500/30" };
+      case "working_note":
+        return { label: "Nota de Trabalho", class: "bg-sky-500/15 text-sky-300 border-sky-500/30" };
+      default:
+        return { label: "Geral", class: "bg-zinc-500/15 text-zinc-300 border-zinc-500/30" };
     }
   }
 
@@ -84,7 +80,7 @@
     editingId = null;
     formTitle = "";
     formContent = "";
-    formCategory = "client";
+    formCategory = "preference";
     formTags = "";
     formPinned = false;
     formActive = true;
@@ -180,6 +176,23 @@
 </script>
 
 <div class="space-y-4">
+  <!-- Scope Clarification Banner -->
+  <div class="p-3 rounded-xl bg-white/[0.02] border border-white/[0.06] flex items-start gap-3 text-xs text-zinc-400">
+    <div class="p-1.5 rounded-lg bg-pink-500/10 text-pink-400 shrink-0 mt-0.5">
+      <Brain class="w-4 h-4" />
+    </div>
+    <div class="space-y-1">
+      <p class="font-medium text-zinc-200">
+        Escopo do Second Brain vs. MCP & RAG
+      </p>
+      <p class="text-[11px] text-zinc-400 leading-relaxed">
+        • <strong class="text-zinc-300">Dados Cadastrais de Clientes</strong>: vêm do CRM / banco cadastral via MCP local.<br />
+        • <strong class="text-zinc-300">Documentos, Relatórios e Atas</strong>: consultados via RAG no MCP de Documentos.<br />
+        • <strong class="text-pink-300">Second Brain</strong>: armazena estritamente suas <strong>preferências de resposta, metodologias fiduciárias e políticas gerais da sua mesa</strong>.
+      </p>
+    </div>
+  </div>
+
   <!-- Stats & Engine Performance Bar -->
   <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
     <div class="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06] flex items-center gap-3">
@@ -316,23 +329,21 @@
             id="form-memory-title"
             type="text"
             bind:value={formTitle}
-            placeholder="Ex: Cliente Família Silveira, Tese NTN-B 2035..."
+            placeholder="Ex: Formato de moedas, Metodologia de Bazin, Política de risco..."
             class="w-full bg-[#141414] border border-white/[0.08] rounded-lg px-2.5 py-1.5 text-xs text-zinc-100 focus:outline-none focus:border-pink-500/40"
           />
         </div>
 
         <div>
-          <label for="form-memory-category" class="block text-[11px] text-zinc-400 mb-1 font-medium">Categoria Fiduciária</label>
+          <label for="form-memory-category" class="block text-[11px] text-zinc-400 mb-1 font-medium">Categoria</label>
           <select
             id="form-memory-category"
             bind:value={formCategory}
             class="w-full bg-[#141414] border border-white/[0.08] rounded-lg px-2.5 py-1.5 text-xs text-zinc-100 focus:outline-none focus:border-pink-500/40"
           >
-            <option value="client">Cliente & Restrições de Carteira</option>
-            <option value="thesis">Tese de Investimento & Macro</option>
-            <option value="rule">Regra Regulatória, Fiscal ou Compliance</option>
-            <option value="profile">Perfil & Mandato do Assessor</option>
-            <option value="preference">Preferência Geral de Análise</option>
+            <option value="preference">Preferência de Análise & Formatação (Ex: Moedas, casas decimais, Bazin)</option>
+            <option value="mandate">Política da Mesa / Consultoria (Ex: Não usar derivativos, rating mínimo)</option>
+            <option value="working_note">Nota de Trabalho & Contexto Operacional (Ex: Pauta do comitê, foco atual)</option>
           </select>
         </div>
       </div>

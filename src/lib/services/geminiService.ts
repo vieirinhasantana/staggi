@@ -96,11 +96,10 @@ Quando o usuário utilizar expressões temporais como "desse ano", "deste ano", 
   const memoryCmdMatch = cleanPrompt.match(/^\/(?:remember|lembrar|memoria|memory)\s+(.+)$/is);
   if (memoryCmdMatch) {
     const rawContent = memoryCmdMatch[1].trim();
-    let category: "client" | "rule" | "thesis" | "profile" | "preference" = "preference";
-    if (/\b(cliente|familia|família|investidor)\b/i.test(rawContent)) category = "client";
-    else if (/\b(regra|lei|tribut|compliance|irs|imposto)\b/i.test(rawContent)) category = "rule";
-    else if (/\b(tese|macro|juros|alocacao|alocação)\b/i.test(rawContent)) category = "thesis";
-    else if (/\b(perfil|assessor|mandato)\b/i.test(rawContent)) category = "profile";
+    let category: "preference" | "mandate" | "working_note" = "preference";
+    if (/\b(politica|política|mandato|mesa|risco|derivativo|compliance|regra geral)\b/i.test(rawContent)) category = "mandate";
+    else if (/\b(trabalho|nota|contexto|trimestre|comite|comitê|reuniao|reunião|hoje|semana)\b/i.test(rawContent)) category = "working_note";
+    else category = "preference";
 
     const title = rawContent.slice(0, 45).replace(/[:;.,]$/, "");
     const saved = memoryStore.addMemory({
@@ -114,10 +113,10 @@ Quando o usuário utilizar expressões temporais como "desse ano", "deste ano", 
     });
 
     return {
-      text: `🧠 **Memória Registrada no Second Brain com Sucesso!**\n\n- **Identificador**: \`${saved.id}\`\n- **Categoria**: **${category.toUpperCase()}**\n- **Diretriz**: *"${rawContent}"*\n\nEssa informação foi gravada no índice de memória de longo prazo do Staggi com recuperação instantânea (< 1ms) e será respeitada em todas as suas próximas conversas e análises consultivas.`,
+      text: `🧠 **Diretriz Registrada no Second Brain com Sucesso!**\n\n- **Identificador**: \`${saved.id}\`\n- **Categoria**: **${category.toUpperCase()}**\n- **Diretriz**: *"${rawContent}"*\n\nEssa preferência pessoal foi gravada no índice de memória de longo prazo do Staggi com recuperação instantânea (< 1ms) e será respeitada em todas as suas próximas conversas e análises consultivas.`,
       success: true,
       isConfigured: true,
-      source: "Second Brain (Long-Term Memory)"
+      source: "Second Brain (Advisor Preferences)"
     };
   }
 
@@ -125,9 +124,10 @@ Quando o usuário utilizar expressões temporais como "desse ano", "deste ano", 
   const relevantMemories = memoryStore.retrieveRelevant(cleanPrompt, 6);
   let secondBrainContext = "";
   if (relevantMemories.length > 0) {
-    secondBrainContext = `\n\n[SECOND BRAIN & MEMÓRIA DE LONGO PRAZO DO ASSESSOR]:
-As diretrizes fiduciárias, teses de mercado, perfis de clientes e regras a seguir foram recuperadas do seu banco de memória permanente com sub-millisecond retrieval. Você DEVE considerar e obedecer a estes fatos com máxima fidelidade:
-${relevantMemories.map(m => `- [${m.category.toUpperCase()}] **${m.title}**: ${m.content}`).join("\n")}`;
+    secondBrainContext = `\n\n[SECOND BRAIN & INSTRUÇÕES PESSOAIS DO ASSESSOR]:
+As seguintes preferências de trabalho, formatação e políticas gerais da consultoria foram definidas pelo assessor e devem ser rigorosamente aplicadas:
+${relevantMemories.map(m => `- [${m.category.toUpperCase()}] **${m.title}**: ${m.content}`).join("\n")}
+Atenção: Trate essas diretrizes como preferências e estilo de trabalho do assessor, correlacionando-as com os dados cadastrais e documentos retornados por MCPs e RAG.`;
   }
 
   let explicitSkillDirective = "";

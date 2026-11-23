@@ -1,4 +1,4 @@
-export type MemoryCategory = "profile" | "client" | "thesis" | "rule" | "preference";
+export type MemoryCategory = "preference" | "mandate" | "working_note";
 
 export interface MemoryItem {
   id: string;

@@ -4,11 +4,11 @@ const MEMORIES_STORAGE_KEY = "staggi_second_brain_memories_v1";
 
 const DEFAULT_MEMORIES: MemoryItem[] = [
   {
-    id: "mem-profile-advisor",
-    title: "Mandato & Perfil Fiduciário do Assessor",
-    content: "Assessor de investimentos e wealth manager atuando com dever fiduciário estrito. Foco em alocação patrimonial balanceada (B3, Renda Fixa soberana/privada e offshore internacional), preservação de capital real e geração recorrente de proventos.",
-    category: "profile",
-    tags: ["perfil", "fiduciario", "wealth", "alocacao", "proventos"],
+    id: "mem-pref-fiduciary-tone",
+    title: "Diretriz Executiva & Tom Fiduciário",
+    content: "Respostas sempre objetivas, numéricas e estruturadas em Markdown executivo. Evitar preâmbulos ou saudações longas. Apresentar dados consolidados em BRL e o equivalente em USD quando houver alocação internacional.",
+    category: "preference",
+    tags: ["tom", "executivo", "formato", "brl", "usd", "objetividade"],
     pinned: true,
     active: true,
     createdAt: "2026-01-01",
@@ -16,11 +16,11 @@ const DEFAULT_MEMORIES: MemoryItem[] = [
     source: "system"
   },
   {
-    id: "mem-rule-irs-estate-tax",
-    title: "Regra IRS US Situs Assets (US$ 60k Threshold)",
-    content: "Investidores não-residentes fiscais nos EUA (Non-Resident Aliens) possuem isenção de apenas US$ 60.000 para ativos US Situs (ações americanas diretas como AAPL, MSFT e ETFs domiciliados nos EUA como SPY, VOO). Acima desse valor, o US Estate Tax varia de 18% a 40%. Sempre alertar e priorizar alocação via ETFs domiciliados na Irlanda/Luxemburgo (UCITS) para carteiras offshore.",
-    category: "rule",
-    tags: ["irs", "estate-tax", "offshore", "us-situs", "ucits", "irlanda", "sucessao"],
+    id: "mem-pref-bazin-graham",
+    title: "Metodologia Padrão de Valuation",
+    content: "Nas análises de ações pagadoras de proventos, adotar prioritariamente taxa de desconto padrão de 6% a.a. para o Preço Teto de Décio Bazin e combinar com a Margem de Segurança da Fórmula de Benjamin Graham.",
+    category: "preference",
+    tags: ["valuation", "bazin", "graham", "teto", "desconto", "proventos"],
     pinned: true,
     active: true,
     createdAt: "2026-01-01",
@@ -28,11 +28,11 @@ const DEFAULT_MEMORIES: MemoryItem[] = [
     source: "system"
   },
   {
-    id: "mem-rule-lei-14754",
-    title: "Regra Tributária Offshore (Lei 14.754/2023)",
-    content: "Aplica alíquota uniforme de 15% de IRPF sobre rendimentos e ganhos de capital no exterior (offshore e entidades controladas), apurada anualmente na Declaração de Ajuste Anual (DAA). Não há mais diferimento fiscal irrestrito para offshores sem tributação periódica.",
-    category: "rule",
-    tags: ["offshore", "tributacao", "lei-14754", "irpf", "15%", "rendimentos"],
+    id: "mem-mandate-risk-policy",
+    title: "Política Geral de Risco da Mesa",
+    content: "Não recomendar estratégias de alavancagem com derivativos a descoberto ou operações de financiamento cambial sem hedge para clientes de varejo e private. Priorizar diversificação de emissores em crédito privado com rating mínimo AA.",
+    category: "mandate",
+    tags: ["politica", "risco", "mesa", "derivativos", "alavancagem", "credito-privado"],
     pinned: false,
     active: true,
     createdAt: "2026-01-01",
@@ -40,28 +40,16 @@ const DEFAULT_MEMORIES: MemoryItem[] = [
     source: "system"
   },
   {
-    id: "mem-thesis-macro-yield",
-    title: "Tese Macro: Prêmio de Risco & Renda Fixa Soberana",
-    content: "Diante de ciclos de volatilidade e taxas de juros elevadas, manter alocação tática em títulos públicos atrelados à inflação (NTN-B / IPCA+) com vencimento intermediário (2029-2035) para travar juro real atrativo, combinada com LFs/CDBs de liquidez diária para caixa.",
-    category: "thesis",
-    tags: ["macro", "renda-fixa", "tesouro", "ipca", "ntn-b", "juros", "cdi"],
+    id: "mem-working-committee-focus",
+    title: "Nota Operacional: Foco do Comitê de Alocação",
+    content: "Diretriz de trabalho para o trimestre: monitorar descompressão de taxas reais em NTN-B e avaliar migração tática de liquidez em CDI para títulos com IPCA+ travado.",
+    category: "working_note",
+    tags: ["trabalho", "comite", "alocacao", "ntn-b", "ipca", "cdi"],
     pinned: false,
     active: true,
     createdAt: "2026-01-01",
     updatedAt: "2026-01-01",
     source: "system"
-  },
-  {
-    id: "mem-client-sample-silveira",
-    title: "Cliente: Família Silveira (Family Office)",
-    content: "Patrimônio líquido focado em proventos sustentáveis. Restrição mandatária do conselho familiar: evitar exposição relevante a empresas estatais com risco de governança política (PETR4, BBAS3). Preferência por elétricas privadas, saneamento e exportadoras (ex: EGIE3, CPLE6, SBSP3, WEGE3).",
-    category: "client",
-    tags: ["cliente", "silveira", "governanca", "estatais", "dividendos", "privadas"],
-    pinned: false,
-    active: true,
-    createdAt: "2026-01-01",
-    updatedAt: "2026-01-01",
-    source: "user"
   }
 ];
 
@@ -104,7 +92,18 @@ function loadStoredMemories(): MemoryItem[] {
     }
     const parsed = JSON.parse(raw);
     if (Array.isArray(parsed) && parsed.length > 0) {
-      return parsed;
+      // Migrate legacy categories if present
+      return parsed.map((m: any) => {
+        let cat: MemoryCategory = "preference";
+        if (m.category === "mandate" || m.category === "profile") cat = "mandate";
+        else if (m.category === "working_note" || m.category === "thesis") cat = "working_note";
+        else if (m.category === "preference") cat = "preference";
+        else cat = "preference";
+        return {
+          ...m,
+          category: cat,
+        };
+      });
     }
     return DEFAULT_MEMORIES;
   } catch {
@@ -195,9 +194,9 @@ class MemoryStore {
 
     // 3. Category & contextual heuristics
     const memMap = new Map(this.memories.map(m => [m.id, m]));
-    const isClientQuery = /\b(cliente|clientes|familia|família|investidor|carteira de)\b/i.test(queryLower);
-    const isRuleQuery = /\b(regra|regras|lei|tribut|irs|imposto|compliance|situs)\b/i.test(queryLower);
-    const isThesisQuery = /\b(tese|teses|macro|juros|alocacao|alocação|cenario|cenário)\b/i.test(queryLower);
+    const isPrefQuery = /\b(preferencia|preferência|formato|moeda|tabela|estilo|tom|bazin|graham|casas decimais)\b/i.test(queryLower);
+    const isMandateQuery = /\b(politica|política|mandato|mesa|risco|derivativo|alavancagem|regra interna|compliance)\b/i.test(queryLower);
+    const isNoteQuery = /\b(trabalho|nota|contexto|trimestre|comite|comitê|reuniao|reunião|foco)\b/i.test(queryLower);
 
     for (const [id, score] of scores.entries()) {
       const mem = memMap.get(id);
@@ -215,9 +214,9 @@ class MemoryStore {
         }
       }
 
-      if (isClientQuery && mem.category === "client") extra += 4;
-      if (isRuleQuery && mem.category === "rule") extra += 4;
-      if (isThesisQuery && mem.category === "thesis") extra += 4;
+      if (isPrefQuery && mem.category === "preference") extra += 4;
+      if (isMandateQuery && mem.category === "mandate") extra += 4;
+      if (isNoteQuery && mem.category === "working_note") extra += 4;
 
       scores.set(id, score + extra);
     }
