@@ -5,6 +5,7 @@
     Server,
     Zap,
     Clock,
+    Brain,
     ArrowDownCircle,
     RefreshCw,
     CheckCircle2,
@@ -12,6 +13,7 @@
   import { aiStore } from "$lib/services/aiProviderState.svelte";
   import { pluginsStore } from "$lib/services/pluginsState.svelte";
   import { tasksStore } from "$lib/services/tasksState.svelte";
+  import { memoryStore } from "$lib/services/memoryState.svelte";
   import { updaterStore } from "$lib/services/updaterService.svelte";
   import { t } from "$lib/i18n";
   import type { ScheduledTask } from "$lib/types";
@@ -20,11 +22,12 @@
   import SettingsMcpsTab from "./settings/SettingsMcpsTab.svelte";
   import SettingsSkillsTab from "./settings/SettingsSkillsTab.svelte";
   import SettingsTasksTab from "./settings/SettingsTasksTab.svelte";
+  import SettingsMemoryTab from "./settings/SettingsMemoryTab.svelte";
   import TaskResultModal from "./settings/TaskResultModal.svelte";
 
   interface Props {
     open: boolean;
-    initialTab?: "ai" | "gemini" | "mcps" | "skills" | "tasks";
+    initialTab?: "ai" | "gemini" | "mcps" | "skills" | "tasks" | "memory";
     onClose: () => void;
   }
 
@@ -34,7 +37,7 @@
     onClose = () => {},
   }: Props = $props();
 
-  let activeTab = $state<"ai" | "gemini" | "mcps" | "skills" | "tasks">("ai");
+  let activeTab = $state<"ai" | "gemini" | "mcps" | "skills" | "tasks" | "memory">("ai");
   let viewingResultTask = $state<ScheduledTask | null>(null);
 
   $effect(() => {
@@ -48,6 +51,7 @@
       aiStore.reloadFromStorage();
       pluginsStore.reloadFromStorage();
       tasksStore.reloadFromStorage();
+      memoryStore.reloadFromStorage();
     }
   });
 </script>
@@ -140,6 +144,18 @@
             <span class="h-1.5 w-1.5 rounded-full bg-amber-400 animate-ping"></span>
           {/if}
         </button>
+
+        <button
+          type="button"
+          onclick={() => (activeTab = "memory")}
+          class="flex items-center gap-2 px-3 py-1.5 rounded-xl font-medium transition-all cursor-pointer whitespace-nowrap shrink-0 {activeTab ===
+          'memory'
+            ? 'bg-pink-500/20 text-pink-200 border border-pink-500/30 shadow-sm'
+            : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]'}"
+        >
+          <Brain class="w-3.5 h-3.5 text-pink-400" />
+          <span>{t("settings.tabs.memory")} ({memoryStore.activeCount})</span>
+        </button>
       </div>
 
       <div class="shrink-0 flex items-center">
@@ -196,6 +212,8 @@
         <SettingsSkillsTab />
       {:else if activeTab === "tasks"}
         <SettingsTasksTab onViewResult={(task) => (viewingResultTask = task)} />
+      {:else if activeTab === "memory"}
+        <SettingsMemoryTab />
       {/if}
     </div>
   </div>
