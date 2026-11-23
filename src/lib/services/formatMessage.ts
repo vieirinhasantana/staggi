@@ -226,96 +226,13 @@ export function detectAuditedSource(text: string): string | null {
     return null;
   }
 
-  // If explicit audited source was provided in the text by the model
+  // If explicit audited source was provided in the text by the model or MCP
   const explicitMatch = text.match(/(?:Fonte Auditada|Audited Source):\s*([^\n\r.]+)/i);
   if (explicitMatch && explicitMatch[1]) {
     const matched = explicitMatch[1].trim();
-    if (matched.length > 3) {
+    if (matched.length > 2) {
       return matched;
     }
-  }
-
-  // Only infer an audited source if there are actual financial numbers, tables, or tickers
-  const hasFinancialContent = text.includes("|") || /R\$\s*\d|US\$\s*\d|\b\d+([,.]\d+)?%\b|\bDY\b|\bP\/L\b|\bP\/VP\b|\bISIN\b|\bROE\b|\bYTM\b/i.test(text);
-  if (!hasFinancialContent) {
-    return null;
-  }
-
-  const lower = text.toLowerCase();
-
-  if (
-    lower.includes("treasury") ||
-    lower.includes("treasuries") ||
-    lower.includes("curva de juros") ||
-    lower.includes("spread 10y") ||
-    lower.includes("yield curve")
-  ) {
-    return "U.S. Department of the Treasury (Daily Yield Curve) • Fed St. Louis";
-  }
-
-  if (
-    lower.includes("etf") ||
-    lower.includes("holdings") ||
-    lower.includes("composição") ||
-    lower.includes("composicao") ||
-    lower.includes("sobreposição") ||
-    lower.includes("overlap")
-  ) {
-    return "Equibles ETF Holdings • SEC N-PORT / Informes CVM";
-  }
-
-  if (
-    lower.includes("bond") ||
-    lower.includes("debenture") ||
-    lower.includes("debênture") ||
-    lower.includes("ytm") ||
-    lower.includes("duration modificada") ||
-    lower.includes("renda fixa global")
-  ) {
-    return "Bond Intelligence • FINRA TRACE / Emissores e Escrituradores";
-  }
-
-  if (
-    lower.includes("insider") ||
-    lower.includes("form 4") ||
-    lower.includes("baleias") ||
-    lower.includes("compras de diretores") ||
-    lower.includes("tickerinside")
-  ) {
-    return "SEC EDGAR (Form 4 Insider Transactions) • TickerInside Intelligence";
-  }
-
-  if (lower.includes("isin") || lower.includes("financedatabase") || lower.includes("300k")) {
-    return "FinanceDatabase Global Directory (300k+ Ativos) • Bolsas Globais";
-  }
-
-  if (
-    (lower.includes("provento") ||
-    lower.includes("dividendo") ||
-    lower.includes("jcp") ||
-    lower.includes("yield on cost")) &&
-    (text.includes("|") || text.includes("R$"))
-  ) {
-    return "B3 / CVM • Informes Oficiais de Escrituração Central";
-  }
-
-  if (
-    lower.includes("graham") ||
-    lower.includes("bazin") ||
-    lower.includes("valuation") ||
-    lower.includes("preço justo") ||
-    lower.includes("preco justo") ||
-    lower.includes("preço teto") ||
-    lower.includes("preco teto") ||
-    lower.includes("p/l") ||
-    lower.includes("p/vp") ||
-    lower.includes("roe")
-  ) {
-    return "Demonstrações IFRS / CVM • Consenso Sell-Side • Market Data";
-  }
-
-  if (lower.includes("cotação") || lower.includes("cotacao") || lower.includes("preço atual")) {
-    return "B3 / NYSE / Nasdaq (Market Data Yahoo Finance)";
   }
 
   return null;

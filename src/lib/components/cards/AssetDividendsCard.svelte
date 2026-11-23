@@ -292,8 +292,7 @@
     <div class="flex items-center gap-1.5">
       <ShieldCheck class="w-3.5 h-3.5 text-emerald-400 shrink-0" />
       <span class="text-zinc-400">Audited Source:</span>
-      <span class="text-zinc-200 font-medium">B3 / SEC / CVM • Official Central Registry Filings</span>
+      <span class="text-zinc-200 font-medium">MCP Verified Data</span>
     </div>
-    <span class="text-zinc-500">Verified DY & Historical Cashflows</span>
   </div>
 </div>

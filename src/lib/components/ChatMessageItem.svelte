@@ -27,7 +27,9 @@
   let { message }: Props = $props();
 
   let auditedSource = $derived(
-    message.sender === "staggi" && !message.isLoading && !message.isStreaming ? detectAuditedSource(message.text) : null
+    message.sender === "staggi" && !message.isLoading && !message.isStreaming
+      ? ((message.metadata?.source as string) || detectAuditedSource(message.text))
+      : null
   );
 
   let assetProfiles = $derived(
@@ -111,7 +113,7 @@
               <span class="text-zinc-400">{t("common.auditedSource")}:</span>
               <span class="text-zinc-200 font-medium">{auditedSource}</span>
             </div>
-            <span class="text-zinc-500 hidden sm:inline">Official Consensus</span>
+            <span class="text-zinc-500 hidden sm:inline">MCP Verified</span>
           </div>
         {/if}
       </div>

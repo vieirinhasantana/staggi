@@ -124,7 +124,8 @@
       time: new Date().toLocaleTimeString().slice(0, 5),
       type: "text",
       isLoading: false,
-      isStreaming: false
+      isStreaming: false,
+      metadata: geminiResult.source ? { source: geminiResult.source } : undefined
     };
 
     messages = messages.map(m => m.id === pendingBotId ? finalBotMessage : m);

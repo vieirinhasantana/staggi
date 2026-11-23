@@ -7,6 +7,7 @@ export interface GeminiResponseResult {
   success: boolean;
   isConfigured: boolean;
   error?: string;
+  source?: string;
 }
 
 export interface ChatHistoryTurn {
@@ -184,8 +185,11 @@ ${targetSkill.systemPrompt}`;
    - NUNCA inclua rodapé de auditoria, tabelas vazias ou cotações não solicitadas em conversas gerais.
 
 5. AUDITORIA E CITAÇÃO DE FONTES:
-   - SOMENTE inclua rodapé de auditoria ("Fonte Auditada: ...") quando a resposta contiver de fato dados numéricos reais de mercado, cotações, proventos, demonstrativos ou balanços oriundos das ferramentas/MCPs.
-   - Cite a fonte correspondente de forma concisa e factual (ex: "Fonte Auditada: Yahoo Finance Market Data", "Fonte Auditada: B3 / CVM", ou a respectiva fonte/MCP provedora). Em dúvidas conceituais ou saudações, nunca inclua rodapé de auditoria.`;
+   - Se dados de ferramentas ou servidores MCP locais foram retornados acima ([DADOS AUDITADOS RETORNADOS DO MCP LOCAL: <NomeDoMcp> • FERRAMENTA: <NomeDaTool>]):
+     Você DEVE citar EXATAMENTE o servidor MCP e a ferramenta consultada no rodapé da resposta: "Fonte Auditada: <NomeDoMcp> • <NomeDaTool>".
+     Exemplo real: se consultou o MCP "staggi-portfolio" com a ferramenta "list_clients", finalize estritamente com: "Fonte Auditada: staggi-portfolio • list_clients".
+     É ESTRITAMENTE PROIBIDO inventar fontes como "B3", "SEC EDGAR", "Market Consensus" ou "Consenso Sell-Side" quando os dados vieram de um MCP local do usuário ou ferramenta específica.
+   - Se nenhuma ferramenta/MCP foi consultada, NÃO inclua nenhum rodapé de "Fonte Auditada".`;
 
   let enforcementDirective = "";
   if (aiStore.enforcementLevel === "low") {
@@ -235,7 +239,8 @@ Equilibre profundidade técnica, dados reais auditados e contextualização exec
     return {
       text: responseText,
       success: true,
-      isConfigured: true
+      isConfigured: true,
+      source: activeToolName || undefined
     };
   } catch (err: any) {
     try {
@@ -259,7 +264,7 @@ Equilibre profundidade técnica, dados reais auditados e contextualização exec
         if (res.ok) {
           const json = await res.json();
           const text = json.choices?.[0]?.message?.content;
-          if (text) return { text, success: true, isConfigured: true };
+          if (text) return { text, success: true, isConfigured: true, source: activeToolName || undefined };
         }
       } else if (provider === "anthropic") {
         const res = await fetch("https://api.anthropic.com/v1/messages", {
@@ -282,7 +287,7 @@ Equilibre profundidade técnica, dados reais auditados e contextualização exec
         if (res.ok) {
           const json = await res.json();
           const text = json.content?.[0]?.text;
-          if (text) return { text, success: true, isConfigured: true };
+          if (text) return { text, success: true, isConfigured: true, source: activeToolName || undefined };
         }
       } else {
         const cleanModel = model.trim().replace(/^models\//, "");
@@ -311,7 +316,7 @@ Equilibre profundidade técnica, dados reais auditados e contextualização exec
         if (res.ok) {
           const json = await res.json();
           const text = json.candidates?.[0]?.content?.parts?.[0]?.text;
-          if (text) return { text, success: true, isConfigured: true };
+          if (text) return { text, success: true, isConfigured: true, source: activeToolName || undefined };
         }
       }
     } catch {
