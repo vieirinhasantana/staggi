@@ -217,6 +217,30 @@ export function parseAssetProfile(rawText: string): ParsedAssetProfile | null {
 
 export function detectAuditedSource(text: string): string | null {
   if (!text) return null;
+  const trimmed = text.trim();
+  if (trimmed.length < 40) return null;
+
+  // Check if it's purely a greeting, casual answer, or conversational exchange
+  const isGreetingOrCasual = /^(ol[áa]|bom\s*dia|boa\s*tarde|boa\s*noite|como\s*posso\s*ajudar|ol[áa]!\s*sou\s*o\s*staggi|ol[áa],\s*sou\s*o\s*staggi|tudo\s*bem|obrigad[oa]|de\s*nada|ol[áa]!|ol[áa],)/i.test(trimmed);
+  if (isGreetingOrCasual && !text.includes("|") && !text.includes("R$") && !text.includes("US$")) {
+    return null;
+  }
+
+  // If explicit audited source was provided in the text by the model
+  const explicitMatch = text.match(/(?:Fonte Auditada|Audited Source):\s*([^\n\r.]+)/i);
+  if (explicitMatch && explicitMatch[1]) {
+    const matched = explicitMatch[1].trim();
+    if (matched.length > 3) {
+      return matched;
+    }
+  }
+
+  // Only infer an audited source if there are actual financial numbers, tables, or tickers
+  const hasFinancialContent = text.includes("|") || /R\$\s*\d|US\$\s*\d|\b\d+([,.]\d+)?%\b|\bDY\b|\bP\/L\b|\bP\/VP\b|\bISIN\b|\bROE\b|\bYTM\b/i.test(text);
+  if (!hasFinancialContent) {
+    return null;
+  }
+
   const lower = text.toLowerCase();
 
   if (
@@ -266,10 +290,11 @@ export function detectAuditedSource(text: string): string | null {
   }
 
   if (
-    lower.includes("provento") ||
+    (lower.includes("provento") ||
     lower.includes("dividendo") ||
     lower.includes("jcp") ||
-    lower.includes("yield on cost")
+    lower.includes("yield on cost")) &&
+    (text.includes("|") || text.includes("R$"))
   ) {
     return "B3 / CVM • Informes Oficiais de Escrituração Central";
   }
@@ -293,7 +318,7 @@ export function detectAuditedSource(text: string): string | null {
     return "B3 / NYSE / Nasdaq (Market Data Yahoo Finance)";
   }
 
-  return "Staggi Intelligence • Fontes Oficiais de Mercado";
+  return null;
 }
 
 export function parseAssetQuote(rawText: string): ParsedAssetQuote | null {
@@ -847,6 +872,7 @@ export function renderMarkdown(content: string): string {
     processed = processed.replace(/^Consultando\s+o\s+mcp-[a-z0-9_-]+[^\n]*:?\s*\n?/gim, "");
     processed = processed.replace(/^Acessando\s+o\s+servidor\s+mcp-[a-z0-9_-]+[^\n]*:?\s*\n?/gim, "");
     processed = processed.replace(/^Com\s+base\s+no\s+mcp-[a-z0-9_-]+[^\n]*:?\s*\n?/gim, "");
+    processed = processed.replace(/(?:\n|^)\s*(?:Fonte Auditada|Audited Source):\s*[^\n]+/gi, "");
 
     processed = processed.replace(/\|\s*\|\s*(?=[A-Za-z0-9\*\_\#])/g, "|\n|");
 
