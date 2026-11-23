@@ -32,6 +32,7 @@ src-tauri/gen/
 !.env.example
 *.pem
 *.key
+*.key.pub
 *.cert
 *.pfx
 *.p12

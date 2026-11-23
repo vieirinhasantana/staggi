@@ -4,6 +4,15 @@ on:
   push:
     tags:
       - 'v*'
+      - '[0-9]*'
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release Tag (e.g. v0.1.0 or 0.1.0)'
+        required: false
+        default: 'v0.1.0'
 
 jobs:
   build-tauri:
@@ -48,9 +57,11 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
         with:
-          tagName: ${{ github.ref_name }}
-          releaseName: 'Staggi ${{ github.ref_name }}'
+          tagName: ${{ github.event.inputs.tag || github.event.release.tag_name || github.ref_name }}
+          releaseName: 'Staggi ${{ github.event.inputs.tag || github.event.release.tag_name || github.ref_name }}'
           releaseBody: 'See [CHANGELOG.md](https://github.com/vieirinhasantana/staggi/blob/main/CHANGELOG.md) for details.'
           releaseDraft: false
           prerelease: false

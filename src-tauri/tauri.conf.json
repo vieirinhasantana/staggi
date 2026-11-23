@@ -45,7 +45,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDJGQTYyOUQ5MDAwMDAwMDAKUldSREdDOWc1dGhnRW5VTWZtVmV0NnJvVWZtTjJqN1pZVU1FVE5qMW01Z1lqTk1lb3BRPT0K",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEE0M0JGQzA5MzU2RjUxRDcKUldUWFVXODFDZnc3cE1tTWJMYWZlcGptRENmTDRGeGJrM29vaUttNHNaemVHRkFtUnZYckNiTTcK",
       "endpoints": [
         "https://github.com/vieirinhasantana/staggi/releases/latest/download/latest.json"
       ]
