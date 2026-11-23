@@ -53,12 +53,25 @@ jobs:
       - name: Install Frontend Dependencies
         run: bun install --frozen-lockfile
 
+      - name: Verify Signing Key Presence
+        shell: bash
+        run: |
+          KEY="${{ secrets.TAURI_SIGNING_PRIVATE_KEY || vars.TAURI_SIGNING_PRIVATE_KEY }}"
+          if [ -z "$KEY" ]; then
+            echo "::error::TAURI_SIGNING_PRIVATE_KEY is not configured in GitHub Secrets!"
+            echo "::error::To fix this, go to: Settings > Secrets and variables > Actions > New repository secret"
+            echo "::error::Name: TAURI_SIGNING_PRIVATE_KEY"
+            exit 1
+          else
+            echo "✓ TAURI_SIGNING_PRIVATE_KEY detected successfully (${#KEY} characters)."
+          fi
+
       - name: Build Tauri Desktop Application
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY || vars.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD || '' }}
         with:
           tagName: ${{ github.event.inputs.tag || github.event.release.tag_name || github.ref_name }}
           releaseName: 'Staggi ${{ github.event.inputs.tag || github.event.release.tag_name || github.ref_name }}'
