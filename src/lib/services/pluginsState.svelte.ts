@@ -3,15 +3,20 @@ import type { McpServerItem, McpTestResult, SkillDefinition } from "$lib/types";
 export type { McpServerItem, McpTestResult, SkillDefinition };
 
 export function getSkillSlug(skill: SkillDefinition): string {
-  if (skill.slug) return skill.slug;
-  if (skill.id === "skill-valuation" || skill.name.includes("valuation") || skill.name.includes("fundamentalista")) return "valuation";
-  if (skill.id === "skill-proventos" || skill.name.includes("proventos") || skill.name.includes("dividendo")) return "proventos";
-  if (skill.id === "skill-etf-screening" || skill.name.includes("screening") || skill.name.includes("etf")) return "screening";
-  if (skill.id === "skill-renda-fixa-yield-curve" || skill.name.includes("renda-fixa") || skill.name.includes("bond")) return "renda-fixa";
-  if (skill.id === "skill-insider-smart-money" || skill.name.includes("insider") || skill.name.includes("smart-money")) return "insider";
-  if (skill.id === "skill-report" || skill.name.includes("parecer") || skill.name.includes("report")) return "report";
-  if (skill.id === "skill-offshore" || skill.name.includes("offshore") || skill.name.includes("tax")) return "offshore";
-  return skill.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  if (skill.slug && skill.slug.trim()) {
+    return skill.slug
+      .trim()
+      .toLowerCase()
+      .replace(/^\/+/, "")
+      .replace(/[^a-z0-9_-]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+  }
+  return skill.name
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9_-]+/g, "-")
+    .replace(/^-+|-+$/g, "") || "skill";
 }
 
 const MCPS_STORAGE_KEY = "staggi_mcps_config_v1";
@@ -196,12 +201,15 @@ function loadStoredMcps(): McpServerItem[] {
   if (typeof window === "undefined") return DEFAULT_MCPS;
   try {
     const raw = localStorage.getItem(MCPS_STORAGE_KEY);
-    if (!raw) return DEFAULT_MCPS;
+    if (raw === null) {
+      localStorage.setItem(MCPS_STORAGE_KEY, JSON.stringify(DEFAULT_MCPS));
+      return DEFAULT_MCPS;
+    }
     const parsed: McpServerItem[] = JSON.parse(raw);
-    if (Array.isArray(parsed) && parsed.length > 0) {
-      let changed = false;
-      let current = parsed.filter(
+    if (Array.isArray(parsed)) {
+      return parsed.filter(
         (m) =>
+          m &&
           m.id !== "mcp-bloomberg" &&
           m.name !== "mcp-bloomberg-terminal" &&
           m.id !== "mcp-investidor10" &&
@@ -209,19 +217,6 @@ function loadStoredMcps(): McpServerItem[] {
           m.id !== "mcp-custodia" &&
           m.name !== "mcp-custodia-offshore"
       );
-      if (current.length !== parsed.length) {
-        changed = true;
-      }
-      for (const def of DEFAULT_MCPS) {
-        if (!current.some((m) => m.id === def.id || m.name === def.name)) {
-          current.push(def);
-          changed = true;
-        }
-      }
-      if (changed) {
-        localStorage.setItem(MCPS_STORAGE_KEY, JSON.stringify(current));
-      }
-      return current;
     }
     return DEFAULT_MCPS;
   } catch {
@@ -233,36 +228,20 @@ function loadStoredSkills(): SkillDefinition[] {
   if (typeof window === "undefined") return DEFAULT_SKILLS;
   try {
     const raw = localStorage.getItem(SKILLS_STORAGE_KEY);
-    if (!raw) return DEFAULT_SKILLS;
+    if (raw === null) {
+      localStorage.setItem(SKILLS_STORAGE_KEY, JSON.stringify(DEFAULT_SKILLS));
+      return DEFAULT_SKILLS;
+    }
     const parsed: SkillDefinition[] = JSON.parse(raw);
-    if (Array.isArray(parsed) && parsed.length > 0) {
-      let changed = false;
-      let current = parsed.filter(
+    if (Array.isArray(parsed)) {
+      return parsed.filter(
         (s) =>
+          s &&
           s.id !== "skill-bloomberg" &&
           s.name !== "terminal-bloomberg-intelligence" &&
           s.id !== "skill-investidor10" &&
           s.name !== "analise-fundamentalista-investidor10"
       );
-      if (current.length !== parsed.length) {
-        changed = true;
-      }
-      for (const s of current) {
-        if ("triggers" in s) {
-          delete (s as any).triggers;
-          changed = true;
-        }
-      }
-      for (const def of DEFAULT_SKILLS) {
-        if (!current.some((s) => s.id === def.id || s.name === def.name)) {
-          current.push(def);
-          changed = true;
-        }
-      }
-      if (changed) {
-        localStorage.setItem(SKILLS_STORAGE_KEY, JSON.stringify(current));
-      }
-      return current;
     }
     return DEFAULT_SKILLS;
   } catch {
@@ -274,21 +253,12 @@ class PluginsStore {
   mcps = $state<McpServerItem[]>(loadStoredMcps());
   skills = $state<SkillDefinition[]>(loadStoredSkills());
 
-  get activeMcps(): McpServerItem[] {
-    return this.mcps.filter(m => m.active);
-  }
-
-  get activeSkills(): SkillDefinition[] {
-    return this.skills.filter(s => s.active);
-  }
-
-  get activeMcpsCount(): number {
-    return this.mcps.filter(m => m.active).length;
-  }
-
-  get activeSkillsCount(): number {
-    return this.skills.filter(s => s.active).length;
-  }
+  activeMcps = $derived.by(() => this.mcps.filter(m => m.active));
+  activeSkills = $derived.by(() => this.skills.filter(s => s.active));
+  activeMcpsCount = $derived.by(() => this.mcps.filter(m => m.active).length);
+  activeSkillsCount = $derived.by(() => this.skills.filter(s => s.active).length);
+  totalSkillsCount = $derived.by(() => this.skills.length);
+  totalMcpsCount = $derived.by(() => this.mcps.length);
 
   reloadFromStorage() {
     this.mcps = loadStoredMcps();
@@ -378,21 +348,43 @@ class PluginsStore {
   }
 
   addSkill(skill: Omit<SkillDefinition, "id">) {
+    const cleanSlug = skill.slug && skill.slug.trim()
+      ? skill.slug.trim().toLowerCase().replace(/^\/+/, "").replace(/[^a-z0-9_-]+/g, "-")
+      : getSkillSlug(skill as SkillDefinition);
+
     const newItem: SkillDefinition = {
       ...skill,
+      slug: cleanSlug,
       id: `skill-${Date.now()}`
     };
     this.skills = [newItem, ...this.skills];
     this.saveSkills();
+    return newItem;
   }
 
   updateSkill(id: string, updated: Partial<SkillDefinition>) {
-    this.skills = this.skills.map(s => s.id === id ? { ...s, ...updated } : s);
+    this.skills = this.skills.map(s => {
+      if (s.id !== id) return s;
+      const merged = { ...s, ...updated };
+      if (updated.slug !== undefined || updated.name !== undefined) {
+        merged.slug = merged.slug && merged.slug.trim()
+          ? merged.slug.trim().toLowerCase().replace(/^\/+/, "").replace(/[^a-z0-9_-]+/g, "-")
+          : getSkillSlug(merged);
+      }
+      return merged;
+    });
     this.saveSkills();
   }
 
   removeSkill(id: string) {
     this.skills = this.skills.filter(s => s.id !== id);
+    this.saveSkills();
+  }
+
+  restoreDefaultSkills() {
+    const defaultIds = new Set(DEFAULT_SKILLS.map(d => d.id));
+    const userCustomSkills = this.skills.filter(s => !defaultIds.has(s.id));
+    this.skills = [...userCustomSkills, ...DEFAULT_SKILLS];
     this.saveSkills();
   }
 }

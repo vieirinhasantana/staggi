@@ -58,11 +58,11 @@
   let matchingSkills = $derived.by(() => {
     if (!isSlashCommandActive) return [];
     const q = slashQuery;
-    const skills = pluginsStore.activeSkills;
+    const skills = pluginsStore.activeSkills.length > 0 ? pluginsStore.activeSkills : pluginsStore.skills;
     if (!q) return skills;
     return skills.filter(s => {
       const slug = getSkillSlug(s).toLowerCase();
-      return slug.includes(q) || s.name.toLowerCase().includes(q) || s.description.toLowerCase().includes(q);
+      return slug.includes(q) || s.name.toLowerCase().includes(q) || (s.description && s.description.toLowerCase().includes(q));
     });
   });
 
@@ -183,11 +183,11 @@
         </button>
       {/if}
 
-      {#if pluginsStore.activeSkillsCount > 0}
+      {#if pluginsStore.skills.length > 0}
         <button 
           type="button"
           onclick={() => togglePopover("skills")}
-          title="Click to view {pluginsStore.activeSkillsCount} Active Specialized Skills"
+          title="Click to view {pluginsStore.activeSkillsCount} Active Specialized Skills ({pluginsStore.skills.length} registered)"
           class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border transition-all cursor-pointer text-[11px] font-mono {activePopover === 'skills' ? 'bg-violet-500/20 border-violet-500/40 text-violet-300 shadow-[0_0_12px_rgba(139,92,246,0.25)]' : 'bg-violet-500/10 border-violet-500/20 text-violet-400 hover:bg-violet-500/15'}"
         >
           <Zap class="h-3.5 w-3.5 text-violet-400" />
@@ -362,21 +362,30 @@
     </div>
   {/if}
 
-  {#if activePopover === "skills" && pluginsStore.activeSkillsCount > 0}
+  {#if activePopover === "skills" && pluginsStore.skills.length > 0}
     <div class="absolute left-24 top-[102%] z-50 w-80 rounded-xl border border-white/[0.12] bg-[#1a1926]/95 p-3 shadow-[0_12px_32px_rgba(0,0,0,0.6)] backdrop-blur-2xl space-y-2 animate-fade-in">
       <div class="flex items-center justify-between pb-1.5 border-b border-white/[0.08] text-[11px] font-mono text-zinc-300">
         <span class="flex items-center gap-1.5 text-violet-400 font-semibold">
-          <Zap class="w-3.5 h-3.5" /> Active Analytical Skills ({pluginsStore.activeSkillsCount})
+          <Zap class="w-3.5 h-3.5" /> Registered Skills ({pluginsStore.activeSkillsCount}/{pluginsStore.totalSkillsCount})
         </span>
         <button type="button" onclick={() => activePopover = 'none'} class="text-zinc-500 hover:text-zinc-200 cursor-pointer">
           <X class="h-3 w-3" />
         </button>
       </div>
-      <div class="grid grid-cols-1 gap-1 text-[11px] font-mono">
-        {#each pluginsStore.activeSkills as skill}
-          <div class="p-1.5 rounded-lg bg-[#2a273b]/50 border border-white/[0.04] flex items-center justify-between">
-            <span class="text-zinc-200">{skill.name}</span>
-            <span class="px-1.5 py-0.5 rounded text-[9px] bg-white/[0.06] text-violet-300 border border-violet-500/20">{skill.mcpDependency || 'Custom'}</span>
+      <div class="grid grid-cols-1 gap-1 text-[11px] font-mono max-h-60 overflow-y-auto">
+        {#each pluginsStore.skills as skill}
+          {@const slug = getSkillSlug(skill)}
+          <div class="p-1.5 rounded-lg bg-[#2a273b]/50 border border-white/[0.04] flex items-center justify-between gap-2">
+            <div class="flex items-center gap-1.5 truncate">
+              <span class="px-1 py-0.2 rounded text-[9px] bg-violet-500/20 text-violet-300 font-bold font-mono">/{slug}</span>
+              <span class="text-zinc-200 truncate">{skill.name}</span>
+            </div>
+            <div class="flex items-center gap-1 shrink-0">
+              {#if !skill.active}
+                <span class="text-[9px] px-1 py-0.2 rounded bg-zinc-700/50 text-zinc-400 font-sans">Inativo</span>
+              {/if}
+              <span class="px-1.5 py-0.5 rounded text-[9px] bg-white/[0.06] text-violet-300 border border-violet-500/20">{skill.mcpDependency || 'Custom'}</span>
+            </div>
           </div>
         {/each}
       </div>

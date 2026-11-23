@@ -153,6 +153,11 @@ export interface TranslationDictionary {
       editing: string;
       skillNameLabel: string;
       skillNamePlaceholder: string;
+      slugLabel: string;
+      slugPlaceholder: string;
+      slugHint: string;
+      descriptionLabel: string;
+      descriptionPlaceholder: string;
       authorizedMcpsLabel: string;
       authorizedMcpsPlaceholder: string;
       systemPromptLabel: string;
@@ -165,6 +170,8 @@ export interface TranslationDictionary {
       createFirstSkill: string;
       editDirectives: string;
       deleteConfirm: string;
+      restoreDefaults: string;
+      restoreDefaultsConfirm: string;
     };
     tasks: {
       createNew: string;

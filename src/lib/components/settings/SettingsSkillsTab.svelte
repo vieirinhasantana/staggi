@@ -5,8 +5,9 @@
     Code,
     Save,
     Trash2,
+    RotateCcw,
   } from "@lucide/svelte";
-  import { pluginsStore } from "$lib/services/pluginsState.svelte";
+  import { pluginsStore, getSkillSlug } from "$lib/services/pluginsState.svelte";
   import { toastStore } from "$lib/services/toastService.svelte";
   import type { SkillDefinition } from "$lib/types";
   import { t } from "$lib/i18n";
@@ -15,6 +16,7 @@
   let isCreatingSkill = $state(false);
 
   let editName = $state("");
+  let editSlug = $state("");
   let editDesc = $state("");
   let editMcp = $state("mcp-yahoo-finance");
   let editPrompt = $state("");
@@ -23,6 +25,7 @@
     editingSkillId = skill.id;
     isCreatingSkill = false;
     editName = skill.name;
+    editSlug = skill.slug || getSkillSlug(skill);
     editDesc = skill.description;
     editMcp = skill.mcpDependency;
     editPrompt = skill.systemPrompt;
@@ -32,6 +35,7 @@
     editingSkillId = null;
     isCreatingSkill = true;
     editName = "";
+    editSlug = "";
     editDesc = "";
     editMcp = "mcp-yahoo-finance";
     editPrompt = `# Specialized Skill Directives
@@ -45,6 +49,7 @@ You are Staggi's specialized financial intelligence advisor.
     editingSkillId = null;
     isCreatingSkill = false;
     editName = "";
+    editSlug = "";
     editDesc = "";
     editMcp = "";
     editPrompt = "";
@@ -53,10 +58,14 @@ You are Staggi's specialized financial intelligence advisor.
   function handleSaveSkill() {
     if (!editName.trim()) return;
     const name = editName.trim();
+    const cleanSlug = editSlug.trim()
+      ? editSlug.trim().toLowerCase().replace(/^\/+/, "").replace(/[^a-z0-9_-]+/g, "-")
+      : name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "");
 
     if (isCreatingSkill) {
       pluginsStore.addSkill({
         name,
+        slug: cleanSlug,
         description: editDesc.trim() || "Custom analytical skill",
         mcpDependency: editMcp,
         systemPrompt: editPrompt,
@@ -64,13 +73,14 @@ You are Staggi's specialized financial intelligence advisor.
       });
       toastStore.success(
         t("toasts.skillCreatedTitle"),
-        t("toasts.skillCreatedDesc", { name, command: name.toLowerCase() })
+        t("toasts.skillCreatedDesc", { name, command: cleanSlug })
       );
       isCreatingSkill = false;
       editingSkillId = null;
     } else if (editingSkillId) {
       pluginsStore.updateSkill(editingSkillId, {
         name,
+        slug: cleanSlug,
         description: editDesc.trim(),
         mcpDependency: editMcp,
         systemPrompt: editPrompt,
@@ -87,6 +97,12 @@ You are Staggi's specialized financial intelligence advisor.
     pluginsStore.removeSkill(id);
     if (editingSkillId === id) {
       editingSkillId = null;
+    }
+  }
+
+  function handleRestoreDefaults() {
+    if (confirm(t("settings.skills.restoreDefaultsConfirm"))) {
+      pluginsStore.restoreDefaultSkills();
     }
   }
 </script>
@@ -161,6 +177,42 @@ You are Staggi's specialized financial intelligence advisor.
           />
         </div>
         <div class="space-y-1">
+          <div class="flex items-center justify-between">
+            <label
+              for="edit-skill-slug"
+              class="text-[10px] text-zinc-400 uppercase"
+              >{t("settings.skills.slugLabel")}</label
+            >
+            <span class="text-[9px] text-violet-400 font-mono">
+              /{editSlug.trim() ? editSlug.trim().toLowerCase().replace(/^\/+/, '') : (editName ? editName.toLowerCase().replace(/[^a-z0-9_-]+/g, '-') : 'command')}
+            </span>
+          </div>
+          <input
+            id="edit-skill-slug"
+            type="text"
+            bind:value={editSlug}
+            placeholder={t("settings.skills.slugPlaceholder")}
+            class="w-full rounded-xl bg-[#2a273b] border border-white/[0.1] px-3 py-2 text-zinc-100 focus:outline-none"
+          />
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2.5">
+        <div class="space-y-1">
+          <label
+            for="edit-skill-desc"
+            class="text-[10px] text-zinc-400 uppercase"
+            >{t("settings.skills.descriptionLabel")}</label
+          >
+          <input
+            id="edit-skill-desc"
+            type="text"
+            bind:value={editDesc}
+            placeholder={t("settings.skills.descriptionPlaceholder")}
+            class="w-full rounded-xl bg-[#2a273b] border border-white/[0.1] px-3 py-2 text-zinc-100 focus:outline-none"
+          />
+        </div>
+        <div class="space-y-1">
           <label
             for="edit-skill-mcp"
             class="text-[10px] text-zinc-400 uppercase"
@@ -213,12 +265,23 @@ You are Staggi's specialized financial intelligence advisor.
   {/if}
 
   <div class="flex items-center justify-between pt-1">
-    <h5 class="text-xs font-semibold text-zinc-300 font-mono">
-      {t("settings.skills.installedSkills", { count: pluginsStore.skills.length })}
-    </h5>
-    <span class="text-[10px] text-zinc-400 font-mono">
-      {t("settings.skills.activeSkillsCount", { count: pluginsStore.activeSkillsCount })}
-    </span>
+    <div class="flex items-center gap-2">
+      <h5 class="text-xs font-semibold text-zinc-300 font-mono">
+        {t("settings.skills.installedSkills", { count: pluginsStore.skills.length })}
+      </h5>
+      <span class="text-[10px] text-zinc-400 font-mono">
+        • {t("settings.skills.activeSkillsCount", { count: pluginsStore.activeSkillsCount })}
+      </span>
+    </div>
+    <button
+      type="button"
+      onclick={handleRestoreDefaults}
+      title="Restore original built-in reference skills"
+      class="flex items-center gap-1 text-[10px] text-zinc-400 hover:text-violet-300 transition-colors font-mono cursor-pointer"
+    >
+      <RotateCcw class="w-3 h-3" />
+      <span>{t("settings.skills.restoreDefaults")}</span>
+    </button>
   </div>
 
   <div class="space-y-3.5">
@@ -251,8 +314,9 @@ You are Staggi's specialized financial intelligence advisor.
     {/if}
 
     {#each pluginsStore.skills as skill (skill.id)}
+      {@const slug = getSkillSlug(skill)}
       <div
-        class="p-4.5 rounded-2xl bg-[#221f33]/90 hover:bg-[#252238] border transition-all space-y-3 {skill.active
+        class="p-4 rounded-2xl bg-[#221f33]/90 hover:bg-[#252238] border transition-all space-y-3 {skill.active
           ? 'border-white/[0.08] hover:border-violet-500/35 shadow-sm'
           : 'border-white/[0.04] opacity-75'}"
       >
@@ -270,15 +334,22 @@ You are Staggi's specialized financial intelligence advisor.
                   >{skill.name}</span
                 >
                 <span
-                  class="px-2 py-0.5 rounded-md text-[10px] font-mono bg-white/[0.06] text-violet-300 border border-violet-500/25"
+                  class="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-violet-500/20 text-violet-300 border border-violet-500/30"
                 >
-                  {skill.mcpDependency || "Custom"}
+                  /{slug}
                 </span>
+                {#if skill.mcpDependency}
+                  <span
+                    class="px-2 py-0.5 rounded-md text-[10px] font-mono bg-white/[0.06] text-zinc-300 border border-white/[0.08]"
+                  >
+                    {skill.mcpDependency}
+                  </span>
+                {/if}
               </div>
               <p
                 class="text-xs text-zinc-300 font-sans leading-relaxed"
               >
-                {skill.description}
+                {skill.description || "Custom analytical skill"}
               </p>
             </div>
           </div>
