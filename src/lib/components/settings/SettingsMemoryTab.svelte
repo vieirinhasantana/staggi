@@ -10,10 +10,8 @@
     X,
     Tag,
     RotateCcw,
-    Zap,
     Download,
     Upload,
-    Check,
   } from "@lucide/svelte";
   import { memoryStore } from "$lib/services/memoryState.svelte";
   import { toastStore } from "$lib/services/toastService.svelte";
@@ -176,66 +174,6 @@
 </script>
 
 <div class="space-y-4">
-  <!-- Scope Clarification Banner -->
-  <div class="p-3 rounded-xl bg-white/[0.02] border border-white/[0.06] flex items-start gap-3 text-xs text-zinc-400">
-    <div class="p-1.5 rounded-lg bg-pink-500/10 text-pink-400 shrink-0 mt-0.5">
-      <Brain class="w-4 h-4" />
-    </div>
-    <div class="space-y-1">
-      <p class="font-medium text-zinc-200">
-        Escopo do Second Brain vs. MCP & RAG
-      </p>
-      <p class="text-[11px] text-zinc-400 leading-relaxed">
-        • <strong class="text-zinc-300">Dados Cadastrais de Clientes</strong>: vêm do CRM / banco cadastral via MCP local.<br />
-        • <strong class="text-zinc-300">Documentos, Relatórios e Atas</strong>: consultados via RAG no MCP de Documentos.<br />
-        • <strong class="text-pink-300">Second Brain</strong>: armazena estritamente suas <strong>preferências de resposta, metodologias fiduciárias e políticas gerais da sua mesa</strong>.
-      </p>
-    </div>
-  </div>
-
-  <!-- Stats & Engine Performance Bar -->
-  <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-    <div class="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06] flex items-center gap-3">
-      <div class="p-2 rounded-lg bg-pink-500/15 text-pink-400">
-        <Brain class="w-4 h-4" />
-      </div>
-      <div>
-        <div class="text-xs text-zinc-400">Total Gravado</div>
-        <div class="text-base font-semibold text-zinc-100">{memoryStore.totalCount} fatos</div>
-      </div>
-    </div>
-
-    <div class="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06] flex items-center gap-3">
-      <div class="p-2 rounded-lg bg-emerald-500/15 text-emerald-400">
-        <Check class="w-4 h-4" />
-      </div>
-      <div>
-        <div class="text-xs text-zinc-400">Ativas no Chat</div>
-        <div class="text-base font-semibold text-emerald-400">{memoryStore.activeCount} ativas</div>
-      </div>
-    </div>
-
-    <div class="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06] flex items-center gap-3">
-      <div class="p-2 rounded-lg bg-amber-500/15 text-amber-400">
-        <Pin class="w-4 h-4" />
-      </div>
-      <div>
-        <div class="text-xs text-zinc-400">Fixadas (Global)</div>
-        <div class="text-base font-semibold text-amber-300">{memoryStore.pinnedCount} fixas</div>
-      </div>
-    </div>
-
-    <div class="p-3 rounded-xl bg-white/[0.03] border border-white/[0.06] flex items-center gap-3">
-      <div class="p-2 rounded-lg bg-violet-500/15 text-violet-400">
-        <Zap class="w-4 h-4" />
-      </div>
-      <div>
-        <div class="text-xs text-zinc-400">Recuperação</div>
-        <div class="text-base font-semibold text-violet-300">&lt; 0.2 ms</div>
-      </div>
-    </div>
-  </div>
-
   <!-- Action & Filter Bar -->
   <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
     <!-- Search Bar -->
@@ -244,7 +182,7 @@
       <input
         type="text"
         bind:value={searchQuery}
-        placeholder="Buscar diretrizes por cliente, tese, ticker, tag ou palavra-chave..."
+        placeholder="Buscar preferências, políticas, tags ou palavras-chave..."
         class="w-full bg-[#141414] border border-white/[0.08] rounded-xl pl-9 pr-3 py-2 text-xs text-zinc-200 placeholder:text-zinc-500 focus:outline-none focus:border-pink-500/40 focus:ring-1 focus:ring-pink-500/40 transition-all"
       />
     </div>
