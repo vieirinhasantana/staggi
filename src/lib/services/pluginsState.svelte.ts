@@ -27,10 +27,10 @@ const DEFAULT_MCPS: McpServerItem[] = [
     id: "mcp-yahoo", 
     name: "mcp-yahoo-finance", 
     type: "Market Data MCP", 
-    transport: "Rust Native / HTTP", 
-    endpoint: "query1.finance.yahoo.com", 
+    transport: "stdio (CLI)", 
+    endpoint: "npx -y yfinance-mcp", 
     active: true, 
-    desc: "Real-time quotes from Yahoo Finance, multiples (P/E, P/B), volume, and declared dividends"
+    desc: "Real-time quotes, multiples (P/E, P/B), volume, historical prices and dividends via MCP"
   },
   { 
     id: "mcp-tax", 

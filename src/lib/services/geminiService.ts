@@ -1,7 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { pluginsStore, getSkillSlug } from "./pluginsState.svelte";
 import { aiStore, geminiStore } from "./aiProviderState.svelte";
-import { getQuote, getMarketNews } from "./yahooFinanceService";
 
 export interface GeminiResponseResult {
   text: string;
@@ -97,82 +96,6 @@ ${targetSkill.systemPrompt}`;
     onProgress?.("Thinking...");
   }
 
-  const searchContext = [
-    cleanPrompt,
-    ...(history || []).slice(-3).map(h => h.text)
-  ].join(" ").toLowerCase();
-
-  const isIdentifierQuery = 
-    /\b[A-Z]{2}[A-Z0-9]{9}\d\b/i.test(searchContext) || 
-    /\b[0-9A-Z]{9}\b/i.test(searchContext) || 
-    /\b[A-Z]{4,5}\d{1,2}\b/i.test(searchContext) || 
-    searchContext.includes("isin") || 
-    searchContext.includes("cusip") || 
-    searchContext.includes("ticker") || 
-    searchContext.includes("código") || 
-    searchContext.includes("codigo") || 
-    searchContext.includes("ativo");
-
-  const isinMatches = prompt.match(/\b[A-Z]{2}[A-Z0-9]{9}\d\b/gi) || [];
-  const b3TickerMatches = prompt.match(/\b[A-Z]{4,5}\d{1,2}\b/gi) || [];
-  const genericTickers = prompt
-    .split(/[\s,;?!()]+/)
-    .map(w => w.trim().toUpperCase())
-    .filter(w => /^[A-Z]{1,5}(\.[A-Z]{2})?$/.test(w) && !["DE", "DO", "DA", "EM", "NO", "NA", "OU", "SE", "OS", "AS", "UM", "ME", "AI", "POR", "COM", "PARA", "QUE", "QUAL", "QUAIS", "VER", "E"].includes(w));
-  const allIdentifiers = [...new Set([...isinMatches, ...b3TickerMatches, ...genericTickers])];
-
-  let liveMarketDataContext = "";
-  if (allIdentifiers.length > 0) {
-    activeToolName = "Market Data Engine";
-    const statusText = activeSkillName
-      ? `Thinking... [Market Data Engine • Skill: ${activeSkillName}]`
-      : `Thinking... [Market Data Engine]`;
-    onProgress?.(statusText);
-    const quotePromises = allIdentifiers.slice(0, 4).map(async (id) => {
-      try {
-        const q = await getQuote(id);
-        if (q && q.price > 0) {
-          const formattedChange = q.changePercent ? `${q.changePercent > 0 ? "+" : ""}${q.changePercent.toFixed(2)}%` : "";
-          const formattedPrice = `${q.currency} ${q.price.toFixed(q.currency === "BRL" ? 2 : 4)}`;
-          return `- ${id} (${q.name}): Cotação Atual / Preço: ${formattedPrice} (Variação: ${formattedChange})`;
-        }
-      } catch {}
-      return null;
-    });
-
-    const resolvedQuotes = (await Promise.all(quotePromises)).filter(Boolean);
-    if (resolvedQuotes.length > 0) {
-      liveMarketDataContext = `\n\nDADOS DE MERCADO EM TEMPO REAL:\n` +
-        resolvedQuotes.join("\n") +
-        `\nATENÇÃO: Utilize com prioridade os valores de cotação/preço acima na sua resposta para esses ativos.`;
-    }
-  }
-
-  const isNewsQuery = 
-    /\b(not[ií]cia|not[ií]cias|fatos? relevantes?|manchetes?|acontecendo no mercado|cen[aá]rio de hoje|news|notici[aá]rio|panorama)\b/i.test(searchContext) ||
-    (searchContext.includes("mercado") && (searchContext.includes("hoje") || searchContext.includes("principal") || searchContext.includes("principais") || searchContext.includes("dia")));
-
-  let liveNewsContext = "";
-  if (isNewsQuery) {
-    activeToolName = "News Wire";
-    const statusText = activeSkillName
-      ? `Thinking... [News Wire • Skill: ${activeSkillName}]`
-      : `Thinking... [News Wire]`;
-    onProgress?.(statusText);
-    try {
-      const newsQuery = allIdentifiers.length > 0 ? allIdentifiers.join(",") : "market";
-      const newsList = await getMarketNews(newsQuery);
-      if (newsList && newsList.length > 0) {
-        const formattedNews = newsList.slice(0, 8).map((n, idx) => {
-          return `${idx + 1}. **${n.title}**\n   - Publicado: ${n.publishedAt} | Fonte: ${n.source}\n   - Detalhes: ${n.aiSummary}`;
-        });
-        liveNewsContext = `\n\nNOTÍCIAS E FATOS RELEVANTES DE MERCADO EM TEMPO REAL:\n` +
-          formattedNews.join("\n\n") +
-          `\n\nDIRETRIZ DE NOTÍCIAS:\nUtilize as informações reais acima para compor uma síntese executiva com panorama geral, destaques objetivos e impactos para os ativos ou carteiras em análise.`;
-      }
-    } catch {}
-  }
-
   let skillsInstructions = "";
   if (activeSkills.length > 0) {
     skillsInstructions = "\n\nSkills Especializadas Ativas no Staggi (Você tem total autonomia para orquestrar e aplicar as diretrizes de cada uma conforme a pergunta do usuário):\n" + 
@@ -207,6 +130,12 @@ ${targetSkill.systemPrompt}`;
       } else if (toolName === "list_trade_ideas" && /\b(trade ideas?|ideias? de trade|teses?|recomendações?|oportunidades?)\b/i.test(cleanPrompt)) {
         shouldExecute = true;
       } else if (toolName === "list_indexed_documents" && /\b(documentos?|pdfs?|relat[oó]rios? indexados?)\b/i.test(cleanPrompt)) {
+        shouldExecute = true;
+      } else if ((toolName.includes("quote") || toolName.includes("price") || toolName.includes("ticker") || toolName.includes("cotacao") || toolName.includes("preco")) &&
+                 /\b(cota[çc][aã]o|pre[çc]o|quanto est[aá]|ticker|a[çc][aã]o|valor|proventos?|dividendos?)\b/i.test(cleanPrompt)) {
+        shouldExecute = true;
+      } else if ((toolName.includes("news") || toolName.includes("noticia")) &&
+                 /\b(not[ií]cias?|manchetes?|fatos? relevantes?|notici[aá]rio)\b/i.test(cleanPrompt)) {
         shouldExecute = true;
       }
 
@@ -274,7 +203,7 @@ O usuário configurou o nível de enforcement para HIGH. Você DEVE operar com r
 Equilibre profundidade técnica, dados reais auditados e contextualização executiva com tabelas claras e conclusões numéricas.`;
   }
 
-  const systemInstruction = `Você é o Staggi, o motor de inteligência e copiloto executivo para assessores de investimento e wealth managers no Brasil. Suas respostas devem ser de alto padrão, numéricas, concisas, sem rodeios desnecessários, com foco em alocação patrimonial, governança offshore, tributação (Lei 14.754/23) e fluxo de proventos.${dateContext}${enforcementDirective}${explicitSkillDirective}${skillsInstructions}${mcpsContext}${liveMcpData}${liveMarketDataContext}${liveNewsContext}${memoryAndFormattingInstruction}${portfolioContext ? `\n\nContexto do Portfólio: ${JSON.stringify(portfolioContext)}` : ""}`;
+  const systemInstruction = `Você é o Staggi, o motor de inteligência e copiloto executivo para assessores de investimento e wealth managers no Brasil. Suas respostas devem ser de alto padrão, numéricas, concisas, sem rodeios desnecessários, com foco em alocação patrimonial, governança offshore, tributação (Lei 14.754/23) e fluxo de proventos.${dateContext}${enforcementDirective}${explicitSkillDirective}${skillsInstructions}${mcpsContext}${liveMcpData}${memoryAndFormattingInstruction}${portfolioContext ? `\n\nContexto do Portfólio: ${JSON.stringify(portfolioContext)}` : ""}`;
 
   const cleanHistory = (history || [])
     .filter(h => h.text && !(h.text.trim().startsWith("{") && h.text.includes('"candidates"')))

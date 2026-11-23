@@ -11,7 +11,6 @@ use commands::ai::{
     ask_ai, ask_gemini, list_ai_models, list_gemini_models, test_ai_connection,
     test_gemini_connection,
 };
-use commands::finance::{fetch_yahoo_data, fetch_yahoo_news};
 use commands::mcp::{call_mcp_tool, test_mcp_connection};
 use commands::window::{hide_window, restart_app, toggle_window};
 
@@ -24,8 +23,6 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             hide_window,
             restart_app,
-            fetch_yahoo_data,
-            fetch_yahoo_news,
             list_gemini_models,
             list_ai_models,
             test_gemini_connection,

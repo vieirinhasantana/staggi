@@ -15,8 +15,6 @@
   } from "@lucide/svelte";
   import { pluginsStore } from "$lib/services/pluginsState.svelte";
   import { toastStore } from "$lib/services/toastService.svelte";
-  import { getQuote } from "$lib/services/yahooFinanceService";
-  import type { StockQuote } from "$lib/types";
   import { t } from "$lib/i18n";
 
   let newMcpName = $state("");
@@ -36,9 +34,6 @@
   }
 }`);
 
-  let mcpTickerTest = $state("PETR4.SA");
-  let mcpQuoteResult = $state<StockQuote | null>(null);
-  let isTestingMcpYahoo = $state(false);
   let isCreatingMcp = $state(false);
 
   let testingMcpId = $state<string | null>(null);
@@ -62,17 +57,6 @@
       toastStore.error("Erro na Execução", String(e || "Falha ao executar ferramenta"));
     } finally {
       executingToolName = null;
-    }
-  }
-
-  async function testMcpYahooQuote() {
-    isTestingMcpYahoo = true;
-    mcpQuoteResult = null;
-    try {
-      mcpQuoteResult = await getQuote(mcpTickerTest);
-    } catch {
-    } finally {
-      isTestingMcpYahoo = false;
     }
   }
 
@@ -665,54 +649,6 @@
               </a>
             </div>
           </div>
-        {/if}
-
-        {#if mcp.id === "mcp-yahoo"}
-          <div
-            class="mt-2 pt-2 border-t border-white/[0.06] flex items-center justify-between text-[11px]"
-          >
-            <span class="text-zinc-400"
-              >{t("settings.mcps.testYahoo")}</span
-            >
-            <div class="flex items-center gap-2">
-              <input
-                type="text"
-                aria-label="Ticker symbol for Yahoo Finance test"
-                bind:value={mcpTickerTest}
-                class="w-24 px-2 py-1 rounded bg-[#2b273b] border border-white/[0.1] text-zinc-100 uppercase text-center font-mono focus:outline-none"
-              />
-              <button
-                type="button"
-                onclick={testMcpYahooQuote}
-                disabled={isTestingMcpYahoo}
-                class="px-2.5 py-1 rounded bg-sky-500/20 hover:bg-sky-500/30 border border-sky-500/30 text-sky-300 font-mono text-[10px] cursor-pointer"
-              >
-                {isTestingMcpYahoo ? t("settings.mcps.fetching") : t("settings.mcps.testTicker")}
-              </button>
-            </div>
-          </div>
-          {#if mcpQuoteResult}
-            <div
-              class="mt-1 p-2 rounded-lg bg-[#2b273b]/60 border border-white/[0.06] flex items-center justify-between text-[11px] font-mono text-zinc-200"
-            >
-              <span
-                >{mcpQuoteResult.name} ({mcpQuoteResult.symbol})</span
-              >
-              <span class="font-bold"
-                >{mcpQuoteResult.currency}
-                {mcpQuoteResult.price.toFixed(2)}</span
-              >
-              <span
-                class={mcpQuoteResult.change >= 0
-                  ? "text-emerald-400"
-                  : "text-rose-400"}
-              >
-                {mcpQuoteResult.change >= 0
-                  ? "+"
-                  : ""}{mcpQuoteResult.changePercent.toFixed(2)}%
-              </span>
-            </div>
-          {/if}
         {/if}
       </div>
     {/each}
