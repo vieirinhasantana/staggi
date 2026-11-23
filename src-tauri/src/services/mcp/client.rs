@@ -1,0 +1,668 @@
+use crate::models::mcp::{McpTestResult, McpTool};
+
+pub fn apply_mcp_auth(
+    mut req: reqwest::RequestBuilder,
+    api_key: Option<&str>,
+    auth_header: Option<&str>,
+) -> reqwest::RequestBuilder {
+    if let Some(key) = api_key.map(|k| k.trim()).filter(|k| !k.is_empty()) {
+        let header_name = auth_header.unwrap_or("Authorization").trim();
+        if header_name.eq_ignore_ascii_case("authorization") {
+            if key.starts_with("Bearer ") {
+                req = req.header("Authorization", key);
+            } else {
+                req = req.header("Authorization", format!("Bearer {}", key));
+            }
+        } else {
+            req = req.header(header_name, key);
+        }
+    }
+    req
+}
+
+pub fn resolve_mcp_endpoint_url(base_target: &str, path_or_url: &str) -> String {
+    let trimmed = path_or_url.trim();
+    if trimmed.starts_with("http://") || trimmed.starts_with("https://") {
+        trimmed.to_string()
+    } else if trimmed.starts_with('/') {
+        if let Some(pos) = base_target.find("://") {
+            let after_proto = &base_target[pos + 3..];
+            let host_end = after_proto.find('/').unwrap_or(after_proto.len());
+            let origin = &base_target[..pos + 3 + host_end];
+            format!("{}{}", origin, trimmed)
+        } else {
+            format!("{}{}", base_target.trim_end_matches('/'), trimmed)
+        }
+    } else {
+        format!("{}/{}", base_target.trim_end_matches('/'), trimmed)
+    }
+}
+
+pub async fn query_mcp_sse_tools(
+    client: &reqwest::Client,
+    target_url: &str,
+    api_key: Option<&str>,
+    auth_header: Option<&str>,
+) -> Result<Vec<McpTool>, String> {
+    let req = client
+        .get(target_url)
+        .header("Accept", "text/event-stream")
+        .header("Cache-Control", "no-cache");
+    let req = apply_mcp_auth(req, api_key, auth_header);
+
+    let mut res = req
+        .send()
+        .await
+        .map_err(|e| format!("Failed to connect to SSE endpoint: {}", e))?;
+
+    let status = res.status();
+    if status == reqwest::StatusCode::UNAUTHORIZED || status == reqwest::StatusCode::FORBIDDEN {
+        return Err(format!("AUTH_ERROR: Status {}", status.as_u16()));
+    }
+    if !status.is_success() {
+        return Err(format!(
+            "HTTP error {}: {}",
+            status.as_u16(),
+            status.canonical_reason().unwrap_or("Unknown")
+        ));
+    }
+
+    let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<serde_json::Value>();
+    let (endpoint_tx, mut endpoint_rx) = tokio::sync::mpsc::channel::<String>(1);
+
+    tokio::spawn(async move {
+        let mut buffer = String::new();
+        let mut found_endpoint = false;
+
+        while let Ok(Some(chunk)) = res.chunk().await {
+            if let Ok(text) = std::str::from_utf8(&chunk) {
+                buffer.push_str(text);
+
+                while let Some(pos) = buffer.find("\n\n").or_else(|| buffer.find("\r\n\r\n")) {
+                    let sep_len = if buffer[pos..].starts_with("\r\n\r\n") { 4 } else { 2 };
+                    let block = buffer[..pos].to_string();
+                    buffer = buffer[pos + sep_len..].to_string();
+
+                    let mut event_name = "message".to_string();
+                    let mut data_lines = Vec::new();
+
+                    for line in block.lines() {
+                        let trimmed = line.trim();
+                        if trimmed.starts_with("event:") {
+                            event_name = trimmed[6..].trim().to_string();
+                        } else if trimmed.starts_with("data:") {
+                            data_lines.push(trimmed[5..].trim());
+                        }
+                    }
+
+                    if !data_lines.is_empty() {
+                        let full_data = data_lines.join("\n");
+                        if event_name == "endpoint" && !found_endpoint {
+                            found_endpoint = true;
+                            let _ = endpoint_tx.send(full_data.clone()).await;
+                        } else if let Ok(val) = serde_json::from_str::<serde_json::Value>(&full_data) {
+                            let _ = tx.send(val);
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    let endpoint_path = match tokio::time::timeout(std::time::Duration::from_secs(6), endpoint_rx.recv()).await {
+        Ok(Some(ep)) => ep,
+        _ => return Err("SSE stream did not send an 'endpoint' event within timeout".to_string()),
+    };
+
+    let post_url = resolve_mcp_endpoint_url(target_url, &endpoint_path);
+
+    // 1. Initialize
+    let init_payload = serde_json::json!({
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "initialize",
+        "params": {
+            "protocolVersion": "2024-11-05",
+            "capabilities": {},
+            "clientInfo": {
+                "name": "staggi",
+                "version": "0.1.0"
+            }
+        }
+    });
+
+    let req_init = client.post(&post_url).json(&init_payload);
+    let req_init = apply_mcp_auth(req_init, api_key, auth_header);
+    let init_res = req_init.send().await.map_err(|e| format!("Failed to send initialize: {}", e))?;
+
+    if init_res.status().is_success() {
+        let text = init_res.text().await.unwrap_or_default();
+        if !text.contains("\"result\"") {
+            let _ = tokio::time::timeout(std::time::Duration::from_secs(3), async {
+                while let Some(msg) = rx.recv().await {
+                    if msg.get("id").and_then(|i| i.as_i64()) == Some(1) {
+                        break;
+                    }
+                }
+            }).await;
+        }
+    }
+
+    // 2. Initialized notification
+    let notif_payload = serde_json::json!({
+        "jsonrpc": "2.0",
+        "method": "notifications/initialized"
+    });
+    let req_notif = client.post(&post_url).json(&notif_payload);
+    let req_notif = apply_mcp_auth(req_notif, api_key, auth_header);
+    let _ = req_notif.send().await;
+
+    tokio::time::sleep(std::time::Duration::from_millis(150)).await;
+
+    // 3. List tools
+    let tools_payload = serde_json::json!({
+        "jsonrpc": "2.0",
+        "id": 2,
+        "method": "tools/list",
+        "params": {}
+    });
+    let req_tools = client.post(&post_url).json(&tools_payload);
+    let req_tools = apply_mcp_auth(req_tools, api_key, auth_header);
+    let tools_res = req_tools.send().await.map_err(|e| format!("Failed to send tools/list: {}", e))?;
+
+    let mut tools_json: Option<serde_json::Value> = None;
+    if tools_res.status().is_success() {
+        let text = tools_res.text().await.unwrap_or_default();
+        if let Ok(val) = serde_json::from_str::<serde_json::Value>(&text) {
+            if val.get("result").and_then(|r| r.get("tools")).is_some() {
+                tools_json = Some(val);
+            }
+        }
+    }
+
+    if tools_json.is_none() {
+        let wait_res = tokio::time::timeout(std::time::Duration::from_secs(6), async {
+            while let Some(msg) = rx.recv().await {
+                if msg.get("id").and_then(|i| i.as_i64()) == Some(2)
+                    || msg.get("result").and_then(|r| r.get("tools")).is_some() {
+                    return Some(msg);
+                }
+            }
+            None
+        }).await;
+
+        if let Ok(Some(msg)) = wait_res {
+            tools_json = Some(msg);
+        }
+    }
+
+    let mut result_tools = Vec::new();
+    if let Some(json) = tools_json {
+        if let Some(tools_arr) = json.get("result").and_then(|r| r.get("tools")).and_then(|t| t.as_array()) {
+            for t in tools_arr {
+                if let Some(name) = t.get("name").and_then(|n| n.as_str()) {
+                    let desc = t.get("description").and_then(|d| d.as_str()).map(|s| s.to_string());
+                    let schema = t.get("inputSchema").cloned();
+                    result_tools.push(McpTool {
+                        name: name.to_string(),
+                        description: desc,
+                        input_schema: schema,
+                    });
+                }
+            }
+        }
+    }
+
+    Ok(result_tools)
+}
+
+pub async fn query_direct_http_mcp_tools(
+    client: &reqwest::Client,
+    target_url: &str,
+    api_key: Option<&str>,
+    auth_header: Option<&str>,
+) -> Result<Vec<McpTool>, String> {
+    let tools_payload = serde_json::json!({
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "tools/list",
+        "params": {}
+    });
+    let req = client.post(target_url).json(&tools_payload);
+    let req = apply_mcp_auth(req, api_key, auth_header);
+    let res = req.send().await.map_err(|e| e.to_string())?;
+
+    let status = res.status();
+    if status == reqwest::StatusCode::UNAUTHORIZED || status == reqwest::StatusCode::FORBIDDEN {
+        return Err(format!("AUTH_ERROR: Status {}", status.as_u16()));
+    }
+    if !status.is_success() {
+        return Err(format!("Status {}", status.as_u16()));
+    }
+    let text = res.text().await.unwrap_or_default();
+    let json: serde_json::Value = serde_json::from_str(&text).map_err(|e| e.to_string())?;
+
+    let mut result_tools = Vec::new();
+    if let Some(tools_arr) = json.get("result").and_then(|r| r.get("tools")).and_then(|t| t.as_array()) {
+        for t in tools_arr {
+            if let Some(name) = t.get("name").and_then(|n| n.as_str()) {
+                let desc = t.get("description").and_then(|d| d.as_str()).map(|s| s.to_string());
+                let schema = t.get("inputSchema").cloned();
+                result_tools.push(McpTool {
+                    name: name.to_string(),
+                    description: desc,
+                    input_schema: schema,
+                });
+            }
+        }
+    }
+
+    Ok(result_tools)
+}
+
+pub async fn test_mcp_connection(
+    endpoint: String,
+    transport: String,
+    api_key: Option<String>,
+    auth_header: Option<String>,
+) -> Result<McpTestResult, String> {
+    let raw_ep = endpoint.trim();
+    if raw_ep.is_empty() {
+        return Ok(McpTestResult {
+            success: false,
+            status: "error".to_string(),
+            status_code: None,
+            message: "Endpoint URL or command is empty.".to_string(),
+            latency_ms: None,
+            tools: Vec::new(),
+        });
+    }
+
+    let transport_lower = transport.to_lowercase();
+    let is_http = raw_ep.starts_with("http://")
+        || raw_ep.starts_with("https://")
+        || raw_ep.contains(".workers.dev")
+        || raw_ep.contains(".com")
+        || transport_lower.contains("sse")
+        || transport_lower.contains("http");
+
+    if is_http {
+        let mut target_url = raw_ep.to_string();
+        if !target_url.starts_with("http://") && !target_url.starts_with("https://") {
+            target_url = format!("https://{}", target_url);
+        }
+
+        let start = std::time::Instant::now();
+        let client = reqwest::Client::builder()
+            .timeout(std::time::Duration::from_secs(12))
+            .build()
+            .map_err(|e| format!("Client build error: {}", e))?;
+
+        let is_sse = transport_lower.contains("sse") || target_url.ends_with("/sse") || target_url.contains("/sse");
+
+        if is_sse {
+            match query_mcp_sse_tools(&client, &target_url, api_key.as_deref(), auth_header.as_deref()).await {
+                Ok(tools) => {
+                    let latency = start.elapsed().as_millis() as u64;
+                    let count = tools.len();
+                    return Ok(McpTestResult {
+                        success: true,
+                        status: "connected".to_string(),
+                        status_code: Some(200),
+                        message: if count > 0 {
+                            format!("Connected successfully • {} tools discovered ({}ms)", count, latency)
+                        } else {
+                            format!("Connected to MCP server (0 tools declared, {}ms)", latency)
+                        },
+                        latency_ms: Some(latency),
+                        tools,
+                    });
+                }
+                Err(err) => {
+                    if err.contains("AUTH_ERROR") {
+                        let latency = start.elapsed().as_millis() as u64;
+                        return Ok(McpTestResult {
+                            success: false,
+                            status: "auth_error".to_string(),
+                            status_code: Some(401),
+                            message: "Authentication failed: API Key or Token is invalid or unauthorized.".to_string(),
+                            latency_ms: Some(latency),
+                            tools: Vec::new(),
+                        });
+                    }
+                    if let Ok(direct_tools) = query_direct_http_mcp_tools(&client, &target_url, api_key.as_deref(), auth_header.as_deref()).await {
+                        let latency = start.elapsed().as_millis() as u64;
+                        let count = direct_tools.len();
+                        return Ok(McpTestResult {
+                            success: true,
+                            status: "connected".to_string(),
+                            status_code: Some(200),
+                            message: format!("Connected successfully • {} tools discovered ({}ms)", count, latency),
+                            latency_ms: Some(latency),
+                            tools: direct_tools,
+                        });
+                    }
+                }
+            }
+        } else {
+            if let Ok(direct_tools) = query_direct_http_mcp_tools(&client, &target_url, api_key.as_deref(), auth_header.as_deref()).await {
+                let latency = start.elapsed().as_millis() as u64;
+                let count = direct_tools.len();
+                return Ok(McpTestResult {
+                    success: true,
+                    status: "connected".to_string(),
+                    status_code: Some(200),
+                    message: format!("Connected successfully • {} tools discovered ({}ms)", count, latency),
+                    latency_ms: Some(latency),
+                    tools: direct_tools,
+                });
+            }
+        }
+
+        let mut req = client.get(&target_url);
+        req = apply_mcp_auth(req, api_key.as_deref(), auth_header.as_deref());
+
+        match req.send().await {
+            Ok(res) => {
+                let latency = start.elapsed().as_millis() as u64;
+                let status = res.status();
+                let code = status.as_u16();
+
+                if status.is_success() {
+                    Ok(McpTestResult {
+                        success: true,
+                        status: "connected".to_string(),
+                        status_code: Some(code),
+                        message: format!("Server responsive (HTTP {} OK, {}ms), but tools handshake failed.", code, latency),
+                        latency_ms: Some(latency),
+                        tools: Vec::new(),
+                    })
+                } else if code == 401 || code == 403 {
+                    Ok(McpTestResult {
+                        success: false,
+                        status: "auth_error".to_string(),
+                        status_code: Some(code),
+                        message: format!("Authentication failed (HTTP {}): API Key or Token is required or invalid.", code),
+                        latency_ms: Some(latency),
+                        tools: Vec::new(),
+                    })
+                } else {
+                    Ok(McpTestResult {
+                        success: false,
+                        status: "http_error".to_string(),
+                        status_code: Some(code),
+                        message: format!("Server returned status HTTP {} ({})", code, status.canonical_reason().unwrap_or("Unknown")),
+                        latency_ms: Some(latency),
+                        tools: Vec::new(),
+                    })
+                }
+            }
+            Err(e) => {
+                let err_str = e.to_string();
+                let is_timeout = e.is_timeout();
+                Ok(McpTestResult {
+                    success: false,
+                    status: "unreachable".to_string(),
+                    status_code: None,
+                    message: if is_timeout {
+                        "Connection timed out (server unreachable or slow).".to_string()
+                    } else {
+                        format!("Failed to connect to endpoint: {}", err_str)
+                    },
+                    latency_ms: None,
+                    tools: Vec::new(),
+                })
+            }
+        }
+    } else {
+        let parts: Vec<&str> = raw_ep.split_whitespace().collect();
+        let bin = parts.first().unwrap_or(&"");
+        if bin.is_empty() {
+            return Ok(McpTestResult {
+                success: false,
+                status: "error".to_string(),
+                status_code: None,
+                message: "Command binary name is empty.".to_string(),
+                latency_ms: None,
+                tools: Vec::new(),
+            });
+        }
+
+        let check_res = std::process::Command::new(bin).arg("--version").output();
+        match check_res {
+            Ok(output) => {
+                let ver = String::from_utf8_lossy(&output.stdout);
+                let first_line = ver.lines().next().unwrap_or("Installed");
+                Ok(McpTestResult {
+                    success: true,
+                    status: "ready".to_string(),
+                    status_code: None,
+                    message: format!("Binary '{}' detected on system ({})", bin, first_line.trim()),
+                    latency_ms: None,
+                    tools: Vec::new(),
+                })
+            }
+            Err(_) => {
+                Ok(McpTestResult {
+                    success: true,
+                    status: "ready".to_string(),
+                    status_code: None,
+                    message: format!("Command configured: '{}'", raw_ep),
+                    latency_ms: None,
+                    tools: Vec::new(),
+                })
+            }
+        }
+    }
+}
+
+pub async fn call_mcp_tool(
+    endpoint: String,
+    transport: String,
+    tool_name: String,
+    arguments: Option<serde_json::Value>,
+    api_key: Option<String>,
+    auth_header: Option<String>,
+) -> Result<serde_json::Value, String> {
+    let raw_ep = endpoint.trim();
+    if raw_ep.is_empty() {
+        return Err("Endpoint URL is empty".to_string());
+    }
+
+    let mut target_url = raw_ep.to_string();
+    if !target_url.starts_with("http://") && !target_url.starts_with("https://") {
+        target_url = format!("https://{}", target_url);
+    }
+
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(20))
+        .build()
+        .map_err(|e| format!("Client build error: {}", e))?;
+
+    let is_sse = transport.to_lowercase().contains("sse") || target_url.ends_with("/sse") || target_url.contains("/sse");
+
+    if is_sse {
+        let req = client
+            .get(&target_url)
+            .header("Accept", "text/event-stream")
+            .header("Cache-Control", "no-cache");
+        let req = apply_mcp_auth(req, api_key.as_deref(), auth_header.as_deref());
+
+        let mut res = req.send().await.map_err(|e| format!("Failed to connect to SSE: {}", e))?;
+
+        let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel::<serde_json::Value>();
+        let (endpoint_tx, mut endpoint_rx) = tokio::sync::mpsc::channel::<String>(1);
+
+        tokio::spawn(async move {
+            let mut buffer = String::new();
+            let mut found_endpoint = false;
+
+            while let Ok(Some(chunk)) = res.chunk().await {
+                if let Ok(text) = std::str::from_utf8(&chunk) {
+                    buffer.push_str(text);
+
+                    while let Some(pos) = buffer.find("\n\n").or_else(|| buffer.find("\r\n\r\n")) {
+                        let sep_len = if buffer[pos..].starts_with("\r\n\r\n") { 4 } else { 2 };
+                        let block = buffer[..pos].to_string();
+                        buffer = buffer[pos + sep_len..].to_string();
+
+                        let mut event_name = "message".to_string();
+                        let mut data_lines = Vec::new();
+
+                        for line in block.lines() {
+                            let trimmed = line.trim();
+                            if trimmed.starts_with("event:") {
+                                event_name = trimmed[6..].trim().to_string();
+                            } else if trimmed.starts_with("data:") {
+                                data_lines.push(trimmed[5..].trim());
+                            }
+                        }
+
+                        if !data_lines.is_empty() {
+                            let full_data = data_lines.join("\n");
+                            if event_name == "endpoint" && !found_endpoint {
+                                found_endpoint = true;
+                                let _ = endpoint_tx.send(full_data.clone()).await;
+                            } else if let Ok(val) = serde_json::from_str::<serde_json::Value>(&full_data) {
+                                let _ = tx.send(val);
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        let endpoint_path = match tokio::time::timeout(std::time::Duration::from_secs(6), endpoint_rx.recv()).await {
+            Ok(Some(ep)) => ep,
+            _ => return Err("SSE stream did not send endpoint event within timeout".to_string()),
+        };
+
+        let post_url = resolve_mcp_endpoint_url(&target_url, &endpoint_path);
+
+        // Initialize
+        let init_payload = serde_json::json!({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "initialize",
+            "params": {
+                "protocolVersion": "2024-11-05",
+                "capabilities": {},
+                "clientInfo": { "name": "staggi", "version": "0.1.0" }
+            }
+        });
+        let req_init = client.post(&post_url).json(&init_payload);
+        let req_init = apply_mcp_auth(req_init, api_key.as_deref(), auth_header.as_deref());
+        let _ = req_init.send().await;
+
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+
+        // Drain initialize response (id: 1)
+        let _ = tokio::time::timeout(std::time::Duration::from_secs(3), async {
+            while let Some(msg) = rx.recv().await {
+                if msg.get("id").and_then(|i| i.as_i64()) == Some(1) {
+                    break;
+                }
+            }
+        }).await;
+
+        // Notification
+        let notif_payload = serde_json::json!({
+            "jsonrpc": "2.0",
+            "method": "notifications/initialized"
+        });
+        let req_notif = client.post(&post_url).json(&notif_payload);
+        let req_notif = apply_mcp_auth(req_notif, api_key.as_deref(), auth_header.as_deref());
+        let _ = req_notif.send().await;
+
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+
+        // Call tool
+        let call_payload = serde_json::json!({
+            "jsonrpc": "2.0",
+            "id": 99,
+            "method": "tools/call",
+            "params": {
+                "name": tool_name,
+                "arguments": arguments.unwrap_or_else(|| serde_json::json!({}))
+            }
+        });
+        let req_call = client.post(&post_url).json(&call_payload);
+        let req_call = apply_mcp_auth(req_call, api_key.as_deref(), auth_header.as_deref());
+        let call_res = req_call.send().await.map_err(|e| format!("Failed to call tool: {}", e))?;
+
+        if call_res.status().is_success() {
+            let text = call_res.text().await.unwrap_or_default();
+            if let Ok(val) = serde_json::from_str::<serde_json::Value>(&text) {
+                if val.get("id").and_then(|i| i.as_i64()) == Some(99) {
+                    return Ok(val);
+                }
+            }
+        }
+
+        let wait_call = tokio::time::timeout(std::time::Duration::from_secs(12), async {
+            while let Some(msg) = rx.recv().await {
+                if msg.get("id").and_then(|i| i.as_i64()) == Some(99) {
+                    return Some(msg);
+                }
+            }
+            None
+        }).await;
+
+        if let Ok(Some(msg)) = wait_call {
+            return Ok(msg);
+        }
+
+        Err("Timeout waiting for tool response from MCP server".to_string())
+    } else {
+        // Direct HTTP tool call
+        let call_payload = serde_json::json!({
+            "jsonrpc": "2.0",
+            "id": 99,
+            "method": "tools/call",
+            "params": {
+                "name": tool_name,
+                "arguments": arguments.unwrap_or_else(|| serde_json::json!({}))
+            }
+        });
+        let req = client.post(&target_url).json(&call_payload);
+        let req = apply_mcp_auth(req, api_key.as_deref(), auth_header.as_deref());
+        let res = req.send().await.map_err(|e| format!("Direct tool call failed: {}", e))?;
+        let text = res.text().await.unwrap_or_default();
+        let val: serde_json::Value = serde_json::from_str(&text).map_err(|e| format!("Error parsing JSON: {}", e))?;
+        Ok(val)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_resolve_mcp_endpoint_url_absolute() {
+        assert_eq!(
+            resolve_mcp_endpoint_url("http://localhost:8000/sse", "http://localhost:8000/messages"),
+            "http://localhost:8000/messages"
+        );
+    }
+
+    #[test]
+    fn test_resolve_mcp_endpoint_url_relative_slash() {
+        assert_eq!(
+            resolve_mcp_endpoint_url("http://localhost:8000/sse", "/messages"),
+            "http://localhost:8000/messages"
+        );
+        assert_eq!(
+            resolve_mcp_endpoint_url("https://api.example.com/v1/sse", "/v1/messages"),
+            "https://api.example.com/v1/messages"
+        );
+    }
+
+    #[test]
+    fn test_resolve_mcp_endpoint_url_relative_no_slash() {
+        assert_eq!(
+            resolve_mcp_endpoint_url("http://localhost:8000", "messages"),
+            "http://localhost:8000/messages"
+        );
+    }
+}
+
