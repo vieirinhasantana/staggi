@@ -2,56 +2,7 @@ import type { MemoryItem, MemoryCategory } from "$lib/types";
 
 const MEMORIES_STORAGE_KEY = "staggi_second_brain_memories_v1";
 
-const DEFAULT_MEMORIES: MemoryItem[] = [
-  {
-    id: "mem-pref-fiduciary-tone",
-    title: "Diretriz Executiva & Tom Fiduciário",
-    content: "Respostas sempre objetivas, numéricas e estruturadas em Markdown executivo. Evitar preâmbulos ou saudações longas. Apresentar dados consolidados em BRL e o equivalente em USD quando houver alocação internacional.",
-    category: "preference",
-    tags: ["tom", "executivo", "formato", "brl", "usd", "objetividade"],
-    pinned: true,
-    active: true,
-    createdAt: "2026-01-01",
-    updatedAt: "2026-01-01",
-    source: "system"
-  },
-  {
-    id: "mem-pref-bazin-graham",
-    title: "Metodologia Padrão de Valuation",
-    content: "Nas análises de ações pagadoras de proventos, adotar prioritariamente taxa de desconto padrão de 6% a.a. para o Preço Teto de Décio Bazin e combinar com a Margem de Segurança da Fórmula de Benjamin Graham.",
-    category: "preference",
-    tags: ["valuation", "bazin", "graham", "teto", "desconto", "proventos"],
-    pinned: true,
-    active: true,
-    createdAt: "2026-01-01",
-    updatedAt: "2026-01-01",
-    source: "system"
-  },
-  {
-    id: "mem-mandate-risk-policy",
-    title: "Política Geral de Risco da Mesa",
-    content: "Não recomendar estratégias de alavancagem com derivativos a descoberto ou operações de financiamento cambial sem hedge para clientes de varejo e private. Priorizar diversificação de emissores em crédito privado com rating mínimo AA.",
-    category: "mandate",
-    tags: ["politica", "risco", "mesa", "derivativos", "alavancagem", "credito-privado"],
-    pinned: false,
-    active: true,
-    createdAt: "2026-01-01",
-    updatedAt: "2026-01-01",
-    source: "system"
-  },
-  {
-    id: "mem-working-committee-focus",
-    title: "Nota Operacional: Foco do Comitê de Alocação",
-    content: "Diretriz de trabalho para o trimestre: monitorar descompressão de taxas reais em NTN-B e avaliar migração tática de liquidez em CDI para títulos com IPCA+ travado.",
-    category: "working_note",
-    tags: ["trabalho", "comite", "alocacao", "ntn-b", "ipca", "cdi"],
-    pinned: false,
-    active: true,
-    createdAt: "2026-01-01",
-    updatedAt: "2026-01-01",
-    source: "system"
-  }
-];
+const DEFAULT_MEMORIES: MemoryItem[] = [];
 
 const STOPWORDS = new Set([
   "de", "a", "o", "que", "e", "do", "da", "em", "um", "para", "com", "nao", "não", "uma", "os", "no", "se", "na",
@@ -92,13 +43,24 @@ function loadStoredMemories(): MemoryItem[] {
     }
     const parsed = JSON.parse(raw);
     if (Array.isArray(parsed) && parsed.length > 0) {
-      // Migrate legacy categories if present
-      return parsed.map((m: any) => {
+      // Filter out any initial seed memories so the second brain stays completely clean/empty unless added by user
+      const userOnly = parsed.filter(
+        (m: any) =>
+          m &&
+          m.source !== "system" &&
+          !m.id?.startsWith("mem-pref-") &&
+          !m.id?.startsWith("mem-mandate-") &&
+          !m.id?.startsWith("mem-working-") &&
+          !m.id?.startsWith("mem-rule-") &&
+          !m.id?.startsWith("mem-profile-") &&
+          !m.id?.startsWith("mem-client-")
+      );
+
+      return userOnly.map((m: any) => {
         let cat: MemoryCategory = "preference";
         if (m.category === "mandate" || m.category === "profile") cat = "mandate";
         else if (m.category === "working_note" || m.category === "thesis") cat = "working_note";
         else if (m.category === "preference") cat = "preference";
-        else cat = "preference";
         return {
           ...m,
           category: cat,
@@ -277,8 +239,13 @@ class MemoryStore {
     this.save();
   }
 
+  clearAll() {
+    this.memories = [];
+    this.save();
+  }
+
   resetToDefault() {
-    this.memories = DEFAULT_MEMORIES;
+    this.memories = [];
     this.save();
   }
 

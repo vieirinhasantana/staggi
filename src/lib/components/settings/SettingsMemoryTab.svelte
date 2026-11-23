@@ -9,7 +9,6 @@
     Save,
     X,
     Tag,
-    RotateCcw,
     Download,
     Upload,
     Check,
@@ -216,14 +215,21 @@
         <input type="file" accept=".json" onchange={handleImport} class="hidden" />
       </label>
 
-      <button
-        type="button"
-        onclick={() => memoryStore.resetToDefault()}
-        title="Restaurar diretrizes padrão fiduciárias"
-        class="p-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-zinc-400 hover:text-zinc-200 border border-white/[0.06] transition-all cursor-pointer"
-      >
-        <RotateCcw class="w-3.5 h-3.5" />
-      </button>
+      {#if memoryStore.memories.length > 0}
+        <button
+          type="button"
+          onclick={() => {
+            if (confirm("Deseja realmente limpar todas as diretrizes do Second Brain?")) {
+              memoryStore.clearAll();
+              toastStore.info("Second Brain Limpo", "Todas as memórias foram removidas.");
+            }
+          }}
+          title="Limpar todas as diretrizes do Second Brain"
+          class="p-2 rounded-xl bg-white/[0.04] hover:bg-rose-500/10 text-zinc-400 hover:text-rose-400 border border-white/[0.06] transition-all cursor-pointer"
+        >
+          <Trash2 class="w-3.5 h-3.5" />
+        </button>
+      {/if}
     </div>
   </div>
 
@@ -407,9 +413,11 @@
     {#if filteredMemories.length === 0}
       <div class="py-12 text-center text-zinc-500 text-xs rounded-xl border border-dashed border-white/[0.06] bg-white/[0.01]">
         <Brain class="w-8 h-8 text-zinc-600 mx-auto mb-2" />
-        <p class="font-medium text-zinc-400">Nenhuma memória encontrada</p>
-        <p class="text-[11px] text-zinc-500 mt-0.5">
-          {searchQuery ? "Nenhum resultado corresponde à sua busca." : "Adicione diretrizes fiduciárias ou use o comando /lembrar no chat."}
+        <p class="font-medium text-zinc-300">Second Brain Vazio</p>
+        <p class="text-[11px] text-zinc-500 mt-1 max-w-sm mx-auto">
+          {searchQuery
+            ? "Nenhum resultado corresponde à sua busca."
+            : "Nenhuma diretriz cadastrada. Adicione suas preferências de resposta e políticas usando o botão Nova Memória acima ou digite /lembrar no chat."}
         </p>
       </div>
     {:else}
