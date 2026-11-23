@@ -12,6 +12,7 @@
     RotateCcw,
     Download,
     Upload,
+    Check,
   } from "@lucide/svelte";
   import { memoryStore } from "$lib/services/memoryState.svelte";
   import { toastStore } from "$lib/services/toastService.svelte";
@@ -243,105 +244,160 @@
 
   <!-- Form for Create or Edit -->
   {#if isCreating || editingId}
-    <div class="p-4 rounded-xl bg-[#202020] border border-pink-500/35 space-y-3 animate-fade-in shadow-lg">
-      <div class="flex items-center justify-between pb-2 border-b border-white/[0.06]">
-        <div class="flex items-center gap-2">
-          <Brain class="w-4 h-4 text-pink-400" />
-          <h4 class="text-xs font-semibold text-zinc-100">
-            {isCreating ? "Registrar Nova Diretriz no Second Brain" : "Editar Memória de Longo Prazo"}
-          </h4>
+    <div class="p-5 rounded-2xl bg-[#181818] border border-white/[0.1] space-y-4 animate-fade-in shadow-xl">
+      <div class="flex items-center justify-between pb-3 border-b border-white/[0.06]">
+        <div class="flex items-center gap-2.5">
+          <div class="p-1.5 rounded-lg bg-pink-500/15 text-pink-300 border border-pink-500/25">
+            <Brain class="w-4 h-4" />
+          </div>
+          <div>
+            <h4 class="text-xs font-semibold text-zinc-100">
+              {isCreating ? "Registrar Nova Diretriz" : "Editar Diretriz"}
+            </h4>
+            <p class="text-[11px] text-zinc-400">
+              Personalize o estilo de resposta, premissas analíticas ou políticas da sua consultoria.
+            </p>
+          </div>
         </div>
         <button
           type="button"
           onclick={cancelForm}
-          class="text-zinc-400 hover:text-zinc-200 p-1 rounded hover:bg-white/[0.06] transition-colors"
+          class="text-zinc-400 hover:text-zinc-200 p-1.5 rounded-lg hover:bg-white/[0.06] transition-colors cursor-pointer"
         >
-          <X class="w-3.5 h-3.5" />
+          <X class="w-4 h-4" />
         </button>
       </div>
 
+      <!-- Categoria Selector (Segmented Control) -->
+      <div>
+        <span class="block text-[11px] font-medium text-zinc-400 mb-1.5">Categoria da Diretriz</span>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <button
+            type="button"
+            onclick={() => formCategory = "preference"}
+            class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium border text-left transition-all cursor-pointer {formCategory === 'preference'
+              ? 'bg-pink-500/15 text-pink-200 border-pink-500/35 shadow-sm ring-1 ring-pink-500/20'
+              : 'bg-[#121212] text-zinc-400 border-white/[0.06] hover:text-zinc-200 hover:bg-white/[0.03]'}"
+          >
+            <span class="text-base">🎯</span>
+            <div>
+              <div class="font-semibold text-zinc-100">Preferência</div>
+              <div class="text-[10px] text-zinc-400">Estilo & Métricas</div>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            onclick={() => formCategory = "mandate"}
+            class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium border text-left transition-all cursor-pointer {formCategory === 'mandate'
+              ? 'bg-amber-500/15 text-amber-200 border-amber-500/35 shadow-sm ring-1 ring-amber-500/20'
+              : 'bg-[#121212] text-zinc-400 border-white/[0.06] hover:text-zinc-200 hover:bg-white/[0.03]'}"
+          >
+            <span class="text-base">🛡️</span>
+            <div>
+              <div class="font-semibold text-zinc-100">Política da Mesa</div>
+              <div class="text-[10px] text-zinc-400">Diretrizes da Casa</div>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            onclick={() => formCategory = "working_note"}
+            class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium border text-left transition-all cursor-pointer {formCategory === 'working_note'
+              ? 'bg-sky-500/15 text-sky-200 border-sky-500/35 shadow-sm ring-1 ring-sky-500/20'
+              : 'bg-[#121212] text-zinc-400 border-white/[0.06] hover:text-zinc-200 hover:bg-white/[0.03]'}"
+          >
+            <span class="text-base">📝</span>
+            <div>
+              <div class="font-semibold text-zinc-100">Nota de Trabalho</div>
+              <div class="text-[10px] text-zinc-400">Contexto Operacional</div>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      <!-- Título & Tags -->
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
-          <label for="form-memory-title" class="block text-[11px] text-zinc-400 mb-1 font-medium">Título da Memória / Fato</label>
+          <label for="form-memory-title" class="block text-[11px] font-medium text-zinc-400 mb-1.5">Título da Diretriz</label>
           <input
             id="form-memory-title"
             type="text"
             bind:value={formTitle}
-            placeholder="Ex: Formato de moedas, Metodologia de Bazin, Política de risco..."
-            class="w-full bg-[#141414] border border-white/[0.08] rounded-lg px-2.5 py-1.5 text-xs text-zinc-100 focus:outline-none focus:border-pink-500/40"
+            placeholder="Ex: Preço Teto Bazin, Resumo Bilíngue (BRL/USD)..."
+            class="w-full bg-[#121212] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-white/25 focus:ring-1 focus:ring-white/10 transition-all"
           />
         </div>
 
         <div>
-          <label for="form-memory-category" class="block text-[11px] text-zinc-400 mb-1 font-medium">Categoria</label>
-          <select
-            id="form-memory-category"
-            bind:value={formCategory}
-            class="w-full bg-[#141414] border border-white/[0.08] rounded-lg px-2.5 py-1.5 text-xs text-zinc-100 focus:outline-none focus:border-pink-500/40"
-          >
-            <option value="preference">Preferência de Análise & Formatação (Ex: Moedas, casas decimais, Bazin)</option>
-            <option value="mandate">Política da Mesa / Consultoria (Ex: Não usar derivativos, rating mínimo)</option>
-            <option value="working_note">Nota de Trabalho & Contexto Operacional (Ex: Pauta do comitê, foco atual)</option>
-          </select>
+          <label for="form-memory-tags" class="block text-[11px] font-medium text-zinc-400 mb-1.5">Tags (separadas por vírgula)</label>
+          <input
+            id="form-memory-tags"
+            type="text"
+            bind:value={formTags}
+            placeholder="Ex: valuation, bazin, moedas, formatação"
+            class="w-full bg-[#121212] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-white/25 focus:ring-1 focus:ring-white/10 transition-all"
+          />
         </div>
       </div>
 
+      <!-- Conteúdo da Instrução -->
       <div>
-        <label for="form-memory-content" class="block text-[11px] text-zinc-400 mb-1 font-medium">
-          Diretriz / Fato Permanente (O modelo respeitará com rigor fiduciário)
+        <label for="form-memory-content" class="block text-[11px] font-medium text-zinc-400 mb-1.5">
+          Instrução / Regra Permanente
         </label>
         <textarea
           id="form-memory-content"
           bind:value={formContent}
           rows="3"
-          placeholder="Descreva o fato, restrição do cliente ou diretriz de investimento que deve ser memorizada para sempre..."
-          class="w-full bg-[#141414] border border-white/[0.08] rounded-lg p-2.5 text-xs text-zinc-100 focus:outline-none focus:border-pink-500/40 resize-none"
+          placeholder="Ex: Nas análises de dividendos, sempre calcule o Preço Teto de Décio Bazin considerando 6% a.a. e combine com a Margem de Segurança de Graham."
+          class="w-full bg-[#121212] border border-white/[0.08] rounded-xl p-3 text-xs text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-white/25 focus:ring-1 focus:ring-white/10 transition-all resize-none leading-relaxed"
         ></textarea>
       </div>
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
-        <div>
-          <label for="form-memory-tags" class="block text-[11px] text-zinc-400 mb-1 font-medium">Tags de Recuperação Rápida (separadas por vírgula)</label>
-          <input
-            id="form-memory-tags"
-            type="text"
-            bind:value={formTags}
-            placeholder="silveira, estatais, dividendos, b3"
-            class="w-full bg-[#141414] border border-white/[0.08] rounded-lg px-2.5 py-1.5 text-xs text-zinc-100 focus:outline-none focus:border-pink-500/40"
-          />
+      <!-- Toggles & Status Pills -->
+      <div class="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-white/[0.06]">
+        <div class="flex items-center gap-2">
+          <button
+            type="button"
+            onclick={() => formPinned = !formPinned}
+            class="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium border transition-all cursor-pointer {formPinned
+              ? 'bg-amber-500/15 text-amber-200 border-amber-500/35 shadow-sm'
+              : 'bg-[#121212] text-zinc-400 border-white/[0.06] hover:text-zinc-200 hover:bg-white/[0.04]'}"
+          >
+            <Pin class="w-3.5 h-3.5 {formPinned ? 'text-amber-400' : 'text-zinc-500'}" />
+            <span>Fixar em todas as conversas</span>
+          </button>
+
+          <button
+            type="button"
+            onclick={() => formActive = !formActive}
+            class="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium border transition-all cursor-pointer {formActive
+              ? 'bg-emerald-500/15 text-emerald-200 border-emerald-500/35 shadow-sm'
+              : 'bg-[#121212] text-zinc-500 border-white/[0.06] hover:text-zinc-300 hover:bg-white/[0.04]'}"
+          >
+            <Check class="w-3.5 h-3.5 {formActive ? 'text-emerald-400' : 'text-zinc-500'}" />
+            <span>{formActive ? "Ativa" : "Inativa"}</span>
+          </button>
         </div>
 
-        <div class="flex items-center gap-4 pt-4 sm:pt-0">
-          <label class="flex items-center gap-2 cursor-pointer text-xs text-zinc-300">
-            <input type="checkbox" bind:checked={formPinned} class="accent-pink-500 rounded" />
-            <span class="flex items-center gap-1">
-              <Pin class="w-3 h-3 text-amber-400" /> Fixar em todas as conversas
-            </span>
-          </label>
-
-          <label class="flex items-center gap-2 cursor-pointer text-xs text-zinc-300">
-            <input type="checkbox" bind:checked={formActive} class="accent-emerald-500 rounded" />
-            <span>Ativa</span>
-          </label>
+        <div class="flex items-center gap-2">
+          <button
+            type="button"
+            onclick={cancelForm}
+            class="px-3.5 py-1.5 rounded-xl text-xs font-medium text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04] transition-colors cursor-pointer"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            onclick={handleSave}
+            class="flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-xs font-semibold bg-white text-zinc-950 hover:bg-zinc-200 transition-all shadow-sm cursor-pointer"
+          >
+            <Save class="w-3.5 h-3.5" />
+            <span>Salvar Diretriz</span>
+          </button>
         </div>
-      </div>
-
-      <div class="flex justify-end gap-2 pt-2">
-        <button
-          type="button"
-          onclick={cancelForm}
-          class="px-3 py-1.5 rounded-lg text-xs font-medium text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04] transition-colors"
-        >
-          Cancelar
-        </button>
-        <button
-          type="button"
-          onclick={handleSave}
-          class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-pink-500 hover:bg-pink-400 text-white transition-all shadow-sm cursor-pointer"
-        >
-          <Save class="w-3.5 h-3.5" />
-          <span>Salvar Memória</span>
-        </button>
       </div>
     </div>
   {/if}
