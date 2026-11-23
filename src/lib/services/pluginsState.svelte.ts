@@ -27,10 +27,15 @@ const DEFAULT_MCPS: McpServerItem[] = [
     id: "mcp-yahoo", 
     name: "mcp-yahoo-finance", 
     type: "Market Data MCP", 
-    transport: "stdio (CLI)", 
-    endpoint: "npx -y yfinance-mcp", 
+    transport: "builtin (Native MCP)", 
+    endpoint: "builtin://yahoo-finance", 
     active: true, 
-    desc: "Real-time quotes, multiples (P/E, P/B), volume, historical prices and dividends via MCP"
+    desc: "Real-time quotes, multiples (P/E, P/B), volume, historical prices and dividends via MCP",
+    tools: [
+      { name: "get_stock_quote", description: "Real-time quotes and fundamentals (price, multiples, volume)" },
+      { name: "get_historical_dividends", description: "Historical dividend & JCP payments by ticker" },
+      { name: "get_market_news", description: "Market news and sentiment analysis" }
+    ]
   },
   { 
     id: "mcp-tax", 
@@ -210,7 +215,7 @@ function loadStoredMcps(): McpServerItem[] {
     }
     const parsed: McpServerItem[] = JSON.parse(raw);
     if (Array.isArray(parsed)) {
-      return parsed.filter(
+      const filtered = parsed.filter(
         (m) =>
           m &&
           m.id !== "mcp-bloomberg" &&
@@ -220,6 +225,17 @@ function loadStoredMcps(): McpServerItem[] {
           m.id !== "mcp-custodia" &&
           m.name !== "mcp-custodia-offshore"
       );
+      return filtered.map((m) => {
+        if (m.id === "mcp-yahoo") {
+          return {
+            ...m,
+            transport: "builtin (Native MCP)",
+            endpoint: "builtin://yahoo-finance",
+            tools: m.tools && m.tools.length > 0 ? m.tools : (DEFAULT_MCPS[0].tools || []),
+          };
+        }
+        return m;
+      });
     }
     return DEFAULT_MCPS;
   } catch {

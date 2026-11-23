@@ -153,7 +153,7 @@ ${targetSkill.systemPrompt}`;
         shouldExecute = true;
       } else if (toolName === "list_indexed_documents" && /\b(documentos?|pdfs?|relat[oó]rios? indexados?)\b/i.test(cleanPrompt)) {
         shouldExecute = true;
-      } else if ((toolName.includes("quote") || toolName.includes("price") || toolName.includes("ticker") || toolName.includes("cotacao") || toolName.includes("preco")) &&
+      } else if ((toolName.includes("quote") || toolName.includes("price") || toolName.includes("ticker") || toolName.includes("cotacao") || toolName.includes("preco") || toolName.includes("dividend") || toolName.includes("provento")) &&
                  /\b(cota[çc][aã]o|pre[çc]o|quanto est[aá]|ticker|a[çc][aã]o|valor|proventos?|dividendos?)\b/i.test(cleanPrompt)) {
         shouldExecute = true;
       } else if ((toolName.includes("news") || toolName.includes("noticia")) &&
@@ -172,8 +172,15 @@ ${targetSkill.systemPrompt}`;
           : `Thinking... [${toolsLabel}]`;
         onProgress?.(statusText);
 
+        const b3Match = cleanPrompt.match(/\b([A-Za-z]{4}\d{1,2}(?:\.SA)?)\b/i);
+        const usMatch = cleanPrompt.match(/\b(AAPL|MSFT|NVDA|GOOGL|AMZN|TSLA|META)\b/i);
+        const detectedTicker = b3Match ? b3Match[1] : (usMatch ? usMatch[1] : undefined);
+        const toolArgs: Record<string, unknown> = detectedTicker
+          ? { symbol: detectedTicker, query: detectedTicker }
+          : {};
+
         try {
-          const res = await pluginsStore.callTool(mcp.id, tool.name, {});
+          const res = await pluginsStore.callTool(mcp.id, tool.name, toolArgs);
           if (res) {
             const rawContent = res.result?.content || res.result || res;
             const contentStr = typeof rawContent === "string" ? rawContent : JSON.stringify(rawContent, null, 2);
