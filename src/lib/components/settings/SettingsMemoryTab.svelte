@@ -7,40 +7,25 @@
     Trash2,
     Save,
     Tag,
-    ChevronDown,
   } from "@lucide/svelte";
   import { memoryStore } from "$lib/services/memoryState.svelte";
   import { toastStore } from "$lib/services/toastService.svelte";
-  import type { MemoryItem, MemoryCategory } from "$lib/types";
+  import type { MemoryItem } from "$lib/types";
 
   let isCreating = $state(false);
   let editingId = $state<string | null>(null);
 
   let formTitle = $state("");
   let formContent = $state("");
-  let formCategory = $state<string>("general");
   let formTags = $state("");
   let formPinned = $state(false);
   let formActive = $state(true);
-
-  function getCategoryLabel(category: string) {
-    switch (category) {
-      case "formatting":
-        return "Formatação";
-      case "valuation":
-        return "Metodologia";
-      case "general":
-      default:
-        return "Geral";
-    }
-  }
 
   function startCreate() {
     isCreating = true;
     editingId = null;
     formTitle = "";
     formContent = "";
-    formCategory = "general";
     formTags = "";
     formPinned = false;
     formActive = true;
@@ -51,7 +36,6 @@
     editingId = mem.id;
     formTitle = mem.title;
     formContent = mem.content;
-    formCategory = mem.category;
     formTags = mem.tags.join(", ");
     formPinned = mem.pinned;
     formActive = mem.active;
@@ -64,11 +48,11 @@
 
   function handleSave() {
     if (!formContent.trim()) {
-      toastStore.warning("Campo obrigatório", "Informe o conteúdo da diretriz de memória.");
+      toastStore.warning("Campo obrigatório", "Informe o que o Staggi deve lembrar.");
       return;
     }
 
-    const title = formTitle.trim() || formContent.slice(0, 35).trim() + "...";
+    const title = formTitle.trim() || formContent.slice(0, 40).trim() + "...";
     const tags = formTags
       .split(",")
       .map((t) => t.trim().toLowerCase())
@@ -78,7 +62,6 @@
       memoryStore.addMemory({
         title,
         content: formContent.trim(),
-        category: formCategory,
         tags,
         pinned: formPinned,
         active: formActive,
@@ -89,7 +72,6 @@
       memoryStore.updateMemory(editingId, {
         title,
         content: formContent.trim(),
-        category: formCategory,
         tags,
         pinned: formPinned,
         active: formActive,
@@ -125,7 +107,7 @@
             Nova Diretriz de Memória
           </h5>
           <p class="text-[11px] text-zinc-400 font-sans">
-            Ensine preferências de formatação, premissas de valuation ou políticas da sua consultoria
+            Ensine preferências de formatação, estilo de resposta ou instruções personalizadas
           </p>
         </div>
       </div>
@@ -164,55 +146,32 @@
             for="form-memory-title"
             class="text-[10px] text-zinc-400 uppercase font-sans"
           >
-            Título da Diretriz
+            Título (opcional)
           </label>
           <input
             id="form-memory-title"
             type="text"
             bind:value={formTitle}
-            placeholder="Ex: Preço Teto Bazin, Resumo Bilíngue..."
+            placeholder="Ex: Formato de Relatório, Preço Teto..."
             class="w-full rounded-xl bg-[#282828] border border-white/[0.1] px-3 py-2 text-zinc-100 text-xs focus:outline-none focus:border-pink-500/50"
           />
         </div>
 
         <div class="space-y-1">
           <label
-            for="form-memory-category"
+            for="form-memory-tags"
             class="text-[10px] text-zinc-400 uppercase font-sans"
           >
-            Categoria
+            Palavras-chave / Tags (opcional)
           </label>
-          <div class="relative">
-            <select
-              id="form-memory-category"
-              bind:value={formCategory}
-              class="w-full appearance-none rounded-xl bg-[#282828] border border-white/[0.1] hover:border-white/[0.2] pl-3 pr-8 py-2 text-zinc-200 text-xs focus:outline-none focus:border-pink-500/50 transition-colors cursor-pointer"
-            >
-              <option value="general" class="bg-[#282828] text-zinc-100">Geral</option>
-              <option value="formatting" class="bg-[#282828] text-zinc-100">Formatação & Estilo</option>
-              <option value="valuation" class="bg-[#282828] text-zinc-100">Metodologia & Cálculos</option>
-            </select>
-            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2.5 text-zinc-400">
-              <ChevronDown class="w-3.5 h-3.5" />
-            </div>
-          </div>
+          <input
+            id="form-memory-tags"
+            type="text"
+            bind:value={formTags}
+            placeholder="Ex: estilo, valuation, dividendos"
+            class="w-full rounded-xl bg-[#282828] border border-white/[0.1] px-3 py-2 text-zinc-100 text-xs focus:outline-none focus:border-pink-500/50"
+          />
         </div>
-      </div>
-
-      <div class="space-y-1">
-        <label
-          for="form-memory-tags"
-          class="text-[10px] text-zinc-400 uppercase font-sans"
-        >
-          Tags (separadas por vírgula)
-        </label>
-        <input
-          id="form-memory-tags"
-          type="text"
-          bind:value={formTags}
-          placeholder="Ex: valuation, bazin, moedas, formatação"
-          class="w-full rounded-xl bg-[#282828] border border-white/[0.1] px-3 py-2 text-zinc-100 text-xs focus:outline-none focus:border-pink-500/50"
-        />
       </div>
 
       <div class="space-y-1">
@@ -220,14 +179,14 @@
           for="form-memory-content"
           class="text-[10px] text-zinc-400 uppercase font-sans"
         >
-          Instrução / Regra Permanente
+          O que o Staggi deve lembrar?
         </label>
         <textarea
           id="form-memory-content"
           bind:value={formContent}
-          rows={5}
-          placeholder="Ex: Nas análises de dividendos, sempre calcule o Preço Teto de Décio Bazin considerando 6% a.a. e apresente valores consolidados em BRL e USD."
-          class="w-full rounded-xl bg-[#181818] border border-white/[0.12] p-3 text-xs text-zinc-200 focus:outline-none focus:border-pink-500/50 leading-relaxed resize-y"
+          rows={4}
+          placeholder="Ex: Sempre responder com resumos executivos diretos em tópicos, priorizando análise de risco antes da recomendação."
+          class="w-full rounded-xl bg-[#282828] border border-white/[0.1] p-3 text-xs text-zinc-100 focus:outline-none focus:border-pink-500/50 leading-relaxed resize-y"
         ></textarea>
       </div>
 
@@ -292,7 +251,7 @@
             Second Brain Vazio
           </h5>
           <p class="text-xs text-zinc-400 max-w-sm mx-auto">
-            Nenhuma diretriz cadastrada ainda. Adicione preferências de resposta ou políticas da sua consultoria.
+            Nenhuma diretriz cadastrada ainda. Adicione preferências de resposta, estilo ou regras de trabalho.
           </p>
         </div>
         <button
@@ -324,11 +283,6 @@
                     class="font-semibold text-zinc-100 text-sm tracking-tight"
                   >
                     {mem.title}
-                  </span>
-                  <span
-                    class="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-pink-500/20 text-pink-300 border border-pink-500/30"
-                  >
-                    {getCategoryLabel(mem.category)}
                   </span>
                   {#if mem.pinned}
                     <span

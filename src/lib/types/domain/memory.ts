@@ -1,10 +1,10 @@
-export type MemoryCategory = "general" | "formatting" | "valuation" | string;
+export type MemoryCategory = "general" | string;
 
 export interface MemoryItem {
   id: string;
   title: string;
   content: string;
-  category: MemoryCategory;
+  category?: MemoryCategory;
   tags: string[];
   pinned: boolean;
   active: boolean;

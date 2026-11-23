@@ -124,8 +124,8 @@ Quando o usuário utilizar expressões temporais como "desse ano", "deste ano", 
   let secondBrainContext = "";
   if (relevantMemories.length > 0) {
     secondBrainContext = `\n\n[SECOND BRAIN & INSTRUÇÕES PESSOAIS DO ASSESSOR]:
-As seguintes preferências de trabalho, formatação e políticas gerais da consultoria foram definidas pelo assessor e devem ser rigorosamente aplicadas:
-${relevantMemories.map(m => `- [${m.category.toUpperCase()}] **${m.title}**: ${m.content}`).join("\n")}
+As seguintes preferências de trabalho, formatação e instruções personalizadas foram definidas pelo assessor e devem ser rigorosamente aplicadas:
+${relevantMemories.map(m => `- **${m.title}**: ${m.content}`).join("\n")}
 Atenção: Trate essas diretrizes como preferências e estilo de trabalho do assessor, correlacionando-as com os dados cadastrais e documentos retornados por MCPs e RAG.`;
   }
 

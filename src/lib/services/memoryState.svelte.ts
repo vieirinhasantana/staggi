@@ -91,7 +91,7 @@ class MemoryStore {
         ...tokenize(mem.title),
         ...tokenize(mem.content),
         ...mem.tags.flatMap(t => tokenize(t)),
-        mem.category.toLowerCase()
+        ...(mem.category ? [mem.category.toLowerCase()] : [])
       ]);
 
       for (const tok of docTokens) {
@@ -191,6 +191,7 @@ class MemoryStore {
     const nowStr = new Date().toISOString().slice(0, 10);
     const newItem: MemoryItem = {
       ...item,
+      category: item.category || "general",
       id: `mem-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       createdAt: nowStr,
       updatedAt: nowStr,
