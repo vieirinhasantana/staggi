@@ -11,7 +11,10 @@ use commands::ai::{
     ask_ai, ask_gemini, list_ai_models, list_gemini_models, test_ai_connection,
     test_gemini_connection,
 };
-use commands::mcp::{call_mcp_tool, test_mcp_connection};
+use commands::mcp::{
+    call_mcp_tool, mcp_discover_oauth_endpoints, mcp_exchange_oauth_code,
+    mcp_refresh_oauth_token, mcp_start_oauth_loopback, test_mcp_connection,
+};
 use commands::window::{hide_window, restart_app, toggle_window};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -30,7 +33,11 @@ pub fn run() {
             test_ai_connection,
             ask_ai,
             test_mcp_connection,
-            call_mcp_tool
+            call_mcp_tool,
+            mcp_start_oauth_loopback,
+            mcp_exchange_oauth_code,
+            mcp_refresh_oauth_token,
+            mcp_discover_oauth_endpoints
         ])
         .setup(|app| {
             let show_i = MenuItem::with_id(app, "toggle", "Exibir / Ocultar Staggi", true, None::<&str>)?;
