@@ -118,24 +118,15 @@
 
   async function handleRunTaskNow(id: string) {
     const task = tasksStore.tasks.find((t) => t.id === id);
-    const name = task ? task.name : "Routine";
+    const name = task ? task.name : "Rotina";
     toastStore.info(
-      t("toasts.taskRunningTitle"),
-      t("toasts.taskRunningDesc", { name })
+      "Executando Rotina",
+      `Iniciando "${name}" em segundo plano...`
     );
     await tasksStore.runTaskNow(id);
     const updated = tasksStore.tasks.find((t) => t.id === id);
     if (updated && updated.lastResult) {
-      toastStore.success(
-        t("toasts.taskSuccessTitle"),
-        t("toasts.taskSuccessDesc", { name: updated.name })
-      );
       onViewResult(updated);
-    } else if (updated && updated.lastStatus === "error") {
-      toastStore.error(
-        t("toasts.taskErrorTitle"),
-        updated.lastError || "Error executing automated task."
-      );
     }
   }
 </script>

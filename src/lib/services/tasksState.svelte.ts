@@ -1,5 +1,6 @@
 import { queryGemini } from "./geminiService";
 import { automationEmailStore } from "./automationEmailService.svelte";
+import { toastStore } from "./toastService.svelte";
 import type { TaskExecutionLog, ScheduledTask, TaskAlert } from "$lib/types";
 export type { TaskExecutionLog, ScheduledTask, TaskAlert };
 
@@ -240,32 +241,15 @@ class TasksStore {
         this.runningTaskId = null;
         this.saveToStorage();
 
-        this.activeAlert = {
-          id: `alert-${Date.now()}`,
-          taskId: task.id,
-          taskName: task.name,
-          status: "success",
-          summary: logSummary,
-          result: result.text,
-          timestamp: nowIso,
-          durationMs
-        };
+        toastStore.success(
+          "Rotina Executada",
+          emailStatus === "sent"
+            ? `"${task.name}" finalizada e relatório enviado para ${targetRecipient}.`
+            : `"${task.name}" finalizada com sucesso.`
+        );
 
         if (this.viewingTaskResult?.id === id && updatedTask) {
           this.viewingTaskResult = updatedTask;
-        }
-
-        if (typeof window !== "undefined" && "Notification" in window) {
-          try {
-            if (Notification.permission === "granted") {
-              new Notification(`Staggi: Tarefa Executada`, {
-                body: `${task.name} concluída com sucesso. Clique para ver o resultado.`,
-              });
-            } else if (Notification.permission === "default") {
-              Notification.requestPermission().catch(() => {});
-            }
-          } catch {
-          }
         }
 
         return true;
@@ -295,16 +279,10 @@ class TasksStore {
         this.runningTaskId = null;
         this.saveToStorage();
 
-        this.activeAlert = {
-          id: `alert-${Date.now()}`,
-          taskId: task.id,
-          taskName: task.name,
-          status: "error",
-          summary: "Erro ao executar tarefa agendada.",
-          error: errorMsg,
-          timestamp: nowIso,
-          durationMs
-        };
+        toastStore.error(
+          "Falha na Rotina",
+          `Erro ao executar "${task.name}": ${errorMsg}`
+        );
 
         return false;
       }
@@ -337,16 +315,10 @@ class TasksStore {
       this.runningTaskId = null;
       this.saveToStorage();
 
-      this.activeAlert = {
-        id: `alert-${Date.now()}`,
-        taskId: task.id,
-        taskName: task.name,
-        status: "error",
-        summary: "Erro fatal ao invocar IA na tarefa.",
-        error: errorMsg,
-        timestamp: nowIso,
-        durationMs
-      };
+      toastStore.error(
+        "Erro na Rotina",
+        `Falha ao processar "${task.name}": ${errorMsg}`
+      );
 
       return false;
     }
