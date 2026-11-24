@@ -13,7 +13,7 @@
   import type { ScheduledTask } from "$lib/types";
   import { renderMarkdown } from "$lib/services/formatMessage";
   import { formatRelativeTime } from "$lib/utils/formatters";
-  import { automationEmailStore } from "$lib/services/automationEmailService";
+  import { automationEmailStore } from "$lib/services/automationEmailService.svelte";
   import { toastStore } from "$lib/services/toastService.svelte";
   import { t } from "$lib/i18n";
 

@@ -13,7 +13,7 @@
   } from "@lucide/svelte";
   import { tasksStore } from "$lib/services/tasksState.svelte";
   import { toastStore } from "$lib/services/toastService.svelte";
-  import { automationEmailStore } from "$lib/services/automationEmailService";
+  import { automationEmailStore } from "$lib/services/automationEmailService.svelte";
   import type { ScheduledTask } from "$lib/types";
   import { formatRelativeTime, formatMinutesLabel } from "$lib/utils/formatters";
   import { t } from "$lib/i18n";

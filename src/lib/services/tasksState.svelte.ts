@@ -1,5 +1,5 @@
 import { queryGemini } from "./geminiService";
-import { automationEmailStore } from "./automationEmailService";
+import { automationEmailStore } from "./automationEmailService.svelte";
 import type { TaskExecutionLog, ScheduledTask, TaskAlert } from "$lib/types";
 export type { TaskExecutionLog, ScheduledTask, TaskAlert };
 
