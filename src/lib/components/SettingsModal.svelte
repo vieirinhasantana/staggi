@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount, untrack } from "svelte";
   import {
     X,
     Bot,
@@ -41,18 +42,21 @@
   let viewingResultTask = $state<ScheduledTask | null>(null);
 
   $effect(() => {
-    if (initialTab) {
-      activeTab = initialTab === "gemini" ? "ai" : initialTab;
+    const tab = initialTab === "gemini" ? "ai" : initialTab;
+    if (tab) {
+      untrack(() => {
+        if (activeTab !== tab) {
+          activeTab = tab;
+        }
+      });
     }
   });
 
-  $effect(() => {
-    if (open) {
-      aiStore.reloadFromStorage();
-      pluginsStore.reloadFromStorage();
-      tasksStore.reloadFromStorage();
-      memoryStore.reloadFromStorage();
-    }
+  onMount(() => {
+    aiStore.reloadFromStorage();
+    pluginsStore.reloadFromStorage();
+    tasksStore.reloadFromStorage();
+    memoryStore.reloadFromStorage();
   });
 </script>
 
