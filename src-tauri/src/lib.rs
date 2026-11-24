@@ -16,7 +16,7 @@ use commands::mcp::{
     mcp_refresh_oauth_token, mcp_register_oauth_client, mcp_start_oauth_loopback,
     test_mcp_connection,
 };
-use commands::window::{hide_window, restart_app, toggle_window};
+use commands::window::{hide_window, restart_app, set_content_protected, toggle_window};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -27,6 +27,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             hide_window,
             restart_app,
+            set_content_protected,
             list_gemini_models,
             list_ai_models,
             test_gemini_connection,

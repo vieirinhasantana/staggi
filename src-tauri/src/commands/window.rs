@@ -19,6 +19,11 @@ pub fn hide_window(window: tauri::WebviewWindow) {
 }
 
 #[tauri::command]
+pub fn set_content_protected(window: tauri::WebviewWindow, protected: bool) -> Result<(), String> {
+    window.set_content_protected(protected).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 pub fn restart_app(app: tauri::AppHandle) {
     app.restart();
 }

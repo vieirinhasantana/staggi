@@ -14,12 +14,15 @@
     ArrowDownCircle,
     CheckCircle2,
     Bot,
+    Shield,
+    ShieldCheck,
   } from "@lucide/svelte";
   import { getCurrentWindow } from "@tauri-apps/api/window";
   import { pluginsStore, getSkillSlug, type SkillDefinition } from "$lib/services/pluginsState.svelte";
   import { aiStore, geminiStore } from "$lib/services/aiProviderState.svelte";
   import { tasksStore } from "$lib/services/tasksState.svelte";
   import { updaterStore } from "$lib/services/updaterService.svelte";
+  import { privacyStore } from "$lib/services/privacyState.svelte";
   import { t } from "$lib/i18n";
 
   interface Props {
@@ -256,6 +259,23 @@
         class="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.08] transition-colors cursor-pointer"
       >
         <Settings class="w-4 h-4" />
+      </button>
+
+      <button
+        type="button"
+        onclick={() => privacyStore.toggle()}
+        title={privacyStore.isProtected 
+          ? "Modo Anti-Captura ATIVADO: Janela oculta em reuniões, streams e prints (Clique para desativar)" 
+          : "Modo Anti-Captura DESATIVADO: Clique para ocultar a janela do Staggi de transmissões e prints"}
+        class="flex h-8 w-8 items-center justify-center rounded-lg transition-all cursor-pointer {privacyStore.isProtected 
+          ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/35 shadow-[0_0_10px_rgba(16,185,129,0.25)]' 
+          : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.08]'}"
+      >
+        {#if privacyStore.isProtected}
+          <ShieldCheck class="w-4 h-4 text-emerald-400" />
+        {:else}
+          <Shield class="w-4 h-4" />
+        {/if}
       </button>
 
       <button

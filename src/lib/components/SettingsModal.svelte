@@ -10,12 +10,15 @@
     ArrowDownCircle,
     RefreshCw,
     CheckCircle2,
+    Shield,
+    ShieldCheck,
   } from "@lucide/svelte";
   import { aiStore } from "$lib/services/aiProviderState.svelte";
   import { pluginsStore } from "$lib/services/pluginsState.svelte";
   import { tasksStore } from "$lib/services/tasksState.svelte";
   import { memoryStore } from "$lib/services/memoryState.svelte";
   import { updaterStore } from "$lib/services/updaterService.svelte";
+  import { privacyStore } from "$lib/services/privacyState.svelte";
   import { t } from "$lib/i18n";
   import type { ScheduledTask } from "$lib/types";
 
@@ -125,6 +128,25 @@
             <span>v{updaterStore.currentVersion}</span>
           </button>
         {/if}
+
+        <button
+          type="button"
+          onclick={() => privacyStore.toggle()}
+          class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border transition-all cursor-pointer text-xs {privacyStore.isProtected
+            ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 shadow-sm'
+            : 'bg-white/[0.04] hover:bg-white/[0.08] text-zinc-400 hover:text-zinc-200 border-white/[0.08] hover:border-white/[0.16]'}"
+          title={privacyStore.isProtected
+            ? "Anti-Captura ATIVADO: Janela do Staggi oculta em prints, gravações e compartilhamento de tela"
+            : "Clique para ativar a proteção contra prints, gravações e compartilhamento de tela"}
+        >
+          {#if privacyStore.isProtected}
+            <ShieldCheck class="w-3.5 h-3.5 text-emerald-400" />
+            <span>Anti-Captura</span>
+          {:else}
+            <Shield class="w-3.5 h-3.5 text-zinc-400" />
+            <span>Anti-Captura</span>
+          {/if}
+        </button>
 
         <button
           type="button"
