@@ -1,4 +1,5 @@
 import { queryGemini } from "./geminiService";
+import { automationEmailStore } from "./automationEmailService";
 import type { TaskExecutionLog, ScheduledTask, TaskAlert } from "$lib/types";
 export type { TaskExecutionLog, ScheduledTask, TaskAlert };
 
@@ -182,6 +183,9 @@ class TasksStore {
       const nextRunIso = new Date(Date.now() + task.intervalMinutes * 60 * 1000).toISOString();
 
       if (result.success) {
+        let emailStatus: "sent" | "simulated" | "failed" | undefined = undefined;
+        const targetRecipient = task.emailRecipient?.trim() || automationEmailStore.config.defaultRecipient;
+
         const newLog: TaskExecutionLog = {
           id: String(Date.now()),
           timestamp: nowIso,
@@ -189,6 +193,22 @@ class TasksStore {
           summary: result.text.slice(0, 250) + (result.text.length > 250 ? "..." : ""),
           durationMs
         };
+
+        if (task.notifyEmail && targetRecipient) {
+          try {
+            const emailResult = await automationEmailStore.dispatchAutomationEmail(task, result.text, {
+              overrideRecipient: targetRecipient
+            });
+            emailStatus = emailResult.status;
+            newLog.emailSent = emailResult.success;
+            newLog.emailRecipient = targetRecipient;
+            newLog.emailStatus = emailResult.status;
+          } catch (e) {
+            console.warn("[TasksStore] Failed to dispatch automation email:", e);
+            emailStatus = "failed";
+            newLog.emailStatus = "failed";
+          }
+        }
 
         let updatedTask: ScheduledTask | undefined;
 
@@ -202,6 +222,8 @@ class TasksStore {
               lastResult: result.text,
               lastError: undefined,
               executionCount: (t.executionCount || 0) + 1,
+              lastEmailStatus: emailStatus,
+              lastEmailTimestamp: emailStatus ? nowIso : t.lastEmailTimestamp,
               logs: [newLog, ...(t.logs || []).slice(0, 29)]
             };
             return updatedTask;

@@ -5,6 +5,9 @@ export interface TaskExecutionLog {
   summary: string;
   error?: string;
   durationMs?: number;
+  emailSent?: boolean;
+  emailRecipient?: string;
+  emailStatus?: "sent" | "simulated" | "failed";
 }
 
 export interface ScheduledTask {
@@ -22,6 +25,12 @@ export interface ScheduledTask {
   lastError?: string;
   executionCount: number;
   logs: TaskExecutionLog[];
+  // Email dispatch configuration
+  notifyEmail?: boolean;
+  emailRecipient?: string;
+  emailSubject?: string;
+  lastEmailStatus?: "sent" | "simulated" | "failed";
+  lastEmailTimestamp?: string;
 }
 
 export interface TaskAlert {
