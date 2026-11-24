@@ -32,9 +32,17 @@ export interface OAuthDiscoveryResult {
   issuer?: string;
   authorization_endpoint?: string;
   token_endpoint?: string;
+  registration_endpoint?: string;
   revocation_endpoint?: string;
   scopes_supported?: string[];
   code_challenge_methods_supported?: string[];
+  error?: string;
+}
+
+export interface DynamicClientRegistrationResult {
+  success: boolean;
+  client_id?: string;
+  client_secret?: string;
   error?: string;
 }
 

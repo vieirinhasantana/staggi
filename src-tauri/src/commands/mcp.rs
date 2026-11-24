@@ -1,6 +1,9 @@
 use crate::models::mcp::McpTestResult;
 use crate::services::mcp;
-use crate::services::mcp::oauth::{OAuthCallbackResult, OAuthDiscoveryResult, OAuthTokenResponse};
+use crate::services::mcp::oauth::{
+    DynamicClientRegistrationResult, OAuthCallbackResult, OAuthDiscoveryResult,
+    OAuthTokenResponse,
+};
 
 #[tauri::command]
 pub async fn test_mcp_connection(
@@ -67,4 +70,13 @@ pub async fn mcp_discover_oauth_endpoints(
     issuer_url: String,
 ) -> Result<OAuthDiscoveryResult, String> {
     mcp::discover_oauth_endpoints(issuer_url).await
+}
+
+#[tauri::command]
+pub async fn mcp_register_oauth_client(
+    registration_url: String,
+    client_name: String,
+    redirect_uris: Vec<String>,
+) -> Result<DynamicClientRegistrationResult, String> {
+    mcp::register_oauth_client(registration_url, client_name, redirect_uris).await
 }

@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import type {
+  DynamicClientRegistrationResult,
   McpAuthType,
   McpOAuth2Config,
   McpServerItem,
@@ -9,6 +10,7 @@ import type {
   SkillDefinition,
 } from "$lib/types";
 export type {
+  DynamicClientRegistrationResult,
   McpAuthType,
   McpOAuth2Config,
   McpServerItem,
@@ -152,6 +154,13 @@ function loadStoredMcps(): McpServerItem[] {
             tools: DEFAULT_MCPS[0].tools || [],
           };
         }
+        // Normalize legacy transport: if set to sse but endpoint is not an SSE route, switch to http
+        if (m.transport === "sse" && m.endpoint && !m.endpoint.includes("/sse")) {
+          return {
+            ...m,
+            transport: "http",
+          };
+        }
         return m;
       });
 
@@ -265,18 +274,91 @@ class PluginsStore {
 
   async startOAuth2Flow(mcpId: string): Promise<boolean> {
     const mcp = this.mcps.find(m => m.id === mcpId);
-    if (!mcp || !mcp.oauth2) {
-      throw new Error("Configuração OAuth 2.1 não encontrada para este servidor.");
+    if (!mcp) {
+      throw new Error("Servidor MCP não encontrado.");
     }
 
-    const oauth = mcp.oauth2;
-    if (!oauth.authorizationUrl || !oauth.clientId) {
-      throw new Error("URL de Autorização e Client ID são obrigatórios para o fluxo OAuth 2.1.");
+    const oauth: McpOAuth2Config = { ...(mcp.oauth2 || {}) } as McpOAuth2Config;
+    if (!oauth.redirectUri) {
+      oauth.redirectUri = "http://127.0.0.1:18420/oauth/callback";
     }
+
+    // Determine base URL / issuer from endpoint
+    let baseUrl = oauth.issuerUrl || mcp.endpoint;
+    try {
+      const u = new URL(mcp.endpoint);
+      baseUrl = oauth.issuerUrl || u.origin;
+    } catch {}
+
+    // Auto-discover endpoints if authorizationUrl or tokenUrl are missing
+    if (!oauth.authorizationUrl || !oauth.tokenUrl) {
+      try {
+        const disc = await invoke<OAuthDiscoveryResult>("mcp_discover_oauth_endpoints", {
+          issuerUrl: baseUrl,
+        });
+        if (disc.success) {
+          if (disc.authorization_endpoint) oauth.authorizationUrl = disc.authorization_endpoint;
+          if (disc.token_endpoint) oauth.tokenUrl = disc.token_endpoint;
+          if ((!oauth.scopes || oauth.scopes.length === 0) && disc.scopes_supported && disc.scopes_supported.length > 0) {
+            oauth.scopes = disc.scopes_supported;
+          }
+          // If server supports Dynamic Client Registration (RFC 7591) and no clientId is set
+          if (disc.registration_endpoint && !oauth.clientId) {
+            try {
+              const regResult = await invoke<DynamicClientRegistrationResult>("mcp_register_oauth_client", {
+                registrationUrl: disc.registration_endpoint,
+                clientName: "Staggi Desktop",
+                redirectUris: [oauth.redirectUri],
+              });
+              if (regResult.success && regResult.client_id) {
+                oauth.clientId = regResult.client_id;
+                if (regResult.client_secret) oauth.clientSecret = regResult.client_secret;
+              }
+            } catch (e) {
+              console.warn("[PluginsStore] Falha no registro dinâmico via RFC 7591:", e);
+            }
+          }
+        }
+      } catch (e) {
+        console.warn("[PluginsStore] Auto-descoberta OAuth 2.1:", e);
+      }
+    }
+
+    // Fallbacks if not discovered
+    const cleanBase = baseUrl.replace(/\/$/, "");
+    if (!oauth.authorizationUrl) {
+      oauth.authorizationUrl = `${cleanBase}/authorize`;
+    }
+    if (!oauth.tokenUrl) {
+      oauth.tokenUrl = `${cleanBase}/token`;
+    }
+    if (!oauth.clientId) {
+      // Try direct dynamic registration on /register
+      try {
+        const regResult = await invoke<DynamicClientRegistrationResult>("mcp_register_oauth_client", {
+          registrationUrl: `${cleanBase}/register`,
+          clientName: "Staggi Desktop",
+          redirectUris: [oauth.redirectUri],
+        });
+        if (regResult.success && regResult.client_id) {
+          oauth.clientId = regResult.client_id;
+          if (regResult.client_secret) oauth.clientSecret = regResult.client_secret;
+        }
+      } catch {}
+      if (!oauth.clientId) {
+        oauth.clientId = "staggi";
+      }
+    }
+
+    // Persist discovered config on mcp
+    this.updateMcp(mcpId, {
+      authType: "oauth2",
+      oauth2: { ...oauth },
+    });
 
     const { verifier, challenge } = await createPKCEPair();
     const state = generateRandomString(32);
-    const redirectUri = oauth.redirectUri || "http://localhost:18420/oauth/callback";
+    const redirectUri = oauth.redirectUri;
 
     let port = 18420;
     try {
@@ -644,7 +726,9 @@ class PluginsStore {
         };
       }
 
-      const transport = endpoint.includes("/sse") || v.transport === "sse" ? "sse" : (v.command ? "stdio" : "sse");
+      const transport = v.command || v.transport === "stdio"
+        ? "stdio"
+        : (endpoint.includes("/sse") || v.transport === "sse" ? "sse" : "http");
       const name = key || "mcp-server";
 
       const existing = this.mcps.find(m => m.name === name || m.endpoint === endpoint);

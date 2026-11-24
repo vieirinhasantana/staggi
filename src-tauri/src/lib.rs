@@ -13,7 +13,8 @@ use commands::ai::{
 };
 use commands::mcp::{
     call_mcp_tool, mcp_discover_oauth_endpoints, mcp_exchange_oauth_code,
-    mcp_refresh_oauth_token, mcp_start_oauth_loopback, test_mcp_connection,
+    mcp_refresh_oauth_token, mcp_register_oauth_client, mcp_start_oauth_loopback,
+    test_mcp_connection,
 };
 use commands::window::{hide_window, restart_app, toggle_window};
 
@@ -37,7 +38,8 @@ pub fn run() {
             mcp_start_oauth_loopback,
             mcp_exchange_oauth_code,
             mcp_refresh_oauth_token,
-            mcp_discover_oauth_endpoints
+            mcp_discover_oauth_endpoints,
+            mcp_register_oauth_client
         ])
         .setup(|app| {
             let show_i = MenuItem::with_id(app, "toggle", "Exibir / Ocultar Staggi", true, None::<&str>)?;

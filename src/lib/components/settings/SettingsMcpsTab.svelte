@@ -26,7 +26,7 @@
 
   let newMcpName = $state("");
   let newMcpEndpoint = $state("");
-  let newMcpTransport = $state<"stdio" | "sse">("sse");
+  let newMcpTransport = $state<"http" | "stdio" | "sse">("http");
   let newMcpAuthType = $state<McpAuthType>("none");
   let newMcpApiKey = $state("");
   let newMcpAuthHeader = $state("Authorization");
@@ -37,7 +37,7 @@
   let newMcpOAuthTokenUrl = $state("");
   let newMcpOAuthClientId = $state("");
   let newMcpOAuthClientSecret = $state("");
-  let newMcpOAuthScopes = $state("offline_access");
+  let newMcpOAuthScopes = $state("");
   let newMcpOAuthRedirectUri = $state("http://localhost:18420/oauth/callback");
 
   let createMode = $state<"form" | "json">("form");
@@ -58,7 +58,10 @@
   let openAuthMcpId = $state<string | null>(null);
   let expandedToolsMcpId = $state<string | null>(null);
   let executingToolName = $state<string | null>(null);
-  let toolExecutionResult = $state<{ toolName: string; resultText: string } | null>(null);
+  let toolExecutionResult = $state<{
+    toolName: string;
+    resultText: string;
+  } | null>(null);
 
   // Active MCP Auth modal state
   let tempAuthType = $state<McpAuthType>("none");
@@ -86,17 +89,23 @@
       if (toolName === "send_automation_report_email") {
         args = {
           automation_name: "Teste de Diagnóstico de Automação",
-          summary: "Varredura executada via teste de conexão no painel de configurações.",
-          details: "Rotina executada com sucesso. Parâmetros operacionais e templates validados.",
+          summary:
+            "Varredura executada via teste de conexão no painel de configurações.",
+          details:
+            "Rotina executada com sucesso. Parâmetros operacionais e templates validados.",
           recipient_email: "advisory@staggi.com.br",
-          status: "SUCCESS"
+          status: "SUCCESS",
         };
       } else if (toolName === "send_portfolio_proposal_email") {
         args = {
           client_id: "STG00000001",
-          trade_idea_id: "trade-001"
+          trade_idea_id: "trade-001",
         };
-      } else if (toolName === "get_stock_quote" || toolName.includes("quote") || toolName.includes("price")) {
+      } else if (
+        toolName === "get_stock_quote" ||
+        toolName.includes("quote") ||
+        toolName.includes("price")
+      ) {
         args = { symbol: "PETR4.SA" };
       }
 
@@ -104,9 +113,15 @@
       const raw = res?.result?.content || res?.result || res;
       let text = typeof raw === "string" ? raw : JSON.stringify(raw, null, 2);
       toolExecutionResult = { toolName, resultText: text };
-      toastStore.success("Ferramenta Executada", `${toolName} respondeu com sucesso.`);
+      toastStore.success(
+        "Ferramenta Executada",
+        `${toolName} respondeu com sucesso.`,
+      );
     } catch (e: any) {
-      toastStore.error("Erro na Execução", String(e || "Falha ao executar ferramenta"));
+      toastStore.error(
+        "Erro na Execução",
+        String(e || "Falha ao executar ferramenta"),
+      );
     } finally {
       executingToolName = null;
     }
@@ -117,26 +132,21 @@
     try {
       const res = await pluginsStore.testMcp(id);
       if (res.success) {
-        const toolMsg = res.tools && res.tools.length > 0 
-          ? ` • ${res.tools.length} ferramentas descobertas` 
-          : "";
+        const toolMsg =
+          res.tools && res.tools.length > 0
+            ? ` • ${res.tools.length} ferramentas descobertas`
+            : "";
         toastStore.success(
           t("settings.mcps.statusConnected"),
-          `${res.message}${toolMsg}`
+          `${res.message}${toolMsg}`,
         );
         if (res.tools && res.tools.length > 0) {
           expandedToolsMcpId = id;
         }
       } else if (res.status === "auth_error") {
-        toastStore.error(
-          t("settings.mcps.statusAuthError"),
-          res.message
-        );
+        toastStore.error(t("settings.mcps.statusAuthError"), res.message);
       } else {
-        toastStore.warning(
-          t("settings.mcps.statusUnreachable"),
-          res.message
-        );
+        toastStore.warning(t("settings.mcps.statusUnreachable"), res.message);
       }
     } finally {
       testingMcpId = null;
@@ -148,7 +158,9 @@
       openAuthMcpId = null;
     } else {
       openAuthMcpId = mcp.id;
-      tempAuthType = mcp.authType || (mcp.oauth2 ? "oauth2" : (mcp.apiKey ? "api_key" : "none"));
+      tempAuthType =
+        mcp.authType ||
+        (mcp.oauth2 ? "oauth2" : mcp.apiKey ? "api_key" : "none");
       tempApiKey = mcp.apiKey || "";
       tempAuthHeader = mcp.authHeader || "Authorization";
 
@@ -159,7 +171,8 @@
       tempOAuthClientId = o?.clientId || "";
       tempOAuthClientSecret = o?.clientSecret || "";
       tempOAuthScopes = o?.scopes?.join(" ") || "offline_access";
-      tempOAuthRedirectUri = o?.redirectUri || "http://localhost:18420/oauth/callback";
+      tempOAuthRedirectUri =
+        o?.redirectUri || "http://localhost:18420/oauth/callback";
       manualOAuthCode = "";
       showManualOAuthInput = false;
     }
@@ -168,7 +181,10 @@
   async function handleDiscoverEndpoints(isNew: boolean = false) {
     const issuer = isNew ? newMcpOAuthIssuer.trim() : tempOAuthIssuer.trim();
     if (!issuer) {
-      toastStore.warning("Issuer URL Necessária", "Informe o domínio base ou URL do provedor OAuth 2.1.");
+      toastStore.warning(
+        "Issuer URL Necessária",
+        "Informe o domínio base ou URL do provedor OAuth 2.1.",
+      );
       return;
     }
 
@@ -177,13 +193,15 @@
       const res = await pluginsStore.discoverOAuth2Endpoints(issuer);
       if (res.success) {
         if (isNew) {
-          if (res.authorization_endpoint) newMcpOAuthAuthUrl = res.authorization_endpoint;
+          if (res.authorization_endpoint)
+            newMcpOAuthAuthUrl = res.authorization_endpoint;
           if (res.token_endpoint) newMcpOAuthTokenUrl = res.token_endpoint;
           if (res.scopes_supported && res.scopes_supported.length > 0) {
             newMcpOAuthScopes = res.scopes_supported.join(" ");
           }
         } else {
-          if (res.authorization_endpoint) tempOAuthAuthUrl = res.authorization_endpoint;
+          if (res.authorization_endpoint)
+            tempOAuthAuthUrl = res.authorization_endpoint;
           if (res.token_endpoint) tempOAuthTokenUrl = res.token_endpoint;
           if (res.scopes_supported && res.scopes_supported.length > 0) {
             tempOAuthScopes = res.scopes_supported.join(" ");
@@ -191,20 +209,26 @@
         }
         toastStore.success(
           "Endpoints Descobertos (RFC 8414)",
-          "Endpoints de Autorização e Token preenchidos automaticamente."
+          "Endpoints de Autorização e Token preenchidos automaticamente.",
         );
       } else {
-        toastStore.error("Descoberta Falhou", res.error || "Não foi possível detectar metadados automaticamente.");
+        toastStore.error(
+          "Descoberta Falhou",
+          res.error || "Não foi possível detectar metadados automaticamente.",
+        );
       }
     } catch (e: any) {
-      toastStore.error("Erro na Descoberta", String(e || "Falha na requisição"));
+      toastStore.error(
+        "Erro na Descoberta",
+        String(e || "Falha na requisição"),
+      );
     } finally {
       isDiscoveringAuth = false;
     }
   }
 
   function handleSaveAuth(id: string, testAfter: boolean = true) {
-    const mcp = pluginsStore.mcps.find(m => m.id === id);
+    const mcp = pluginsStore.mcps.find((m) => m.id === id);
     if (!mcp) return;
 
     let oauthConfig: McpOAuth2Config | undefined = undefined;
@@ -216,8 +240,12 @@
         tokenUrl: tempOAuthTokenUrl.trim(),
         clientId: tempOAuthClientId.trim(),
         clientSecret: tempOAuthClientSecret.trim() || undefined,
-        scopes: tempOAuthScopes.trim() ? tempOAuthScopes.trim().split(" ") : ["offline_access"],
-        redirectUri: tempOAuthRedirectUri.trim() || "http://localhost:18420/oauth/callback",
+        scopes: tempOAuthScopes.trim()
+          ? tempOAuthScopes.trim().split(" ")
+          : ["offline_access"],
+        redirectUri:
+          tempOAuthRedirectUri.trim() ||
+          "http://localhost:18420/oauth/callback",
         accessToken: mcp.oauth2?.accessToken,
         refreshToken: mcp.oauth2?.refreshToken,
         tokenType: mcp.oauth2?.tokenType || "Bearer",
@@ -238,7 +266,7 @@
     if (testAfter) {
       toastStore.success(
         t("settings.mcps.savedAuth"),
-        "Configurações de autenticação salvas com sucesso."
+        "Configurações de autenticação salvas com sucesso.",
       );
       openAuthMcpId = null;
       handleTestMcp(id);
@@ -251,16 +279,19 @@
       handleSaveAuth(mcpId, false);
       toastStore.info(
         "Aguardando Autorização OAuth 2.1",
-        "O navegador foi aberto com PKCE (S256). Conclua o login na aba do navegador."
+        "O navegador foi aberto com PKCE (S256). Conclua o login na aba do navegador.",
       );
       await pluginsStore.startOAuth2Flow(mcpId);
       toastStore.success(
         "Conectado via OAuth 2.1",
-        "Token de acesso obtido e autenticação vinculada com sucesso."
+        "Token de acesso obtido e autenticação vinculada com sucesso.",
       );
       openAuthMcpId = null;
     } catch (e: any) {
-      toastStore.error("Falha no OAuth 2.1", String(e?.message || e || "Erro no fluxo de autorização"));
+      toastStore.error(
+        "Falha no OAuth 2.1",
+        String(e?.message || e || "Erro no fluxo de autorização"),
+      );
     } finally {
       isAuthorizingMcpId = null;
     }
@@ -270,12 +301,18 @@
     if (!manualOAuthCode.trim()) return;
     try {
       await pluginsStore.submitManualOAuth2Code(mcpId, manualOAuthCode.trim());
-      toastStore.success("Código Validado", "Autenticação OAuth 2.1 finalizada com sucesso.");
+      toastStore.success(
+        "Código Validado",
+        "Autenticação OAuth 2.1 finalizada com sucesso.",
+      );
       manualOAuthCode = "";
       showManualOAuthInput = false;
       openAuthMcpId = null;
     } catch (e: any) {
-      toastStore.error("Código Inválido", String(e?.message || e || "Falha ao trocar código"));
+      toastStore.error(
+        "Código Inválido",
+        String(e?.message || e || "Falha ao trocar código"),
+      );
     }
   }
 
@@ -283,9 +320,15 @@
     isRefreshingMcpId = mcpId;
     try {
       await pluginsStore.refreshOAuth2Token(mcpId);
-      toastStore.success("Token Renovado", "Novo access token obtido via refresh token.");
+      toastStore.success(
+        "Token Renovado",
+        "Novo access token obtido via refresh token.",
+      );
     } catch (e: any) {
-      toastStore.error("Erro ao Renovar", String(e?.message || e || "Falha no refresh"));
+      toastStore.error(
+        "Erro ao Renovar",
+        String(e?.message || e || "Falha no refresh"),
+      );
     } finally {
       isRefreshingMcpId = null;
     }
@@ -297,28 +340,53 @@
   }
 
   function handleAddMcp() {
-    if (!newMcpName.trim() || !newMcpEndpoint.trim()) return;
-    const name = newMcpName.trim();
+    const endpoint = newMcpEndpoint.trim();
+    if (!endpoint) return;
+
+    let name = newMcpName.trim();
+    if (!name) {
+      try {
+        const u = new URL(endpoint.startsWith("http") ? endpoint : `http://${endpoint}`);
+        name = u.hostname === "localhost" || u.hostname === "127.0.0.1"
+          ? (u.pathname && u.pathname !== "/" ? `mcp-${u.pathname.replace(/^\//, "").replace(/\//g, "-")}` : "mcp-local")
+          : `mcp-${u.hostname.split(".")[0]}`;
+      } catch {
+        name = "mcp-server";
+      }
+    }
+
     const cleanKey = newMcpApiKey.trim().replace(/^Bearer\s+/i, "");
 
     let oauthConfig: McpOAuth2Config | undefined = undefined;
     if (newMcpAuthType === "oauth2") {
       oauthConfig = {
         issuerUrl: newMcpOAuthIssuer.trim() || undefined,
-        authorizationUrl: newMcpOAuthAuthUrl.trim(),
-        tokenUrl: newMcpOAuthTokenUrl.trim(),
-        clientId: newMcpOAuthClientId.trim(),
+        authorizationUrl: newMcpOAuthAuthUrl.trim() || "",
+        tokenUrl: newMcpOAuthTokenUrl.trim() || "",
+        clientId: newMcpOAuthClientId.trim() || "",
         clientSecret: newMcpOAuthClientSecret.trim() || undefined,
-        scopes: newMcpOAuthScopes.trim() ? newMcpOAuthScopes.trim().split(" ") : ["offline_access"],
-        redirectUri: newMcpOAuthRedirectUri.trim() || "http://localhost:18420/oauth/callback",
+        scopes: newMcpOAuthScopes.trim()
+          ? newMcpOAuthScopes.trim().split(" ")
+          : undefined,
+        redirectUri:
+          newMcpOAuthRedirectUri.trim() ||
+          "http://localhost:18420/oauth/callback",
       };
+    }
+
+    // Auto-detect transport if not set
+    let transport = newMcpTransport;
+    if (endpoint.includes("/sse")) {
+      transport = "sse";
+    } else if (endpoint.startsWith("http://") || endpoint.startsWith("https://")) {
+      transport = "http";
     }
 
     const added = pluginsStore.addMcp({
       name,
       type: "Custom MCP Server",
-      transport: newMcpTransport,
-      endpoint: newMcpEndpoint.trim(),
+      transport,
+      endpoint,
       active: true,
       desc: "User-registered custom MCP Server",
       authType: newMcpAuthType,
@@ -331,7 +399,7 @@
 
     toastStore.success(
       t("toasts.mcpRegisteredTitle"),
-      t("toasts.mcpRegisteredDesc", { name })
+      t("toasts.mcpRegisteredDesc", { name }),
     );
 
     newMcpName = "";
@@ -344,12 +412,13 @@
     newMcpOAuthTokenUrl = "";
     newMcpOAuthClientId = "";
     newMcpOAuthClientSecret = "";
+    newMcpOAuthScopes = "";
     isCreatingMcp = false;
 
-    if (selectedAuthType !== "oauth2") {
-      handleTestMcp(added.id);
+    if (selectedAuthType === "oauth2") {
+      handleStartOAuthFlow(added.id);
     } else {
-      handleOpenAuth(added);
+      handleTestMcp(added.id);
     }
   }
 
@@ -360,17 +429,23 @@
       if (added.length > 0) {
         toastStore.success(
           "Configuração MCP Importada",
-          `${added.length} servidor(es) registrado(s). Conectando e descobrindo ferramentas...`
+          `${added.length} servidor(es) registrado(s). Conectando e descobrindo ferramentas...`,
         );
         isCreatingMcp = false;
         for (const item of added) {
           handleTestMcp(item.id);
         }
       } else {
-        toastStore.error("Erro na importação", "Nenhum servidor válido encontrado no JSON.");
+        toastStore.error(
+          "Erro na importação",
+          "Nenhum servidor válido encontrado no JSON.",
+        );
       }
     } catch (e: any) {
-      toastStore.error("JSON Inválido", e?.message || "Verifique a sintaxe do JSON.");
+      toastStore.error(
+        "JSON Inválido",
+        e?.message || "Verifique a sintaxe do JSON.",
+      );
     }
   }
 
@@ -390,7 +465,10 @@
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
       <button
         type="button"
-        onclick={() => { isCreatingMcp = true; createMode = "form"; }}
+        onclick={() => {
+          isCreatingMcp = true;
+          createMode = "form";
+        }}
         class="p-3.5 rounded-2xl bg-gradient-to-r from-emerald-500/15 via-[#262626] to-[#232323] border border-emerald-500/30 hover:border-emerald-500/50 flex items-center justify-between text-left transition-all cursor-pointer group shadow-sm"
       >
         <div class="flex items-center gap-3">
@@ -414,7 +492,10 @@
 
       <button
         type="button"
-        onclick={() => { isCreatingMcp = true; createMode = "json"; }}
+        onclick={() => {
+          isCreatingMcp = true;
+          createMode = "json";
+        }}
         class="p-3.5 rounded-2xl bg-gradient-to-r from-purple-500/15 via-[#262626] to-[#232323] border border-purple-500/30 hover:border-purple-500/50 flex items-center justify-between text-left transition-all cursor-pointer group shadow-sm"
       >
         <div class="flex items-center gap-3">
@@ -449,14 +530,20 @@
           <button
             type="button"
             onclick={() => (createMode = "form")}
-            class="px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer {createMode === 'form' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'text-zinc-400 hover:text-zinc-200'}"
+            class="px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer {createMode ===
+            'form'
+              ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+              : 'text-zinc-400 hover:text-zinc-200'}"
           >
             Formulário
           </button>
           <button
             type="button"
             onclick={() => (createMode = "json")}
-            class="px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer {createMode === 'json' ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40' : 'text-zinc-400 hover:text-zinc-200'}"
+            class="px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer {createMode ===
+            'json'
+              ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40'
+              : 'text-zinc-400 hover:text-zinc-200'}"
           >
             Colar JSON (mcpServers)
           </button>
@@ -490,10 +577,19 @@
               bind:value={newMcpTransport}
               class="w-full appearance-none rounded-xl bg-[#282828] border border-white/[0.1] hover:border-white/[0.2] pl-3 pr-8 py-2 text-zinc-200 focus:outline-none focus:border-emerald-500/60 transition-colors cursor-pointer"
             >
-              <option value="sse" class="bg-[#282828] text-zinc-100">{t("settings.mcps.transportSse")}</option>
-              <option value="stdio" class="bg-[#282828] text-zinc-100">{t("settings.mcps.transportStdio")}</option>
+              <option value="http" class="bg-[#282828] text-zinc-100"
+                >{t("settings.mcps.transportHttp")}</option
+              >
+              <option value="sse" class="bg-[#282828] text-zinc-100"
+                >{t("settings.mcps.transportSse")}</option
+              >
+              <option value="stdio" class="bg-[#282828] text-zinc-100"
+                >{t("settings.mcps.transportStdio")}</option
+              >
             </select>
-            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2.5 text-zinc-400">
+            <div
+              class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2.5 text-zinc-400"
+            >
               <ChevronDown class="w-3.5 h-3.5" />
             </div>
           </div>
@@ -502,34 +598,55 @@
           type="text"
           aria-label={t("settings.mcps.endpointUrl")}
           bind:value={newMcpEndpoint}
-          placeholder="http://localhost:8000/sse"
+          oninput={() => {
+            const ep = newMcpEndpoint.trim();
+            if (ep.includes("/sse")) {
+              newMcpTransport = "sse";
+            } else if (ep.startsWith("http://") || ep.startsWith("https://")) {
+              newMcpTransport = "http";
+            }
+          }}
+          placeholder="URL do Servidor (ex: http://localhost:8000/mcp ou http://localhost:8000)"
           class="w-full rounded-xl bg-[#282828] border border-white/[0.1] px-3.5 py-2 text-xs text-zinc-100 focus:outline-none focus:border-emerald-500/60"
         />
 
         <!-- Authentication Mode Selection -->
         <div class="space-y-1.5 pt-1">
-          <label class="text-[11px] text-zinc-300 font-semibold flex items-center gap-1.5">
+          <label
+            class="text-[11px] text-zinc-300 font-semibold flex items-center gap-1.5"
+          >
             <Lock class="w-3 h-3 text-emerald-400" /> Método de Autenticação
           </label>
-          <div class="grid grid-cols-3 gap-1.5 p-1 bg-[#1e1e1e] rounded-xl border border-white/[0.08] text-xs">
+          <div
+            class="grid grid-cols-3 gap-1.5 p-1 bg-[#1e1e1e] rounded-xl border border-white/[0.08] text-xs"
+          >
             <button
               type="button"
-              onclick={() => newMcpAuthType = "none"}
-              class="py-1.5 px-2 rounded-lg font-medium text-center transition-all cursor-pointer {newMcpAuthType === 'none' ? 'bg-white/[0.12] text-zinc-100 shadow-sm' : 'text-zinc-400 hover:text-zinc-200'}"
+              onclick={() => (newMcpAuthType = "none")}
+              class="py-1.5 px-2 rounded-lg font-medium text-center transition-all cursor-pointer {newMcpAuthType ===
+              'none'
+                ? 'bg-white/[0.12] text-zinc-100 shadow-sm'
+                : 'text-zinc-400 hover:text-zinc-200'}"
             >
               Sem Auth
             </button>
             <button
               type="button"
-              onclick={() => newMcpAuthType = "api_key"}
-              class="py-1.5 px-2 rounded-lg font-medium text-center transition-all cursor-pointer flex items-center justify-center gap-1 {newMcpAuthType === 'api_key' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm' : 'text-zinc-400 hover:text-zinc-200'}"
+              onclick={() => (newMcpAuthType = "api_key")}
+              class="py-1.5 px-2 rounded-lg font-medium text-center transition-all cursor-pointer flex items-center justify-center gap-1 {newMcpAuthType ===
+              'api_key'
+                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm'
+                : 'text-zinc-400 hover:text-zinc-200'}"
             >
               <Key class="w-3 h-3" /> API Key
             </button>
             <button
               type="button"
-              onclick={() => newMcpAuthType = "oauth2"}
-              class="py-1.5 px-2 rounded-lg font-medium text-center transition-all cursor-pointer flex items-center justify-center gap-1 {newMcpAuthType === 'oauth2' ? 'bg-sky-500/20 text-sky-300 border border-sky-500/40 shadow-sm' : 'text-zinc-400 hover:text-zinc-200'}"
+              onclick={() => (newMcpAuthType = "oauth2")}
+              class="py-1.5 px-2 rounded-lg font-medium text-center transition-all cursor-pointer flex items-center justify-center gap-1 {newMcpAuthType ===
+              'oauth2'
+                ? 'bg-sky-500/20 text-sky-300 border border-sky-500/40 shadow-sm'
+                : 'text-zinc-400 hover:text-zinc-200'}"
             >
               <ShieldCheck class="w-3 h-3 text-sky-400" /> OAuth 2.1
             </button>
@@ -538,8 +655,12 @@
 
         {#if newMcpAuthType === "api_key"}
           <div class="space-y-1 pt-1 animate-fade-in">
-            <label for="new-mcp-key" class="text-[11px] text-zinc-300 flex items-center gap-1.5">
-              <Key class="w-3 h-3 text-amber-400" /> {t("settings.mcps.apiKeyLabel")}
+            <label
+              for="new-mcp-key"
+              class="text-[11px] text-zinc-300 flex items-center gap-1.5"
+            >
+              <Key class="w-3 h-3 text-amber-400" />
+              {t("settings.mcps.apiKeyLabel")}
             </label>
             <input
               id="new-mcp-key"
@@ -550,79 +671,86 @@
             />
           </div>
         {:else if newMcpAuthType === "oauth2"}
-          <div class="p-3 rounded-xl bg-[#1e1e1e] border border-sky-500/30 space-y-2.5 animate-fade-in text-xs">
+          <div
+            class="p-3.5 rounded-xl bg-sky-500/10 border border-sky-500/30 space-y-2.5 animate-fade-in text-xs"
+          >
             <div class="flex items-center justify-between">
               <span class="font-semibold text-sky-300 flex items-center gap-1.5">
-                <ShieldCheck class="w-3.5 h-3.5 text-sky-400" /> Parâmetros OAuth 2.1 (PKCE S256)
+                <ShieldCheck class="w-4 h-4 text-sky-400" /> OAuth 2.1 Automático (Zero Config)
               </span>
-              <span class="text-[10px] text-sky-400/80 font-mono">RFC 7636 / RFC 8414</span>
+              <span class="text-[10px] text-sky-400/80 font-mono">RFC 8414 • RFC 7591 • PKCE S256</span>
             </div>
 
-            <div class="flex items-center gap-1.5">
-              <input
-                type="text"
-                bind:value={newMcpOAuthIssuer}
-                placeholder="Issuer / URL Base (ex: https://auth.company.com)"
-                class="flex-1 rounded-lg bg-[#282828] border border-white/[0.1] px-3 py-1.5 text-xs text-zinc-100 focus:outline-none focus:border-sky-400"
-              />
-              <button
-                type="button"
-                onclick={() => handleDiscoverEndpoints(true)}
-                disabled={isDiscoveringAuth || !newMcpOAuthIssuer.trim()}
-                class="px-2.5 py-1.5 rounded-lg bg-sky-500/20 hover:bg-sky-500/30 border border-sky-500/40 text-sky-200 text-xs font-semibold cursor-pointer transition-colors shrink-0 disabled:opacity-40 flex items-center gap-1"
-              >
-                <Compass class="w-3 h-3 {isDiscoveringAuth ? 'animate-spin' : ''}" />
-                <span>Detectar</span>
-              </button>
-            </div>
-
-            <div class="grid grid-cols-2 gap-2">
-              <input
-                type="text"
-                bind:value={newMcpOAuthAuthUrl}
-                placeholder="Auth URL (ex: https://.../oauth/authorize)"
-                class="rounded-lg bg-[#282828] border border-white/[0.1] px-3 py-1.5 text-xs text-zinc-100 focus:outline-none focus:border-sky-400"
-              />
-              <input
-                type="text"
-                bind:value={newMcpOAuthTokenUrl}
-                placeholder="Token URL (ex: https://.../oauth/token)"
-                class="rounded-lg bg-[#282828] border border-white/[0.1] px-3 py-1.5 text-xs text-zinc-100 focus:outline-none focus:border-sky-400"
-              />
-            </div>
-
-            <div class="grid grid-cols-2 gap-2">
-              <input
-                type="text"
-                bind:value={newMcpOAuthClientId}
-                placeholder="Client ID (Obrigatório)"
-                class="rounded-lg bg-[#282828] border border-white/[0.1] px-3 py-1.5 text-xs text-zinc-100 focus:outline-none focus:border-sky-400"
-              />
-              <input
-                type="password"
-                bind:value={newMcpOAuthClientSecret}
-                placeholder="Client Secret (Opcional com PKCE)"
-                class="rounded-lg bg-[#282828] border border-white/[0.1] px-3 py-1.5 text-xs text-zinc-100 focus:outline-none focus:border-sky-400"
-              />
-            </div>
-
-            <div class="grid grid-cols-2 gap-2">
-              <input
-                type="text"
-                bind:value={newMcpOAuthScopes}
-                placeholder="Scopes (ex: offline_access mcp)"
-                class="rounded-lg bg-[#282828] border border-white/[0.1] px-3 py-1.5 text-xs text-zinc-100 focus:outline-none focus:border-sky-400"
-              />
-              <input
-                type="text"
-                bind:value={newMcpOAuthRedirectUri}
-                placeholder="Redirect URI (ex: http://localhost:18420/oauth/callback)"
-                class="rounded-lg bg-[#282828] border border-white/[0.1] px-3 py-1.5 text-xs text-zinc-100 focus:outline-none focus:border-sky-400"
-              />
-            </div>
-            <p class="text-[10px] text-zinc-400 font-sans">
-              Após cadastrar, clique em <strong>Conectar via OAuth 2.1</strong> para abrir o navegador com autorização PKCE.
+            <p class="text-[11px] text-zinc-300 leading-relaxed">
+              Basta informar a URL do servidor acima. A descoberta de rotas, registro dinâmico do cliente e o fluxo PKCE no navegador acontecem de forma 100% automática ao cadastrar.
             </p>
+
+            <details class="pt-1 text-[11px] text-zinc-400">
+              <summary class="cursor-pointer hover:text-zinc-200 select-none flex items-center gap-1">
+                <span>Parâmetros avançados (opcional / detecção automática)</span>
+              </summary>
+              <div class="space-y-2 pt-2.5">
+                <div class="flex items-center gap-1.5">
+                  <input
+                    type="text"
+                    bind:value={newMcpOAuthIssuer}
+                    placeholder="Issuer / URL Base (opcional)"
+                    class="flex-1 rounded-lg bg-[#282828] border border-white/[0.1] px-3 py-1.5 text-xs text-zinc-100 focus:outline-none focus:border-sky-400"
+                  />
+                  <button
+                    type="button"
+                    onclick={() => handleDiscoverEndpoints(true)}
+                    disabled={isDiscoveringAuth || (!newMcpOAuthIssuer.trim() && !newMcpEndpoint.trim())}
+                    class="px-2.5 py-1.5 rounded-lg bg-sky-500/20 hover:bg-sky-500/30 border border-sky-500/40 text-sky-200 text-xs font-semibold cursor-pointer transition-colors shrink-0 disabled:opacity-40 flex items-center gap-1"
+                  >
+                    <Compass class="w-3 h-3 {isDiscoveringAuth ? 'animate-spin' : ''}" />
+                    <span>Detectar</span>
+                  </button>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                  <input
+                    type="text"
+                    bind:value={newMcpOAuthAuthUrl}
+                    placeholder="Auth URL (opcional)"
+                    class="rounded-lg bg-[#282828] border border-white/[0.1] px-3 py-1.5 text-xs text-zinc-100 focus:outline-none focus:border-sky-400"
+                  />
+                  <input
+                    type="text"
+                    bind:value={newMcpOAuthTokenUrl}
+                    placeholder="Token URL (opcional)"
+                    class="rounded-lg bg-[#282828] border border-white/[0.1] px-3 py-1.5 text-xs text-zinc-100 focus:outline-none focus:border-sky-400"
+                  />
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                  <input
+                    type="text"
+                    bind:value={newMcpOAuthClientId}
+                    placeholder="Client ID (opcional - auto registro)"
+                    class="rounded-lg bg-[#282828] border border-white/[0.1] px-3 py-1.5 text-xs text-zinc-100 focus:outline-none focus:border-sky-400"
+                  />
+                  <input
+                    type="password"
+                    bind:value={newMcpOAuthClientSecret}
+                    placeholder="Client Secret (opcional)"
+                    class="rounded-lg bg-[#282828] border border-white/[0.1] px-3 py-1.5 text-xs text-zinc-100 focus:outline-none focus:border-sky-400"
+                  />
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                  <input
+                    type="text"
+                    bind:value={newMcpOAuthScopes}
+                    placeholder="Scopes (ex: read write)"
+                    class="rounded-lg bg-[#282828] border border-white/[0.1] px-3 py-1.5 text-xs text-zinc-100 focus:outline-none focus:border-sky-400"
+                  />
+                  <input
+                    type="text"
+                    bind:value={newMcpOAuthRedirectUri}
+                    placeholder="Redirect URI (padrão: loopback 18420)"
+                    class="rounded-lg bg-[#282828] border border-white/[0.1] px-3 py-1.5 text-xs text-zinc-100 focus:outline-none focus:border-sky-400"
+                  />
+                </div>
+              </div>
+            </details>
           </div>
         {/if}
 
@@ -642,7 +770,7 @@
           <button
             type="button"
             onclick={handleAddMcp}
-            disabled={!newMcpName.trim() || !newMcpEndpoint.trim()}
+            disabled={!newMcpEndpoint.trim()}
             class="flex-1 py-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 text-xs font-semibold transition-all cursor-pointer disabled:opacity-40"
           >
             {t("settings.mcps.registerBtn")}
@@ -651,7 +779,9 @@
       {:else}
         <div class="space-y-2">
           <p class="text-[11px] text-zinc-300 font-sans">
-            Cole a configuração do seu servidor no formato padrão MCP (<code class="text-purple-300">mcpServers</code>), incluindo opções de <code class="text-sky-300">oauth2</code> se houver:
+            Cole a configuração do seu servidor no formato padrão MCP (<code
+              class="text-purple-300">mcpServers</code
+            >), incluindo opções de <code class="text-sky-300">oauth2</code> se houver:
           </p>
           <textarea
             bind:value={jsonInput}
@@ -714,16 +844,24 @@
             <!-- Authentication Status Badge -->
             {#if mcp.authType === "oauth2" || mcp.oauth2}
               {#if mcp.oauth2?.accessToken}
-                <span class="px-1.5 py-0.5 rounded text-[9px] bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 flex items-center gap-1 shrink-0" title="Autenticado via OAuth 2.1">
+                <span
+                  class="px-1.5 py-0.5 rounded text-[9px] bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 flex items-center gap-1 shrink-0"
+                  title="Autenticado via OAuth 2.1"
+                >
                   <ShieldCheck class="w-3 h-3 text-emerald-400" /> OAuth 2.1 Ativo
                 </span>
               {:else}
-                <span class="px-1.5 py-0.5 rounded text-[9px] bg-amber-500/15 text-amber-300 border border-amber-500/30 flex items-center gap-1 shrink-0" title="Configuração OAuth 2.1 pendente de conexão">
+                <span
+                  class="px-1.5 py-0.5 rounded text-[9px] bg-amber-500/15 text-amber-300 border border-amber-500/30 flex items-center gap-1 shrink-0"
+                  title="Configuração OAuth 2.1 pendente de conexão"
+                >
                   <ShieldCheck class="w-3 h-3 text-amber-400" /> OAuth 2.1 Pendente
                 </span>
               {/if}
             {:else if mcp.apiKey}
-              <span class="px-1.5 py-0.5 rounded text-[9px] bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 flex items-center gap-1 shrink-0">
+              <span
+                class="px-1.5 py-0.5 rounded text-[9px] bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 flex items-center gap-1 shrink-0"
+              >
                 <Lock class="w-2.5 h-2.5 text-emerald-400" /> API Key
               </span>
             {/if}
@@ -731,19 +869,26 @@
             {#if mcp.tools && mcp.tools.length > 0}
               <button
                 type="button"
-                onclick={() => expandedToolsMcpId = expandedToolsMcpId === mcp.id ? null : mcp.id}
+                onclick={() =>
+                  (expandedToolsMcpId =
+                    expandedToolsMcpId === mcp.id ? null : mcp.id)}
                 class="px-2 py-0.5 rounded text-[10px] bg-purple-500/15 text-purple-300 border border-purple-500/30 flex items-center gap-1 shrink-0 hover:bg-purple-500/25 transition-all cursor-pointer"
               >
                 <Wrench class="w-2.5 h-2.5 text-purple-400" />
                 <span>{mcp.tools.length} Tools</span>
-                <ChevronDown class="w-2.5 h-2.5 transition-transform {expandedToolsMcpId === mcp.id ? 'rotate-180' : ''}" />
+                <ChevronDown
+                  class="w-2.5 h-2.5 transition-transform {expandedToolsMcpId ===
+                  mcp.id
+                    ? 'rotate-180'
+                    : ''}"
+                />
               </button>
             {/if}
           </div>
 
           <div class="flex items-center gap-1.5 shrink-0">
-            <span class="text-[10px] text-zinc-500 mr-1 hidden sm:inline"
-              >{mcp.transport}</span
+            <span class="text-[10px] px-2 py-0.5 rounded-full font-mono uppercase tracking-wider bg-white/[0.04] text-zinc-400 border border-white/[0.06] mr-1 hidden sm:inline"
+              >{mcp.transport === "builtin (Native MCP)" ? "NATIVE" : mcp.transport}</span
             >
 
             <button
@@ -753,15 +898,30 @@
               title={t("settings.mcps.testConnection")}
               class="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-semibold bg-sky-500/15 hover:bg-sky-500/25 text-sky-300 border border-sky-500/30 transition-all cursor-pointer disabled:opacity-50"
             >
-              <RefreshCw class="w-2.5 h-2.5 {testingMcpId === mcp.id ? 'animate-spin' : ''}" />
-              <span>{testingMcpId === mcp.id ? t("settings.mcps.testing") : t("settings.mcps.testConnection")}</span>
+              <RefreshCw
+                class="w-2.5 h-2.5 {testingMcpId === mcp.id
+                  ? 'animate-spin'
+                  : ''}"
+              />
+              <span
+                >{testingMcpId === mcp.id
+                  ? t("settings.mcps.testing")
+                  : t("settings.mcps.testConnection")}</span
+              >
             </button>
 
             <button
               type="button"
               onclick={() => handleOpenAuth(mcp)}
               title="Configurar Autenticação (OAuth 2.1 / API Key)"
-              class="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold transition-all cursor-pointer {mcp.authType === 'oauth2' || mcp.oauth2 ? (mcp.oauth2?.accessToken ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-sky-500/20 text-sky-300 border border-sky-500/40') : (mcp.apiKey ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-white/[0.06] text-zinc-400 border border-white/[0.08] hover:text-zinc-200')}"
+              class="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold transition-all cursor-pointer {mcp.authType ===
+                'oauth2' || mcp.oauth2
+                ? mcp.oauth2?.accessToken
+                  ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                  : 'bg-sky-500/20 text-sky-300 border border-sky-500/40'
+                : mcp.apiKey
+                  ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                  : 'bg-white/[0.06] text-zinc-400 border border-white/[0.08] hover:text-zinc-200'}"
             >
               {#if mcp.authType === "oauth2" || mcp.oauth2}
                 <ShieldCheck class="w-3 h-3 text-sky-400" />
@@ -795,10 +955,17 @@
 
         <!-- Authentication Drawer -->
         {#if openAuthMcpId === mcp.id}
-          <div class="mt-2 p-3.5 rounded-xl bg-[#262626] border border-white/[0.12] space-y-3 animate-fade-in text-xs shadow-lg">
-            <div class="flex items-center justify-between text-zinc-200 border-b border-white/[0.08] pb-2">
-              <span class="font-semibold flex items-center gap-1.5 text-zinc-100">
-                <Lock class="w-3.5 h-3.5 text-emerald-400" /> Autenticação do Servidor ({mcp.name})
+          <div
+            class="mt-2 p-3.5 rounded-xl bg-[#262626] border border-white/[0.12] space-y-3 animate-fade-in text-xs shadow-lg"
+          >
+            <div
+              class="flex items-center justify-between text-zinc-200 border-b border-white/[0.08] pb-2"
+            >
+              <span
+                class="font-semibold flex items-center gap-1.5 text-zinc-100"
+              >
+                <Lock class="w-3.5 h-3.5 text-emerald-400" /> Autenticação do Servidor
+                ({mcp.name})
               </span>
               <button
                 type="button"
@@ -810,25 +977,36 @@
             </div>
 
             <!-- Segmented Auth Type Selector -->
-            <div class="grid grid-cols-3 gap-1.5 p-1 bg-[#1c1c1c] rounded-xl border border-white/[0.08]">
+            <div
+              class="grid grid-cols-3 gap-1.5 p-1 bg-[#1c1c1c] rounded-xl border border-white/[0.08]"
+            >
               <button
                 type="button"
-                onclick={() => tempAuthType = "none"}
-                class="py-1.5 px-2 rounded-lg font-medium text-center transition-all cursor-pointer {tempAuthType === 'none' ? 'bg-white/[0.12] text-zinc-100' : 'text-zinc-400 hover:text-zinc-200'}"
+                onclick={() => (tempAuthType = "none")}
+                class="py-1.5 px-2 rounded-lg font-medium text-center transition-all cursor-pointer {tempAuthType ===
+                'none'
+                  ? 'bg-white/[0.12] text-zinc-100'
+                  : 'text-zinc-400 hover:text-zinc-200'}"
               >
                 Sem Auth
               </button>
               <button
                 type="button"
-                onclick={() => tempAuthType = "api_key"}
-                class="py-1.5 px-2 rounded-lg font-medium text-center transition-all cursor-pointer flex items-center justify-center gap-1 {tempAuthType === 'api_key' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'text-zinc-400 hover:text-zinc-200'}"
+                onclick={() => (tempAuthType = "api_key")}
+                class="py-1.5 px-2 rounded-lg font-medium text-center transition-all cursor-pointer flex items-center justify-center gap-1 {tempAuthType ===
+                'api_key'
+                  ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                  : 'text-zinc-400 hover:text-zinc-200'}"
               >
                 <Key class="w-3 h-3" /> API Key
               </button>
               <button
                 type="button"
-                onclick={() => tempAuthType = "oauth2"}
-                class="py-1.5 px-2 rounded-lg font-medium text-center transition-all cursor-pointer flex items-center justify-center gap-1 {tempAuthType === 'oauth2' ? 'bg-sky-500/20 text-sky-300 border border-sky-500/40' : 'text-zinc-400 hover:text-zinc-200'}"
+                onclick={() => (tempAuthType = "oauth2")}
+                class="py-1.5 px-2 rounded-lg font-medium text-center transition-all cursor-pointer flex items-center justify-center gap-1 {tempAuthType ===
+                'oauth2'
+                  ? 'bg-sky-500/20 text-sky-300 border border-sky-500/40'
+                  : 'text-zinc-400 hover:text-zinc-200'}"
               >
                 <ShieldCheck class="w-3 h-3 text-sky-400" /> OAuth 2.1 (PKCE)
               </button>
@@ -837,10 +1015,15 @@
             {#if tempAuthType === "api_key"}
               <div class="space-y-2 animate-fade-in">
                 <div class="flex items-center justify-between text-zinc-300">
-                  <span class="text-[11px] font-medium flex items-center gap-1.5 text-amber-300">
-                    <Key class="w-3 h-3 text-amber-400" /> Chave de Acesso / Token Bearer
+                  <span
+                    class="text-[11px] font-medium flex items-center gap-1.5 text-amber-300"
+                  >
+                    <Key class="w-3 h-3 text-amber-400" /> Chave de Acesso / Token
+                    Bearer
                   </span>
-                  <span class="text-[10px] text-zinc-400">Header: {tempAuthHeader || "Authorization"}</span>
+                  <span class="text-[10px] text-zinc-400"
+                    >Header: {tempAuthHeader || "Authorization"}</span
+                  >
                 </div>
                 <div class="flex items-center gap-2">
                   <input
@@ -862,14 +1045,19 @@
               <div class="space-y-3 animate-fade-in">
                 <!-- Connected Status Banner -->
                 {#if mcp.oauth2?.accessToken}
-                  <div class="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 space-y-2">
+                  <div
+                    class="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 space-y-2"
+                  >
                     <div class="flex items-center justify-between">
                       <div class="flex items-center gap-2">
                         <CheckCircle2 class="w-4 h-4 text-emerald-400" />
                         <div>
-                          <div class="font-bold text-emerald-300 text-xs">Autenticado via OAuth 2.1</div>
+                          <div class="font-bold text-emerald-300 text-xs">
+                            Autenticado via OAuth 2.1
+                          </div>
                           <div class="text-[10px] text-zinc-400">
-                            {formatExpiresAt(mcp.oauth2.expiresAt)} • {mcp.oauth2.scopeGranted || tempOAuthScopes}
+                            {formatExpiresAt(mcp.oauth2.expiresAt)} • {mcp
+                              .oauth2.scopeGranted || tempOAuthScopes}
                           </div>
                         </div>
                       </div>
@@ -877,11 +1065,16 @@
                         <button
                           type="button"
                           onclick={() => handleRefreshOAuth(mcp.id)}
-                          disabled={isRefreshingMcpId === mcp.id || !mcp.oauth2?.refreshToken}
+                          disabled={isRefreshingMcpId === mcp.id ||
+                            !mcp.oauth2?.refreshToken}
                           title="Renovar token agora usando Refresh Token"
                           class="px-2.5 py-1 rounded-lg text-[10px] font-semibold bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-200 border border-emerald-500/40 cursor-pointer transition-colors flex items-center gap-1 disabled:opacity-40"
                         >
-                          <RefreshCw class="w-3 h-3 {isRefreshingMcpId === mcp.id ? 'animate-spin' : ''}" />
+                          <RefreshCw
+                            class="w-3 h-3 {isRefreshingMcpId === mcp.id
+                              ? 'animate-spin'
+                              : ''}"
+                          />
                           <span>Renovar Token</span>
                         </button>
                         <button
@@ -897,94 +1090,114 @@
                     </div>
                   </div>
                 {:else}
-                  <div class="p-3 rounded-xl bg-sky-500/10 border border-sky-500/25 flex items-center justify-between">
+                  <div
+                    class="p-3 rounded-xl bg-sky-500/10 border border-sky-500/25 flex items-center justify-between"
+                  >
                     <div class="flex items-center gap-2">
                       <ShieldCheck class="w-4 h-4 text-sky-400" />
                       <div class="text-[11px] text-zinc-300">
-                        Servidor requer login interativo com <strong class="text-sky-300">PKCE S256</strong>.
+                        Servidor requer login interativo com <strong
+                          class="text-sky-300">PKCE S256</strong
+                        >.
                       </div>
                     </div>
                     <button
                       type="button"
                       onclick={() => handleStartOAuthFlow(mcp.id)}
-                      disabled={isAuthorizingMcpId === mcp.id || !tempOAuthAuthUrl || !tempOAuthClientId}
+                      disabled={isAuthorizingMcpId === mcp.id}
                       class="px-3.5 py-1.5 rounded-lg bg-sky-500/25 hover:bg-sky-500/35 border border-sky-500/50 text-sky-200 font-bold text-xs cursor-pointer transition-all shadow-sm flex items-center gap-1.5 disabled:opacity-40"
                     >
-                      <Globe class="w-3.5 h-3.5 {isAuthorizingMcpId === mcp.id ? 'animate-spin' : ''}" />
-                      <span>{isAuthorizingMcpId === mcp.id ? 'Aguardando no Navegador...' : 'Conectar via OAuth 2.1'}</span>
+                      <Globe
+                        class="w-3.5 h-3.5 {isAuthorizingMcpId === mcp.id
+                          ? 'animate-spin'
+                          : ''}"
+                      />
+                      <span
+                        >{isAuthorizingMcpId === mcp.id
+                          ? "Aguardando no Navegador..."
+                          : "Conectar via OAuth 2.1"}</span
+                      >
                     </button>
                   </div>
                 {/if}
 
-                <!-- Endpoint Configuration Form -->
-                <div class="p-3 rounded-xl bg-[#1e1e1e] border border-white/[0.08] space-y-2">
-                  <div class="flex items-center justify-between text-zinc-300">
-                    <span class="text-[11px] font-semibold text-sky-300 flex items-center gap-1.5">
-                      <Compass class="w-3 h-3" /> Configuração de Endpoints
+                <!-- Endpoint Configuration Form (Collapsible) -->
+                <details
+                  class="p-3 rounded-xl bg-[#1e1e1e] border border-white/[0.08] space-y-2 text-zinc-400 text-[11px]"
+                >
+                  <summary class="cursor-pointer hover:text-zinc-200 select-none flex items-center justify-between">
+                    <span class="font-semibold text-sky-300 flex items-center gap-1.5">
+                      <Compass class="w-3 h-3" /> Parâmetros Avançados (opcional / detecção automática)
                     </span>
                     <button
                       type="button"
-                      onclick={() => handleDiscoverEndpoints(false)}
-                      disabled={isDiscoveringAuth || !tempOAuthIssuer.trim()}
+                      onclick={(e) => {
+                        e.stopPropagation();
+                        handleDiscoverEndpoints(false);
+                      }}
+                      disabled={isDiscoveringAuth || (!tempOAuthIssuer.trim() && !mcp.endpoint)}
                       class="text-[10px] text-sky-400 hover:text-sky-300 hover:underline flex items-center gap-1 cursor-pointer disabled:opacity-40"
                     >
-                      <span>Auto-detectar via Issuer (RFC 8414)</span>
+                      <span>Auto-detectar (RFC 8414)</span>
                       <ArrowRight class="w-2.5 h-2.5" />
                     </button>
-                  </div>
+                  </summary>
 
-                  <input
-                    type="text"
-                    bind:value={tempOAuthIssuer}
-                    placeholder="URL Base do Provedor (Issuer, ex: https://auth.empresa.com)"
-                    class="w-full rounded-lg bg-[#282828] border border-white/[0.1] px-3 py-1.5 text-xs text-zinc-100 focus:outline-none focus:border-sky-400"
-                  />
+                  <div class="space-y-2 pt-2">
+                    <input
+                      type="text"
+                      bind:value={tempOAuthIssuer}
+                      placeholder="URL Base do Provedor (Issuer, ex: https://auth.empresa.com)"
+                      class="w-full rounded-lg bg-[#282828] border border-white/[0.1] px-3 py-1.5 text-xs text-zinc-100 focus:outline-none focus:border-sky-400"
+                    />
 
-                  <div class="grid grid-cols-2 gap-2">
-                    <label class="text-[10px] text-zinc-400 mb-0.5 block">
-                      <span class="block mb-0.5">Authorization Endpoint</span>
-                      <input
-                        type="text"
-                        bind:value={tempOAuthAuthUrl}
-                        placeholder="https://.../oauth/authorize"
-                        class="w-full rounded-lg bg-[#282828] border border-white/[0.1] px-3 py-1.5 text-xs text-zinc-100 focus:outline-none focus:border-sky-400 font-normal"
-                      />
-                    </label>
-                    <label class="text-[10px] text-zinc-400 mb-0.5 block">
-                      <span class="block mb-0.5">Token Endpoint</span>
-                      <input
-                        type="text"
-                        bind:value={tempOAuthTokenUrl}
-                        placeholder="https://.../oauth/token"
-                        class="w-full rounded-lg bg-[#282828] border border-white/[0.1] px-3 py-1.5 text-xs text-zinc-100 focus:outline-none focus:border-sky-400 font-normal"
-                      />
-                    </label>
-                  </div>
+                    <div class="grid grid-cols-2 gap-2">
+                      <label class="text-[10px] text-zinc-400 mb-0.5 block">
+                        <span class="block mb-0.5">Authorization Endpoint</span>
+                        <input
+                          type="text"
+                          bind:value={tempOAuthAuthUrl}
+                          placeholder="https://.../oauth/authorize"
+                          class="w-full rounded-lg bg-[#282828] border border-white/[0.1] px-3 py-1.5 text-xs text-zinc-100 focus:outline-none focus:border-sky-400 font-normal"
+                        />
+                      </label>
+                      <label class="text-[10px] text-zinc-400 mb-0.5 block">
+                        <span class="block mb-0.5">Token Endpoint</span>
+                        <input
+                          type="text"
+                          bind:value={tempOAuthTokenUrl}
+                          placeholder="https://.../oauth/token"
+                          class="w-full rounded-lg bg-[#282828] border border-white/[0.1] px-3 py-1.5 text-xs text-zinc-100 focus:outline-none focus:border-sky-400 font-normal"
+                        />
+                      </label>
+                    </div>
 
-                  <div class="grid grid-cols-2 gap-2">
-                    <label class="text-[10px] text-zinc-400 mb-0.5 block">
-                      <span class="block mb-0.5">Client ID</span>
-                      <input
-                        type="text"
-                        bind:value={tempOAuthClientId}
-                        placeholder="ID do cliente registrado"
-                        class="w-full rounded-lg bg-[#282828] border border-white/[0.1] px-3 py-1.5 text-xs text-zinc-100 focus:outline-none focus:border-sky-400 font-normal"
-                      />
-                    </label>
-                    <label class="text-[10px] text-zinc-400 mb-0.5 block">
-                      <span class="block mb-0.5">Client Secret (Opcional)</span>
-                      <input
-                        type="password"
-                        bind:value={tempOAuthClientSecret}
-                        placeholder="Opcional com PKCE S256"
-                        class="w-full rounded-lg bg-[#282828] border border-white/[0.1] px-3 py-1.5 text-xs text-zinc-100 focus:outline-none focus:border-sky-400 font-normal"
-                      />
-                    </label>
-                  </div>
+                    <div class="grid grid-cols-2 gap-2">
+                      <label class="text-[10px] text-zinc-400 mb-0.5 block">
+                        <span class="block mb-0.5">Client ID</span>
+                        <input
+                          type="text"
+                          bind:value={tempOAuthClientId}
+                          placeholder="ID do cliente registrado (opcional)"
+                          class="w-full rounded-lg bg-[#282828] border border-white/[0.1] px-3 py-1.5 text-xs text-zinc-100 focus:outline-none focus:border-sky-400 font-normal"
+                        />
+                      </label>
+                      <label class="text-[10px] text-zinc-400 mb-0.5 block">
+                        <span class="block mb-0.5">Client Secret (Opcional)</span>
+                        <input
+                          type="password"
+                          bind:value={tempOAuthClientSecret}
+                          placeholder="Opcional com PKCE S256"
+                          class="w-full rounded-lg bg-[#282828] border border-white/[0.1] px-3 py-1.5 text-xs text-zinc-100 focus:outline-none focus:border-sky-400 font-normal"
+                        />
+                      </label>
+                    </div>
 
-                  <div class="grid grid-cols-2 gap-2">
-                    <label class="text-[10px] text-zinc-400 mb-0.5 block">
-                      <span class="block mb-0.5">Scopes (separados por espaço)</span>
+                    <div class="grid grid-cols-2 gap-2">
+                      <label class="text-[10px] text-zinc-400 mb-0.5 block">
+                        <span class="block mb-0.5"
+                          >Scopes (separados por espaço)</span
+                        >
                       <input
                         type="text"
                         bind:value={tempOAuthScopes}
@@ -1003,21 +1216,32 @@
                     </label>
                   </div>
                 </div>
+              </details>
 
                 <!-- Manual code fallback option -->
                 <div class="pt-1">
                   <button
                     type="button"
-                    onclick={() => (showManualOAuthInput = !showManualOAuthInput)}
+                    onclick={() =>
+                      (showManualOAuthInput = !showManualOAuthInput)}
                     class="text-[10px] text-zinc-400 hover:text-zinc-200 underline cursor-pointer"
                   >
-                    {showManualOAuthInput ? 'Ocultar entrada manual' : 'Não conseguiu redirecionar? Colar código de autorização manualmente'}
+                    {showManualOAuthInput
+                      ? "Ocultar entrada manual"
+                      : "Não conseguiu redirecionar? Colar código de autorização manualmente"}
                   </button>
 
                   {#if showManualOAuthInput}
-                    <div class="mt-2 p-2.5 rounded-lg bg-[#1a1a1a] border border-white/[0.1] space-y-1.5 animate-fade-in">
-                      <label class="text-[10px] text-zinc-300 font-medium block">
-                        <span class="block mb-1">Cole o código de autorização ou a URL completa redirecionada:</span>
+                    <div
+                      class="mt-2 p-2.5 rounded-lg bg-[#1a1a1a] border border-white/[0.1] space-y-1.5 animate-fade-in"
+                    >
+                      <label
+                        class="text-[10px] text-zinc-300 font-medium block"
+                      >
+                        <span class="block mb-1"
+                          >Cole o código de autorização ou a URL completa
+                          redirecionada:</span
+                        >
                         <div class="flex items-center gap-1.5">
                           <input
                             type="text"
@@ -1050,8 +1274,13 @@
                 </div>
               </div>
             {:else}
-              <div class="p-3 rounded-xl bg-white/[0.04] text-center space-y-2 text-zinc-400">
-                <p class="text-xs">Este servidor será acessado publicamente sem cabeçalhos de autenticação.</p>
+              <div
+                class="p-3 rounded-xl bg-white/[0.04] text-center space-y-2 text-zinc-400"
+              >
+                <p class="text-xs">
+                  Este servidor será acessado publicamente sem cabeçalhos de
+                  autenticação.
+                </p>
                 <button
                   type="button"
                   onclick={() => handleSaveAuth(mcp.id)}
@@ -1065,10 +1294,17 @@
         {/if}
 
         {#if mcp.lastTestedMessage}
-          <div class="flex items-center gap-1.5 text-[10px] {mcp.lastTestedStatus === 'connected' ? 'text-emerald-400' : mcp.lastTestedStatus === 'auth_error' ? 'text-rose-400' : 'text-amber-400'}">
-            {#if mcp.lastTestedStatus === 'connected'}
+          <div
+            class="flex items-center gap-1.5 text-[10px] {mcp.lastTestedStatus ===
+            'connected'
+              ? 'text-emerald-400'
+              : mcp.lastTestedStatus === 'auth_error'
+                ? 'text-rose-400'
+                : 'text-amber-400'}"
+          >
+            {#if mcp.lastTestedStatus === "connected"}
               <CheckCircle2 class="w-3 h-3 shrink-0" />
-            {:else if mcp.lastTestedStatus === 'auth_error'}
+            {:else if mcp.lastTestedStatus === "auth_error"}
               <Key class="w-3 h-3 shrink-0" />
             {:else}
               <AlertTriangle class="w-3 h-3 shrink-0" />
@@ -1078,17 +1314,29 @@
         {/if}
 
         {#if expandedToolsMcpId === mcp.id && mcp.tools && mcp.tools.length > 0}
-          <div class="mt-2 p-3 rounded-xl bg-[#262626]/95 border border-purple-500/35 space-y-2 animate-fade-in text-xs">
-            <div class="flex items-center justify-between pb-1.5 border-b border-white/[0.08]">
-              <span class="font-semibold text-purple-300 flex items-center gap-1.5">
+          <div
+            class="mt-2 p-3 rounded-xl bg-[#262626]/95 border border-purple-500/35 space-y-2 animate-fade-in text-xs"
+          >
+            <div
+              class="flex items-center justify-between pb-1.5 border-b border-white/[0.08]"
+            >
+              <span
+                class="font-semibold text-purple-300 flex items-center gap-1.5"
+              >
                 <Wrench class="w-3.5 h-3.5 text-purple-400" />
                 Ferramentas Disponíveis ({mcp.tools.length})
               </span>
-              <span class="text-[10px] text-zinc-400 font-sans">Protocolo MCP Ativo</span>
+              <span class="text-[10px] text-zinc-400 font-sans"
+                >Protocolo MCP Ativo</span
+              >
             </div>
-            <div class="max-h-60 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+            <div
+              class="max-h-60 overflow-y-auto space-y-2 pr-1 custom-scrollbar"
+            >
               {#each mcp.tools as tool}
-                <div class="p-2.5 rounded-lg bg-[#1e1e1e] border border-white/[0.06] space-y-1">
+                <div
+                  class="p-2.5 rounded-lg bg-[#1e1e1e] border border-white/[0.06] space-y-1"
+                >
                   <div class="flex items-center justify-between">
                     <span class="font-bold text-emerald-400">{tool.name}</span>
                     <button
@@ -1097,26 +1345,42 @@
                       disabled={executingToolName === tool.name}
                       class="flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 text-[10px] cursor-pointer transition-colors disabled:opacity-40"
                     >
-                      <Play class="w-2.5 h-2.5 {executingToolName === tool.name ? 'animate-spin' : ''}" />
-                      <span>{executingToolName === tool.name ? 'Executando...' : 'Testar'}</span>
+                      <Play
+                        class="w-2.5 h-2.5 {executingToolName === tool.name
+                          ? 'animate-spin'
+                          : ''}"
+                      />
+                      <span
+                        >{executingToolName === tool.name
+                          ? "Executando..."
+                          : "Testar"}</span
+                      >
                     </button>
                   </div>
                   {#if tool.description}
-                    <p class="text-[11px] text-zinc-300 font-sans whitespace-pre-line leading-relaxed">
+                    <p
+                      class="text-[11px] text-zinc-300 font-sans whitespace-pre-line leading-relaxed"
+                    >
                       {tool.description}
                     </p>
                   {/if}
                   {#if toolExecutionResult && toolExecutionResult.toolName === tool.name}
-                    <div class="mt-2 p-2.5 rounded bg-black/50 border border-emerald-500/40 text-[10px] text-zinc-200 space-y-1 animate-fade-in">
-                      <div class="flex items-center justify-between text-emerald-300 font-semibold border-b border-white/[0.08] pb-1">
+                    <div
+                      class="mt-2 p-2.5 rounded bg-black/50 border border-emerald-500/40 text-[10px] text-zinc-200 space-y-1 animate-fade-in"
+                    >
+                      <div
+                        class="flex items-center justify-between text-emerald-300 font-semibold border-b border-white/[0.08] pb-1"
+                      >
                         <span>Resultado ({tool.name}):</span>
                         <button
                           type="button"
                           onclick={() => (toolExecutionResult = null)}
                           class="text-zinc-400 hover:text-zinc-200 cursor-pointer"
-                        >✕</button>
+                          >✕</button
+                        >
                       </div>
-                      <pre class="max-h-48 overflow-y-auto whitespace-pre-wrap leading-relaxed text-zinc-300 custom-scrollbar">{toolExecutionResult.resultText}</pre>
+                      <pre
+                        class="max-h-48 overflow-y-auto whitespace-pre-wrap leading-relaxed text-zinc-300 custom-scrollbar">{toolExecutionResult.resultText}</pre>
                     </div>
                   {/if}
                 </div>
@@ -1125,11 +1389,173 @@
           </div>
         {/if}
 
-        <p
-          class="text-[11px] text-zinc-300 font-sans leading-relaxed"
-        >
+        <p class="text-[11px] text-zinc-300 font-sans leading-relaxed">
           {mcp.desc}
         </p>
+
+        {#if mcp.id === "mcp-financedatabase"}
+          <div
+            class="mt-2 pt-2 border-t border-white/[0.06] space-y-2 text-[11px]"
+          >
+            <div class="flex items-center justify-between text-zinc-300">
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <span class="text-zinc-400">{t("settings.mcps.coverage")}</span>
+                <span
+                  class="px-1.5 py-0.5 rounded bg-sky-500/15 text-sky-300 border border-sky-500/25 text-[10px]"
+                  >300k+ Assets</span
+                >
+                <span
+                  class="px-1.5 py-0.5 rounded bg-teal-500/15 text-teal-300 border border-teal-500/25 text-[10px]"
+                  >Equities & ETFs</span
+                >
+                <span
+                  class="px-1.5 py-0.5 rounded bg-violet-500/15 text-violet-300 border border-violet-500/25 text-[10px]"
+                  >Funds & Indices</span
+                >
+              </div>
+              <a
+                href="https://www.jeroenbouma.com/projects/financedatabase/mcp"
+                target="_blank"
+                class="text-[10px] text-sky-400 hover:text-sky-300 hover:underline flex items-center gap-1 shrink-0"
+              >
+                <span>FinanceDatabase Docs</span>
+                <ExternalLink class="w-2.5 h-2.5" />
+              </a>
+            </div>
+          </div>
+        {/if}
+
+        {#if mcp.id === "mcp-equibles-etf"}
+          <div
+            class="mt-2 pt-2 border-t border-white/[0.06] space-y-2 text-[11px]"
+          >
+            <div class="flex items-center justify-between text-zinc-300">
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <span class="text-zinc-400"
+                  >{t("settings.mcps.transparency")}</span
+                >
+                <span
+                  class="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/25 text-[10px]"
+                  >Holdings</span
+                >
+                <span
+                  class="px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-300 border border-blue-500/25 text-[10px]"
+                  >Portfolio Weights</span
+                >
+                <span
+                  class="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/25 text-[10px]"
+                  >Overlap Analysis</span
+                >
+              </div>
+              <a
+                href="https://equibles.com/etf-holdings-api"
+                target="_blank"
+                class="text-[10px] text-emerald-400 hover:text-emerald-300 hover:underline flex items-center gap-1 shrink-0"
+              >
+                <span>Equibles ETF API</span>
+                <ExternalLink class="w-2.5 h-2.5" />
+              </a>
+            </div>
+          </div>
+        {/if}
+
+        {#if mcp.id === "mcp-bonds"}
+          <div
+            class="mt-2 pt-2 border-t border-white/[0.06] space-y-2 text-[11px]"
+          >
+            <div class="flex items-center justify-between text-zinc-300">
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <span class="text-zinc-400">{t("settings.mcps.metrics")}</span>
+                <span
+                  class="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/25 text-[10px]"
+                  >Modified Duration</span
+                >
+                <span
+                  class="px-1.5 py-0.5 rounded bg-sky-500/15 text-sky-300 border border-sky-500/25 text-[10px]"
+                  >YTM</span
+                >
+                <span
+                  class="px-1.5 py-0.5 rounded bg-violet-500/15 text-violet-300 border border-violet-500/25 text-[10px]"
+                  >Rating & Convexity</span
+                >
+              </div>
+              <a
+                href="https://mcp.so/servers/bond-mcp-server"
+                target="_blank"
+                class="text-[10px] text-amber-400 hover:text-amber-300 hover:underline flex items-center gap-1 shrink-0"
+              >
+                <span>Bond MCP Server</span>
+                <ExternalLink class="w-2.5 h-2.5" />
+              </a>
+            </div>
+          </div>
+        {/if}
+
+        {#if mcp.id === "mcp-treasury-yields"}
+          <div
+            class="mt-2 pt-2 border-t border-white/[0.06] space-y-2 text-[11px]"
+          >
+            <div class="flex items-center justify-between text-zinc-300">
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <span class="text-zinc-400">{t("settings.mcps.usCurve")}</span>
+                <span
+                  class="px-1.5 py-0.5 rounded bg-teal-500/15 text-teal-300 border border-teal-500/25 text-[10px]"
+                  >1M to 30Y</span
+                >
+                <span
+                  class="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/25 text-[10px]"
+                  >Spread 10Y-2Y</span
+                >
+                <span
+                  class="px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-300 border border-blue-500/25 text-[10px]"
+                  >Risk-Free Benchmark</span
+                >
+              </div>
+              <a
+                href="https://treasury-yields-rates-today-mcp.lipmichal.workers.dev"
+                target="_blank"
+                class="text-[10px] text-teal-400 hover:text-teal-300 hover:underline flex items-center gap-1 shrink-0"
+              >
+                <span>Treasury Yields MCP</span>
+                <ExternalLink class="w-2.5 h-2.5" />
+              </a>
+            </div>
+          </div>
+        {/if}
+
+        {#if mcp.id === "mcp-tickerinside"}
+          <div
+            class="mt-2 pt-2 border-t border-white/[0.06] space-y-2 text-[11px]"
+          >
+            <div class="flex items-center justify-between text-zinc-300">
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <span class="text-zinc-400"
+                  >{t("settings.mcps.smartMoney")}</span
+                >
+                <span
+                  class="px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-300 border border-purple-500/25 text-[10px]"
+                  >SEC Form 4</span
+                >
+                <span
+                  class="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/25 text-[10px]"
+                  >Director Purchases</span
+                >
+                <span
+                  class="px-1.5 py-0.5 rounded bg-sky-500/15 text-sky-300 border border-sky-500/25 text-[10px]"
+                  >Whale Tracking</span
+                >
+              </div>
+              <a
+                href="https://mcpservers.org/pt-BR/servers/tickerinside-com-agent"
+                target="_blank"
+                class="text-[10px] text-purple-400 hover:text-purple-300 hover:underline flex items-center gap-1 shrink-0"
+              >
+                <span>TickerInside MCP</span>
+                <ExternalLink class="w-2.5 h-2.5" />
+              </a>
+            </div>
+          </div>
+        {/if}
       </div>
     {/each}
   </div>

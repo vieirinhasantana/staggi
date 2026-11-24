@@ -33,9 +33,18 @@ pub struct OAuthDiscoveryResult {
     pub issuer: Option<String>,
     pub authorization_endpoint: Option<String>,
     pub token_endpoint: Option<String>,
+    pub registration_endpoint: Option<String>,
     pub revocation_endpoint: Option<String>,
     pub scopes_supported: Option<Vec<String>>,
     pub code_challenge_methods_supported: Option<Vec<String>>,
+    pub error: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct DynamicClientRegistrationResult {
+    pub success: bool,
+    pub client_id: Option<String>,
+    pub client_secret: Option<String>,
     pub error: Option<String>,
 }
 
@@ -382,10 +391,21 @@ pub async fn discover_oauth_endpoints(issuer_url: String) -> Result<OAuthDiscove
 
     let trimmed = issuer_url.trim().trim_end_matches('/');
 
-    let well_known_urls = [
-        format!("{}/.well-known/oauth-authorization-server", trimmed),
-        format!("{}/.well-known/openid-configuration", trimmed),
-    ];
+    let mut candidate_bases = vec![trimmed.to_string()];
+    if let Ok(parsed) = Url::parse(trimmed) {
+        let origin = parsed.origin().ascii_serialization();
+        if origin != trimmed && !origin.is_empty() {
+            candidate_bases.push(origin);
+        }
+    }
+
+    let mut well_known_urls = Vec::new();
+    for base in &candidate_bases {
+        well_known_urls.push(format!("{}/.well-known/oauth-authorization-server", base));
+        well_known_urls.push(format!("{}/.well-known/openid-configuration", base));
+        well_known_urls.push(format!("{}/.well-known/oauth-protected-resource", base));
+        well_known_urls.push(format!("{}/mcp/.well-known/oauth-authorization-server", base));
+    }
 
     let mut last_err = String::new();
 
@@ -401,6 +421,10 @@ pub async fn discover_oauth_endpoints(issuer_url: String) -> Result<OAuthDiscove
                             .map(String::from);
                         let token_endpoint = json_val
                             .get("token_endpoint")
+                            .and_then(|v| v.as_str())
+                            .map(String::from);
+                        let registration_endpoint = json_val
+                            .get("registration_endpoint")
                             .and_then(|v| v.as_str())
                             .map(String::from);
                         let revocation_endpoint = json_val
@@ -425,6 +449,7 @@ pub async fn discover_oauth_endpoints(issuer_url: String) -> Result<OAuthDiscove
                             issuer,
                             authorization_endpoint,
                             token_endpoint,
+                            registration_endpoint,
                             revocation_endpoint,
                             scopes_supported,
                             code_challenge_methods_supported,
@@ -446,6 +471,7 @@ pub async fn discover_oauth_endpoints(issuer_url: String) -> Result<OAuthDiscove
         issuer: None,
         authorization_endpoint: None,
         token_endpoint: None,
+        registration_endpoint: None,
         revocation_endpoint: None,
         scopes_supported: None,
         code_challenge_methods_supported: None,
@@ -454,5 +480,59 @@ pub async fn discover_oauth_endpoints(issuer_url: String) -> Result<OAuthDiscove
         } else {
             last_err
         }),
+    })
+}
+
+/// Dynamically registers an OAuth 2.1 client with the Authorization Server (RFC 7591)
+pub async fn register_oauth_client(
+    registration_url: String,
+    client_name: String,
+    redirect_uris: Vec<String>,
+) -> Result<DynamicClientRegistrationResult, String> {
+    let client = Client::builder()
+        .timeout(Duration::from_secs(12))
+        .build()
+        .map_err(|e| format!("Falha ao inicializar cliente HTTP: {}", e))?;
+
+    let payload = serde_json::json!({
+        "client_name": client_name,
+        "redirect_uris": redirect_uris,
+        "grant_types": ["authorization_code", "refresh_token"],
+        "response_types": ["code"],
+        "token_endpoint_auth_method": "none"
+    });
+
+    let resp = client
+        .post(&registration_url)
+        .header("Content-Type", "application/json")
+        .header("Accept", "application/json")
+        .json(&payload)
+        .send()
+        .await
+        .map_err(|e| format!("Falha ao contatar endpoint de registro dinâmico: {}", e))?;
+
+    let status = resp.status();
+    let text = resp.text().await.unwrap_or_default();
+
+    if status.is_success() {
+        if let Ok(json_val) = serde_json::from_str::<serde_json::Value>(&text) {
+            let client_id = json_val.get("client_id").and_then(|v| v.as_str()).map(String::from);
+            let client_secret = json_val.get("client_secret").and_then(|v| v.as_str()).map(String::from);
+            if client_id.is_some() {
+                return Ok(DynamicClientRegistrationResult {
+                    success: true,
+                    client_id,
+                    client_secret,
+                    error: None,
+                });
+            }
+        }
+    }
+
+    Ok(DynamicClientRegistrationResult {
+        success: false,
+        client_id: None,
+        client_secret: None,
+        error: Some(format!("Registro dinâmico retornou HTTP {}: {}", status.as_u16(), text)),
     })
 }

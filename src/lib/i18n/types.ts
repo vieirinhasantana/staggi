@@ -120,6 +120,7 @@ export interface TranslationDictionary {
       endpointUrl: string;
       namePlaceholder: string;
       transportStdio: string;
+      transportHttp: string;
       transportSse: string;
       endpointPlaceholder: string;
       registerBtn: string;
