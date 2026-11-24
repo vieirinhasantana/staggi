@@ -118,8 +118,9 @@ class AutomationEmailService {
       task.description ||
       "Rotina automatizada de inteligência de mercado executada com sucesso.";
 
-    // Convert full markdown to sanitized HTML
-    const renderedResultHtml = marked.parse(resultText) as string;
+    // Convert full markdown to sanitized HTML after cleaning LaTeX escapes (e.g. '\$' -> '$')
+    const cleanResult = (resultText || "").replace(/\\(\$)/g, "$1");
+    const renderedResultHtml = marked.parse(cleanResult) as string;
 
     return `<!DOCTYPE html>
 <html lang="pt-BR">
@@ -245,20 +246,34 @@ class AutomationEmailService {
     .report-body table {
       width: 100%;
       border-collapse: collapse;
-      margin: 16px 0;
-      font-size: 13px;
+      margin: 18px 0;
+      font-size: 12px;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      overflow: hidden;
+      background-color: #ffffff;
     }
     .report-body th {
       background-color: #f1f5f9;
-      padding: 8px 12px;
+      padding: 10px 12px;
       text-align: left;
-      font-weight: 600;
+      font-weight: 700;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
       border: 1px solid #e2e8f0;
-      color: #1e293b;
+      color: #0f172a;
+      white-space: nowrap;
     }
     .report-body td {
-      padding: 8px 12px;
+      padding: 9px 12px;
       border: 1px solid #e2e8f0;
+      color: #334155;
+      font-size: 12px;
+      line-height: 1.4;
+    }
+    .report-body tr:nth-child(even) td {
+      background-color: #f8fafc;
     }
     .report-body ul, .report-body ol {
       padding-left: 20px;
