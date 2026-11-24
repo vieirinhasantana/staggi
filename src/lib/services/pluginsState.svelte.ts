@@ -82,25 +82,6 @@ const SKILLS_STORAGE_KEY = "staggi_skills_config_v1";
 
 const DEFAULT_MCPS: McpServerItem[] = [
   { 
-    id: "mcp-staggi-core", 
-    name: "staggi-portfolio", 
-    type: "Wealth Management & Advisory Core MCP", 
-    transport: "sse (Server-Sent)", 
-    endpoint: "http://localhost:8000/sse", 
-    active: true, 
-    apiKey: "staggi-secret-api-key-2026",
-    desc: "Staggi Wealth Core: Clients CRM, Portfolio Analytics, Trade Ideas & Client Communications (Proposal & Automation Email Dispatch)",
-    tools: [
-      { name: "send_automation_report_email", description: "Dispatches a formal wealth management automation report email with the exact institutional styling of trade ideas" },
-      { name: "send_portfolio_proposal_email", description: "Generates and dispatches a formal wealth management investment proposal email to a client" },
-      { name: "list_trade_ideas", description: "Lists curated wealth management investment recommendations" },
-      { name: "list_clients", description: "Queries and filters wealth management client accounts" },
-      { name: "get_portfolio_positions", description: "Retrieves active positions and metrics for a portfolio" },
-      { name: "get_asset_allocation", description: "Calculates current allocation percentages across asset classes" },
-      { name: "get_portfolio_metrics", description: "Calculates Sharpe ratio, volatility, and maximum drawdown" }
-    ]
-  },
-  { 
     id: "mcp-yahoo", 
     name: "mcp-yahoo-finance", 
     type: "Market Data MCP", 
@@ -113,174 +94,10 @@ const DEFAULT_MCPS: McpServerItem[] = [
       { name: "get_historical_dividends", description: "Historical dividend & JCP payments by ticker" },
       { name: "get_market_news", description: "Market news and sentiment analysis" }
     ]
-  },
-  { 
-    id: "mcp-tax", 
-    name: "mcp-tax-engine", 
-    type: "Tax Engine MCP", 
-    transport: "sse (Server-Sent)", 
-    endpoint: "http://localhost:3001/mcp", 
-    active: true, 
-    desc: "Cross-border tax rules, CFC regulations, and US Estate Tax IRS shielding"
-  },
-  { 
-    id: "mcp-financedatabase", 
-    name: "mcp-financedatabase", 
-    type: "Multi-Asset Screener MCP", 
-    transport: "stdio (Python / CLI)", 
-    endpoint: "python -m financedatabase_mcp", 
-    active: true, 
-    desc: "Global directory and screening with 300k+ assets (equities, ETFs, funds, indices, currencies, crypto) categorized by sector, industry, and country (Jeroen Bouma)"
-  },
-  { 
-    id: "mcp-equibles-etf", 
-    name: "mcp-equibles-etf-holdings", 
-    type: "ETF Transparency MCP", 
-    transport: "sse (HTTP / REST)", 
-    endpoint: "https://api.equibles.com/v1/etfs/mcp", 
-    active: true, 
-    desc: "Global ETF transparency: underlying asset weightings, sector breakdown, geographic exposure, and portfolio overlap analysis"
-  },
-  { 
-    id: "mcp-bonds", 
-    name: "mcp-bond-intelligence", 
-    type: "Fixed Income & Bonds MCP", 
-    transport: "stdio (CLI)", 
-    endpoint: "npx -y @mcp/bond-server", 
-    active: true, 
-    desc: "Global sovereign and corporate bond analytics: modified duration, convexity, yield to maturity (YTM), and credit rating"
-  },
-  { 
-    id: "mcp-treasury-yields", 
-    name: "mcp-treasury-yields", 
-    type: "Macro Sovereign Curve MCP", 
-    transport: "sse (Cloudflare Worker)", 
-    endpoint: "https://treasury-yields-rates-today-mcp.lipmichal.workers.dev/sse", 
-    active: true, 
-    desc: "Real-time US Treasury sovereign yield curve (1M to 30Y), current benchmark rates, and 10Y-2Y yield inversion spreads"
-  },
-  { 
-    id: "mcp-tickerinside", 
-    name: "mcp-tickerinside-insider", 
-    type: "Insider Trading & Smart Money MCP", 
-    transport: "sse (HTTP / Agent)", 
-    endpoint: "https://api.tickerinside.com/mcp/sse", 
-    active: true, 
-    desc: "Executive smart money tracking (SEC Form 4), institutional whale positioning, and insider transaction sentiment"
   }
 ];
 
-const DEFAULT_SKILLS: SkillDefinition[] = [
-  { 
-    id: "skill-etf-screening", 
-    name: "screening-assets-etf-transparency", 
-    slug: "screening",
-    description: "Cross-references global asset universe (FinanceDatabase) with ETF portfolio holdings and transparency (Equibles).", 
-    mcpDependency: "mcp-financedatabase, mcp-equibles-etf-holdings, mcp-yahoo-finance",
-    systemPrompt: `# Global Screening & ETF Transparency Skill Directives
-You are Staggi's multi-asset portfolio strategist:
-1. For ETFs and Index Funds, query mcp-equibles-etf-holdings to inspect underlying fund holdings:
-   - Detail top 10 constituents with corresponding weights.
-   - Analyze sector and geographic concentration.
-   - Detect fund overlap when comparing multiple ETFs.
-2. For corporate screening and sector classification, leverage mcp-financedatabase:
-   - Filter assets by country, sector, industry, asset class, and market cap.
-   - Provide structured markdown tables with selected companies.`,
-    active: true 
-  },
-  { 
-    id: "skill-renda-fixa-yield-curve", 
-    name: "fixed-income-treasuries-curve", 
-    slug: "fixed-income",
-    description: "Analyzes US sovereign yield curves (Treasuries) and prices sovereign/corporate bonds (duration, convexity, YTM).", 
-    mcpDependency: "mcp-treasury-yields, mcp-bond-intelligence",
-    systemPrompt: `# Fixed Income & Sovereign Yield Curve Skill Directives
-You are Staggi's senior macro and fixed income analyst:
-1. Query mcp-treasury-yields for current US Treasury curve rates (1M, 3M, 6M, 1Y, 2Y, 5Y, 10Y, 20Y, 30Y):
-   - Compute critical 10Y - 2Y slope and curve inversion spread.
-   - Determine the risk-free rate benchmark for equity valuation.
-2. Query mcp-bond-intelligence for government and corporate debt:
-   - Report Yield to Maturity (YTM), annual coupon, and maturity.
-   - Evaluate modified duration (interest rate sensitivity) and convexity.
-   - Assess credit ratings and credit spreads over benchmark Treasuries.`,
-    active: true 
-  },
-  { 
-    id: "skill-insider-smart-money", 
-    name: "smart-money-insider-flow", 
-    slug: "insider",
-    description: "Monitors officer/director buys and sells (SEC Form 4) and institutional whale transactions.", 
-    mcpDependency: "mcp-tickerinside-insider, mcp-yahoo-finance",
-    systemPrompt: `# Insider Trading & Smart Money Flow Directives
-You are Staggi's institutional capital flow and corporate governance analyst:
-1. Query mcp-tickerinside-insider to audit SEC Form 4 filings:
-   - Identify open-market purchases by C-suite executives and board members.
-   - Distinguish discretionary market purchases from routine Rule 10b5-1 selling plans or option exercises.
-   - Assess aggregate Insider Sentiment Score and transaction volume.
-2. Correlate insider signals with underlying valuation and recent price action.`,
-    active: true 
-  },
-  { 
-    id: "skill-valuation", 
-    name: "fundamental-valuation-analysis", 
-    slug: "valuation",
-    description: "Audits valuation multiples, ROE, Net Margin, Graham Intrinsic Value, and Bazin ceiling.", 
-    mcpDependency: "mcp-yahoo-finance, mcp-financedatabase",
-    systemPrompt: `# Fundamental Valuation Skill Directives
-You are Staggi's senior equity research analyst:
-1. Evaluate verified financial multiples:
-   - Valuation: P/E, P/B, EV/EBITDA, P/S, Graham Intrinsic Formula, and Bazin Ceiling Price (DY 6%).
-   - Profitability: ROE, ROIC, Gross Margin, EBITDA Margin, and Net Margin.
-   - Leverage: Net Debt/EBITDA and Current Ratio.
-   - Dividend Consistency: 5-year average Dividend Yield and Payout Ratio.
-2. Assess durable competitive advantages (Economic Moats) and corporate governance quality.
-3. Deliver a concise executive synthesis with Ceiling Price, Margin of Safety, and Allocation Stance.`,
-    active: true 
-  },
-  { 
-    id: "skill-proventos", 
-    name: "dividend-cashflow-analysis", 
-    slug: "dividends",
-    description: "Forecasts dividend cashflows, filters declared distributions, and calculates yield.", 
-    mcpDependency: "mcp-yahoo-finance",
-    systemPrompt: `# Dividend & Yield Cashflow Skill Directives
-You are Staggi's passive income analytics engine:
-1. STRICT TEMPORAL FILTERING:
-   - When the user asks for dividends of a specific period (e.g. "desse ano", "deste ano", "somente 2024", "último trimestre"), filter and show ONLY distributions for that exact period.
-   - Do NOT output multi-year historical tables unless the user explicitly requested "histórico" or multi-year evolution.
-2. Structure output into structured Markdown tables:
-   - Declared Distributions Table: | Type | Amount per Share | Ex-Dividend Date | Payment Date |
-   - Period Total (R$) and Dividend Yield on current price.
-   - Only include a Historical Annual Yield Table (| Year | Total Dividends | Average Price | Annual DY |) if explicitly requested.`,
-    active: true 
-  },
-  { 
-    id: "skill-report", 
-    name: "executive-wealth-advisory", 
-    slug: "report",
-    description: "Generates executive wealth advisory opinion and consolidated Sharpe ratio analysis.", 
-    mcpDependency: "mcp-yahoo-finance, mcp-financedatabase",
-    systemPrompt: `# Executive Advisory Directives
-You are Staggi's senior private wealth strategist:
-1. Assess consolidated portfolio metrics, 12-month volatility, and Sharpe Ratio.
-2. Formulate 3 distinct rebalancing recommendations (Increase, Hold, Reduce).
-3. Produce a polished executive briefing suitable for family office or client presentation.`,
-    active: true 
-  },
-  { 
-    id: "skill-offshore", 
-    name: "offshore-us-estate-tax-audit", 
-    slug: "offshore",
-    description: "Audits direct US Situs Asset exposure against IRS $60,000 threshold.", 
-    mcpDependency: "mcp-tax-engine, mcp-financedatabase",
-    systemPrompt: `# Offshore & US Estate Tax Audit Directives
-You are Staggi's international wealth structuring auditor:
-1. Identify US Situs Assets held by non-US resident aliens.
-2. Critical Threshold: USD 60,000 (18% to 40% estate tax rates on excess values upon succession).
-3. Recommend optimal structuring via Irish/Luxembourg UCITS ETFs or foreign holding vehicles to eliminate US estate tax liability.`,
-    active: true 
-  }
-];
+const DEFAULT_SKILLS: SkillDefinition[] = [];
 
 function loadStoredMcps(): McpServerItem[] {
   if (typeof window === "undefined") return DEFAULT_MCPS;
@@ -292,32 +109,53 @@ function loadStoredMcps(): McpServerItem[] {
     }
     const parsed: McpServerItem[] = JSON.parse(raw);
     if (Array.isArray(parsed)) {
+      const obsoleteIds = new Set([
+        "mcp-staggi-core",
+        "mcp-tax",
+        "mcp-financedatabase",
+        "mcp-equibles-etf",
+        "mcp-bonds",
+        "mcp-treasury-yields",
+        "mcp-tickerinside",
+        "mcp-bloomberg",
+        "mcp-investidor10",
+        "mcp-custodia",
+      ]);
+      const obsoleteNames = new Set([
+        "staggi-portfolio",
+        "mcp-tax-engine",
+        "mcp-financedatabase",
+        "mcp-equibles-etf-holdings",
+        "mcp-bond-intelligence",
+        "mcp-treasury-yields",
+        "mcp-tickerinside-insider",
+        "mcp-bloomberg-terminal",
+        "mcp-investidor10",
+        "mcp-custodia-offshore",
+      ]);
+
       const filtered = parsed.filter(
-        (m) =>
-          m &&
-          m.id !== "mcp-bloomberg" &&
-          m.name !== "mcp-bloomberg-terminal" &&
-          m.id !== "mcp-investidor10" &&
-          m.name !== "mcp-investidor10" &&
-          m.id !== "mcp-custodia" &&
-          m.name !== "mcp-custodia-offshore"
+        (m) => m && !obsoleteIds.has(m.id) && !obsoleteNames.has(m.name)
       );
-      const updated = filtered.map((m) => {
-        if (m.id === "mcp-yahoo") {
+
+      const hasYahoo = filtered.some((m) => m.id === "mcp-yahoo" || m.name === "mcp-yahoo-finance");
+      const result = hasYahoo ? filtered : [DEFAULT_MCPS[0], ...filtered];
+
+      const updated = result.map((m) => {
+        if (m.id === "mcp-yahoo" || m.name === "mcp-yahoo-finance") {
           return {
             ...m,
+            id: "mcp-yahoo",
+            name: "mcp-yahoo-finance",
             transport: "builtin (Native MCP)",
             endpoint: "builtin://yahoo-finance",
-            tools: m.tools && m.tools.length > 0 ? m.tools : (DEFAULT_MCPS[1].tools || []),
+            tools: DEFAULT_MCPS[0].tools || [],
           };
         }
         return m;
       });
 
-      const hasStaggiCore = updated.some((m) => m.id === "mcp-staggi-core" || m.name === "staggi-portfolio");
-      if (!hasStaggiCore) {
-        return [DEFAULT_MCPS[0], ...updated];
-      }
+      localStorage.setItem(MCPS_STORAGE_KEY, JSON.stringify(updated));
       return updated;
     }
     return DEFAULT_MCPS;
@@ -336,24 +174,21 @@ function loadStoredSkills(): SkillDefinition[] {
     }
     const parsed: SkillDefinition[] = JSON.parse(raw);
     if (Array.isArray(parsed)) {
-      return parsed
-        .filter(
-          (s) =>
-            s &&
-            s.id !== "skill-bloomberg" &&
-            s.name !== "terminal-bloomberg-intelligence" &&
-            s.id !== "skill-investidor10" &&
-            s.name !== "analise-fundamentalista-investidor10"
-        )
-        .map((s) => {
-          if (s.id === "skill-proventos") {
-            const def = DEFAULT_SKILLS.find((d) => d.id === "skill-proventos");
-            if (def && (!s.systemPrompt || s.systemPrompt.includes("Historical Annual Yield Table: | Year | Total Dividends | Average Price | Annual DY |"))) {
-              return { ...s, systemPrompt: def.systemPrompt, description: def.description };
-            }
-          }
-          return s;
-        });
+      const obsoleteSkillIds = new Set([
+        "skill-etf-screening",
+        "skill-renda-fixa-yield-curve",
+        "skill-insider-smart-money",
+        "skill-valuation",
+        "skill-proventos",
+        "skill-report",
+        "skill-offshore",
+        "skill-bloomberg",
+        "skill-investidor10",
+      ]);
+
+      const filtered = parsed.filter((s) => s && !obsoleteSkillIds.has(s.id));
+      localStorage.setItem(SKILLS_STORAGE_KEY, JSON.stringify(filtered));
+      return filtered;
     }
     return DEFAULT_SKILLS;
   } catch {
