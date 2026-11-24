@@ -86,19 +86,16 @@ class AutomationEmailService {
         })
       : "Conforme agendamento";
 
-    const lastLog = task.logs?.[0];
-    const durationStr = lastLog?.durationMs ? `${lastLog.durationMs}ms` : "< 1s";
-
     const statusMap = {
       SUCCESS: {
         badge_bg: "#dcfce7",
         badge_text: "#16a34a",
-        label: "EXECUÇÃO CONCLUÍDA COM SUCESSO",
+        label: "MONITORAMENTO ATIVO",
       },
       WARNING: {
         badge_bg: "#fef3c7",
         badge_text: "#d97706",
-        label: "ATENÇÃO: AÇÃO RECOMENDADA",
+        label: "AÇÃO RECOMENDADA",
       },
       ALERT: {
         badge_bg: "#fee2e2",
@@ -108,26 +105,21 @@ class AutomationEmailService {
     };
     const stInfo = statusMap[status] || statusMap.SUCCESS;
 
-    // Executive summary (first 2 paragraphs or ~250 chars)
-    const summaryLines = resultText
-      .split("\n")
-      .map((l) => l.trim())
-      .filter((l) => l.length > 0 && !l.startsWith("#"));
-    const executiveSummary =
-      summaryLines.slice(0, 2).join(" ") ||
-      task.description ||
-      "Rotina automatizada de inteligência de mercado executada com sucesso.";
-
     // Convert full markdown to sanitized HTML after cleaning LaTeX escapes (e.g. '\$' -> '$')
     const cleanResult = (resultText || "").replace(/\\(\$)/g, "$1");
     const renderedResultHtml = marked.parse(cleanResult) as string;
+
+    const emailTitle =
+      status === "ALERT" || status === "WARNING"
+        ? `[${status === "ALERT" ? "ALERTA" : "ATENÇÃO"}] Staggi Wealth • ${task.name}`
+        : `Staggi Wealth • ${task.name}`;
 
     return `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Staggi Automation: ${task.name}</title>
+  <title>${emailTitle}</title>
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
@@ -192,42 +184,17 @@ class AutomationEmailService {
       background-color: #f8fafc;
       border: 1px solid #e2e8f0;
       border-radius: 10px;
-      padding: 20px 24px;
+      padding: 18px 22px;
       margin: 20px 0;
     }
     .card-title {
-      font-size: 13px;
+      font-size: 12px;
       font-weight: 700;
       text-transform: uppercase;
       color: #0284c7;
       letter-spacing: 0.05em;
       margin-top: 0;
-      margin-bottom: 12px;
-    }
-    .metrics-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      margin: 16px 0 0 0;
-    }
-    .metric-box {
-      background: #ffffff;
-      border: 1px solid #e2e8f0;
-      border-radius: 8px;
-      padding: 12px 14px;
-    }
-    .metric-label {
-      font-size: 11px;
-      color: #64748b;
-      text-transform: uppercase;
-      font-weight: 600;
-      letter-spacing: 0.03em;
-    }
-    .metric-value {
-      font-size: 16px;
-      font-weight: 700;
-      color: #0f172a;
-      margin-top: 4px;
+      margin-bottom: 8px;
     }
     .section-title {
       font-size: 15px;
@@ -320,60 +287,47 @@ class AutomationEmailService {
 <body>
   <div class="container">
     <div class="header">
-      <div class="subtitle">Staggi Wealth Management • Offshore Automation</div>
+      <div class="subtitle">Staggi Wealth Management • Relatório de Acompanhamento</div>
       <h1>${task.name}</h1>
     </div>
     <div class="content">
       <div class="status-badge">${stInfo.label}</div>
       <p class="greeting">
-        Relatório automático gerado pelo terminal Staggi em <strong>${dateStr}</strong> para <strong>${recipientEmail}</strong>.
+        Relatório de monitoramento patrimonial atualizado em <strong>${dateStr}</strong> para <strong>${recipientEmail}</strong>.
       </p>
 
+      ${
+        task.description && task.description.trim()
+          ? `
       <div class="card">
-        <div class="card-title">Resumo Executivo da Execução</div>
-        <p style="margin: 0; font-size: 14px; line-height: 1.6; color: #334155;">
-          ${executiveSummary}
+        <div class="card-title">Objetivo do Monitoramento</div>
+        <p style="margin: 0; font-size: 13px; line-height: 1.6; color: #334155;">
+          ${task.description}
         </p>
-        <div class="metrics-grid">
-          <div class="metric-box">
-            <div class="metric-label">Status da Rotina</div>
-            <div class="metric-value" style="color: ${stInfo.badge_text};">${status}</div>
-          </div>
-          <div class="metric-box">
-            <div class="metric-label">Tempo de Processamento</div>
-            <div class="metric-value">${durationStr}</div>
-          </div>
-          <div class="metric-box">
-            <div class="metric-label">Intervalo de Recorrência</div>
-            <div class="metric-value">A cada ${task.intervalMinutes} min</div>
-          </div>
-          <div class="metric-box">
-            <div class="metric-label">Próxima Execução</div>
-            <div class="metric-value" style="font-size: 13px; font-weight: 600; margin-top: 6px;">${nextRunStr}</div>
-          </div>
-        </div>
-      </div>
+      </div>`
+          : ""
+      }
 
-      <div class="section-title">Resultados e Detalhamento da Rotina</div>
+      <div class="section-title">Resultados do Monitoramento</div>
       <div class="report-body">
         ${renderedResultHtml}
       </div>
 
-      <div class="section-title">Próximos Passos & Monitoramento</div>
+      <div class="section-title">Próximos Passos & Alocação</div>
       <p style="font-size: 13px; line-height: 1.6; color: #475569; margin: 0 0 20px 0;">
-        Os parâmetros operacionais e de risco permanecem sob acompanhamento contínuo da esteira de automações do Staggi.
-        Para interagir diretamente com os resultados ou solicitar rebalanceamento, acesse o terminal.
+        Os parâmetros de risco e oportunidades identificadas permanecem sob monitoramento ativo.
+        Para estruturar estratégias de rebalanceamento ou consultar detalhes operacionais, contate sua assessoria de investimentos.
       </p>
 
       <div class="btn-container">
-        <a href="mailto:advisory@staggi.com.br?subject=FEEDBACK%20AUTOMAÇÃO%20${encodeURIComponent(task.name)}" class="btn">
-          Revisar Alertas no Terminal Staggi
+        <a href="mailto:advisory@staggi.com.br?subject=FEEDBACK%20MONITORAMENTO%20${encodeURIComponent(task.name)}" class="btn">
+          Acessar Terminal Staggi
         </a>
       </div>
     </div>
     <div class="footer">
-      <strong>Staggi Wealth Management</strong> • Monitoramento Automatizado de Carteiras e Risco Offshore<br>
-      Este e-mail é gerado automaticamente pelo motor fiduciário de automações do Staggi.
+      <strong>Staggi Wealth Management</strong> • Inteligência e Gestão Patrimonial Offshore<br>
+      Comunicação confidencial para acompanhamento de carteiras e suporte à tomada de decisão de investimentos.
     </div>
   </div>
 </body>
@@ -388,21 +342,15 @@ class AutomationEmailService {
   ): string {
     const dateStr = new Date().toLocaleString("pt-BR");
     return `=======================================================
-STAGGI WEALTH MANAGEMENT - RELATÓRIO DE AUTOMAÇÃO
+STAGGI WEALTH MANAGEMENT - RELATÓRIO DE MONITORAMENTO
 =======================================================
-Automação: ${task.name}
+Assunto: ${task.name}
 Data/Hora: ${dateStr}
-Status: ${status}
 Destinatário: ${recipientEmail}
-Intervalo: Cada ${task.intervalMinutes} minutos
 
+${task.description ? `=======================================================\nOBJETIVO DO MONITORAMENTO\n=======================================================\n${task.description}\n` : ""}
 =======================================================
-RESUMO DA EXECUÇÃO
-=======================================================
-${task.description || "Rotina automatizada executada pelo terminal Staggi."}
-
-=======================================================
-RESULTADO COMPLETO
+RESULTADOS DO MONITORAMENTO
 =======================================================
 ${resultText}
 
@@ -435,7 +383,9 @@ Staggi Wealth Management • advisory@staggi.com.br
     const subject =
       options?.overrideSubject ||
       task.emailSubject ||
-      `Staggi Automation Report: ${task.name} [${status}]`;
+      (status === "ALERT" || status === "WARNING"
+        ? `[${status === "ALERT" ? "ALERTA" : "ATENÇÃO"}] Staggi Wealth • ${task.name}`
+        : `Staggi Wealth • ${task.name}`);
 
     const htmlContent = this.generateHtml(task, resultText, recipient, status);
     const plainText = this.generatePlainText(task, resultText, recipient, status);
@@ -455,15 +405,10 @@ Staggi Wealth Management • advisory@staggi.com.br
           "send_automation_report_email",
           {
             automation_name: task.name,
-            summary: task.description || `Relatório de execução de ${task.name}`,
+            summary: task.description || `Relatório de acompanhamento patrimonial: ${task.name}`,
             details: resultText,
             recipient_email: recipient,
             status,
-            metrics: {
-              "Intervalo (min)": task.intervalMinutes,
-              "Status": status,
-            },
-            custom_notes: `Disparo automático do Staggi Desktop Scheduler (${subject}).`,
           }
         );
 
