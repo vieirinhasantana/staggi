@@ -126,7 +126,7 @@ pub async fn query_mcp_sse_tools(
             "capabilities": {},
             "clientInfo": {
                 "name": "staggi",
-                "version": "0.1.0"
+                "version": "0.1.1"
             }
         }
     });
@@ -273,7 +273,7 @@ pub async fn query_direct_http_mcp_tools(
                     "params": {
                         "protocolVersion": "2024-11-05",
                         "capabilities": {},
-                        "clientInfo": { "name": "staggi", "version": "0.1.0" }
+                        "clientInfo": { "name": "staggi", "version": "0.1.1" }
                     }
                 });
                 let init_req = client.post(&url).json(&init_payload);
@@ -650,7 +650,7 @@ pub async fn call_mcp_tool(
             "params": {
                 "protocolVersion": "2024-11-05",
                 "capabilities": {},
-                "clientInfo": { "name": "staggi", "version": "0.1.0" }
+                "clientInfo": { "name": "staggi", "version": "0.1.1" }
             }
         });
         let req_init = client.post(&post_url).json(&init_payload);
@@ -767,7 +767,7 @@ pub async fn call_mcp_tool(
                         "params": {
                             "protocolVersion": "2024-11-05",
                             "capabilities": {},
-                            "clientInfo": { "name": "staggi", "version": "0.1.0" }
+                            "clientInfo": { "name": "staggi", "version": "0.1.1" }
                         }
                     });
                     let init_req = client.post(&url).json(&init_payload);

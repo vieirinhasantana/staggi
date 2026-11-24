@@ -17,7 +17,7 @@ const STORAGE_KEY_LAST_CHECKED = "staggi_updater_last_checked";
 
 class UpdaterService {
   status = $state<UpdateStatus>("idle");
-  currentVersion = $state<string>("0.1.0");
+  currentVersion = $state<string>("0.1.1");
   availableVersion = $state<string>("");
   releaseDate = $state<string>("");
   releaseNotes = $state<string>("");
