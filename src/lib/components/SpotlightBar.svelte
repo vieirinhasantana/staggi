@@ -153,8 +153,7 @@
 <div 
   role="presentation"
   data-tauri-drag-region
-  onmousedown={handleMouseDown}
-  class="relative z-30 w-full rounded-[28px] border border-white/[0.14] ring-1 ring-white/[0.06] bg-[#212121]/98 shadow-[0_2px_10px_rgba(0,0,0,0.35),0_12px_32px_-4px_rgba(0,0,0,0.55),0_24px_50px_-6px_rgba(0,0,0,0.65),inset_0_1px_0_0_rgba(255,255,255,0.15)] backdrop-blur-2xl transition-all duration-200 select-none cursor-grab active:cursor-grabbing"
+  class="relative z-30 w-full rounded-[28px] border border-white/[0.14] ring-1 ring-white/[0.06] bg-[#212121]/98 shadow-[0_2px_10px_rgba(0,0,0,0.35),0_12px_32px_-4px_rgba(0,0,0,0.55),0_24px_50px_-6px_rgba(0,0,0,0.65),inset_0_1px_0_0_rgba(255,255,255,0.15)] backdrop-blur-2xl transition-[box-shadow,border-color] duration-200 select-none cursor-grab active:cursor-grabbing"
 >
   <div data-tauri-drag-region class="px-5 pt-4 pb-2 flex items-center">
     <textarea

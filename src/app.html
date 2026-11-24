@@ -5,6 +5,13 @@
     <link rel="icon" href="%sveltekit.assets%/favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Staggi</title>
+    <script>
+      try {
+        if (/Windows|Win32|Win64/i.test(navigator.userAgent) || (navigator.platform && navigator.platform.indexOf("Win") !== -1)) {
+          document.documentElement.classList.add("platform-windows");
+        }
+      } catch (e) {}
+    </script>
     %sveltekit.head%
   </head>
   <body data-sveltekit-preload-data="hover" class="bg-transparent overflow-hidden" style="background: transparent !important; background-color: transparent !important;">
