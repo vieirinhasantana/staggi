@@ -190,6 +190,9 @@ ${targetSkill.systemPrompt}`;
         shouldExecute = true;
       } else if (toolName === "list_trade_ideas" && /\b(trade ideas?|ideias? de trade|teses?|recomendações?|oportunidades?)\b/i.test(cleanPrompt)) {
         shouldExecute = true;
+      } else if ((toolName === "send_automation_report_email" || toolName === "send_portfolio_proposal_email") &&
+        /\b(envi(?:ar|e)|dispar(?:ar|e)|notific(?:ar|que)|mand(?:ar|e))\b.*\b(e-?mails?|relat[oó]rio|proposta|resultado)\b/i.test(cleanPrompt)) {
+        shouldExecute = true;
       } else if (toolName === "list_indexed_documents" && /\b(documentos?|pdfs?|relat[oó]rios? indexados?)\b/i.test(cleanPrompt)) {
         shouldExecute = true;
       } else if ((toolName.includes("quote") || toolName.includes("price") || toolName.includes("ticker") || toolName.includes("cotacao") || toolName.includes("preco") || toolName.includes("dividend") || toolName.includes("provento")) &&

@@ -24,6 +24,25 @@ const SKILLS_STORAGE_KEY = "staggi_skills_config_v1";
 
 const DEFAULT_MCPS: McpServerItem[] = [
   { 
+    id: "mcp-staggi-core", 
+    name: "staggi-portfolio", 
+    type: "Wealth Management & Advisory Core MCP", 
+    transport: "sse (Server-Sent)", 
+    endpoint: "http://localhost:8000/sse", 
+    active: true, 
+    apiKey: "staggi-secret-api-key-2026",
+    desc: "Staggi Wealth Core: Clients CRM, Portfolio Analytics, Trade Ideas & Client Communications (Proposal & Automation Email Dispatch)",
+    tools: [
+      { name: "send_automation_report_email", description: "Dispatches a formal wealth management automation report email with the exact institutional styling of trade ideas" },
+      { name: "send_portfolio_proposal_email", description: "Generates and dispatches a formal wealth management investment proposal email to a client" },
+      { name: "list_trade_ideas", description: "Lists curated wealth management investment recommendations" },
+      { name: "list_clients", description: "Queries and filters wealth management client accounts" },
+      { name: "get_portfolio_positions", description: "Retrieves active positions and metrics for a portfolio" },
+      { name: "get_asset_allocation", description: "Calculates current allocation percentages across asset classes" },
+      { name: "get_portfolio_metrics", description: "Calculates Sharpe ratio, volatility, and maximum drawdown" }
+    ]
+  },
+  { 
     id: "mcp-yahoo", 
     name: "mcp-yahoo-finance", 
     type: "Market Data MCP", 
@@ -225,17 +244,23 @@ function loadStoredMcps(): McpServerItem[] {
           m.id !== "mcp-custodia" &&
           m.name !== "mcp-custodia-offshore"
       );
-      return filtered.map((m) => {
+      const updated = filtered.map((m) => {
         if (m.id === "mcp-yahoo") {
           return {
             ...m,
             transport: "builtin (Native MCP)",
             endpoint: "builtin://yahoo-finance",
-            tools: m.tools && m.tools.length > 0 ? m.tools : (DEFAULT_MCPS[0].tools || []),
+            tools: m.tools && m.tools.length > 0 ? m.tools : (DEFAULT_MCPS[1].tools || []),
           };
         }
         return m;
       });
+
+      const hasStaggiCore = updated.some((m) => m.id === "mcp-staggi-core" || m.name === "staggi-portfolio");
+      if (!hasStaggiCore) {
+        return [DEFAULT_MCPS[0], ...updated];
+      }
+      return updated;
     }
     return DEFAULT_MCPS;
   } catch {

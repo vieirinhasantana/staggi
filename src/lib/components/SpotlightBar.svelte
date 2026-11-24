@@ -195,19 +195,17 @@
         </button>
       {/if}
 
-      {#if tasksStore.totalCount > 0 || tasksStore.isRunningAny || tasksStore.activeAlert}
+      {#if tasksStore.totalCount > 0 || tasksStore.isRunningAny}
         <button 
           type="button"
           onclick={() => togglePopover("tasks")}
           title="Click to view {tasksStore.totalCount} Scheduled Background Automations"
-          class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border transition-all cursor-pointer text-[11px] {activePopover === 'tasks' ? 'bg-sky-500/20 border-sky-500/40 text-sky-300 shadow-[0_0_12px_rgba(14,165,233,0.25)]' : tasksStore.activeAlert ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.3)]' : 'bg-sky-500/10 border-sky-500/20 text-sky-400 hover:bg-sky-500/15'}"
+          class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border transition-all cursor-pointer text-[11px] {activePopover === 'tasks' ? 'bg-sky-500/20 border-sky-500/40 text-sky-300 shadow-[0_0_12px_rgba(14,165,233,0.25)]' : 'bg-sky-500/10 border-sky-500/20 text-sky-400 hover:bg-sky-500/15'}"
         >
           <Clock class="h-3.5 w-3.5 text-sky-400" />
           <span class="font-semibold">{tasksStore.activeCount}/{tasksStore.totalCount} {tasksStore.totalCount === 1 ? 'Task' : 'Tasks'}</span>
           {#if tasksStore.isRunningAny}
             <span class="h-1.5 w-1.5 rounded-full bg-amber-400 animate-ping" title="Running task..."></span>
-          {:else if tasksStore.activeAlert}
-            <span class="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" title="New task execution result available"></span>
           {/if}
         </button>
       {/if}

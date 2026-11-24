@@ -1,4 +1,6 @@
 import { queryGemini } from "./geminiService";
+import { automationEmailStore } from "./automationEmailService.svelte";
+import { toastStore } from "./toastService.svelte";
 import type { TaskExecutionLog, ScheduledTask, TaskAlert } from "$lib/types";
 export type { TaskExecutionLog, ScheduledTask, TaskAlert };
 
@@ -182,13 +184,39 @@ class TasksStore {
       const nextRunIso = new Date(Date.now() + task.intervalMinutes * 60 * 1000).toISOString();
 
       if (result.success) {
+        let emailStatus: "sent" | "simulated" | "failed" | undefined = undefined;
+        const targetRecipient = (
+          task.emailRecipient?.trim() ||
+          automationEmailStore.config.defaultRecipient ||
+          "advisory@staggi.com.br"
+        ).trim();
+
+        const logSummary = result.text.replace(/\s+/g, " ").trim().slice(0, 180) + (result.text.length > 180 ? "..." : "");
+
         const newLog: TaskExecutionLog = {
           id: String(Date.now()),
           timestamp: nowIso,
           status: "success",
-          summary: result.text.slice(0, 250) + (result.text.length > 250 ? "..." : ""),
+          summary: logSummary,
           durationMs
         };
+
+        // Automatic email dispatch upon every successful routine completion (no manual click needed)
+        if (targetRecipient) {
+          try {
+            const emailResult = await automationEmailStore.dispatchAutomationEmail(task, result.text, {
+              overrideRecipient: targetRecipient
+            });
+            emailStatus = emailResult.status;
+            newLog.emailSent = emailResult.success;
+            newLog.emailRecipient = targetRecipient;
+            newLog.emailStatus = emailResult.status;
+          } catch (e) {
+            console.warn("[TasksStore] Failed to dispatch automation email automatically:", e);
+            emailStatus = "failed";
+            newLog.emailStatus = "failed";
+          }
+        }
 
         let updatedTask: ScheduledTask | undefined;
 
@@ -202,6 +230,8 @@ class TasksStore {
               lastResult: result.text,
               lastError: undefined,
               executionCount: (t.executionCount || 0) + 1,
+              lastEmailStatus: emailStatus,
+              lastEmailTimestamp: emailStatus ? nowIso : t.lastEmailTimestamp,
               logs: [newLog, ...(t.logs || []).slice(0, 29)]
             };
             return updatedTask;
@@ -211,33 +241,15 @@ class TasksStore {
         this.runningTaskId = null;
         this.saveToStorage();
 
-        const summarySnippet = result.text.replace(/\s+/g, " ").trim().slice(0, 160) + (result.text.length > 160 ? "..." : "");
-        this.activeAlert = {
-          id: `alert-${Date.now()}`,
-          taskId: task.id,
-          taskName: task.name,
-          status: "success",
-          summary: summarySnippet,
-          result: result.text,
-          timestamp: nowIso,
-          durationMs
-        };
+        toastStore.success(
+          "Rotina Executada",
+          emailStatus === "sent"
+            ? `"${task.name}" finalizada e relatório enviado para ${targetRecipient}.`
+            : `"${task.name}" finalizada com sucesso.`
+        );
 
         if (this.viewingTaskResult?.id === id && updatedTask) {
           this.viewingTaskResult = updatedTask;
-        }
-
-        if (typeof window !== "undefined" && "Notification" in window) {
-          try {
-            if (Notification.permission === "granted") {
-              new Notification(`Staggi: Tarefa Executada`, {
-                body: `${task.name} concluída com sucesso. Clique para ver o resultado.`,
-              });
-            } else if (Notification.permission === "default") {
-              Notification.requestPermission().catch(() => {});
-            }
-          } catch {
-          }
         }
 
         return true;
@@ -267,16 +279,10 @@ class TasksStore {
         this.runningTaskId = null;
         this.saveToStorage();
 
-        this.activeAlert = {
-          id: `alert-${Date.now()}`,
-          taskId: task.id,
-          taskName: task.name,
-          status: "error",
-          summary: "Erro ao executar tarefa agendada.",
-          error: errorMsg,
-          timestamp: nowIso,
-          durationMs
-        };
+        toastStore.error(
+          "Falha na Rotina",
+          `Erro ao executar "${task.name}": ${errorMsg}`
+        );
 
         return false;
       }
@@ -309,16 +315,10 @@ class TasksStore {
       this.runningTaskId = null;
       this.saveToStorage();
 
-      this.activeAlert = {
-        id: `alert-${Date.now()}`,
-        taskId: task.id,
-        taskName: task.name,
-        status: "error",
-        summary: "Erro fatal ao invocar IA na tarefa.",
-        error: errorMsg,
-        timestamp: nowIso,
-        durationMs
-      };
+      toastStore.error(
+        "Erro na Rotina",
+        `Falha ao processar "${task.name}": ${errorMsg}`
+      );
 
       return false;
     }

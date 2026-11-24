@@ -8,9 +8,12 @@
     Trash2,
     Save,
     FileText,
+    Mail,
+    Settings,
   } from "@lucide/svelte";
   import { tasksStore } from "$lib/services/tasksState.svelte";
   import { toastStore } from "$lib/services/toastService.svelte";
+  import { automationEmailStore } from "$lib/services/automationEmailService.svelte";
   import type { ScheduledTask } from "$lib/types";
   import { formatRelativeTime, formatMinutesLabel } from "$lib/utils/formatters";
   import { t } from "$lib/i18n";
@@ -23,12 +26,18 @@
 
   let isCreatingTask = $state(false);
   let editingTaskId = $state<string | null>(null);
+  let showEmailGlobalSettings = $state(false);
 
   let taskFormName = $state("");
   let taskFormDesc = $state("");
   let taskFormPrompt = $state("");
   let taskFormInterval = $state<number>(60);
   let taskFormActive = $state(true);
+  let taskFormNotifyEmail = $state(true);
+  let taskFormEmailRecipient = $state(automationEmailStore.config.defaultRecipient || "advisory@staggi.com.br");
+  let taskFormEmailSubject = $state("");
+
+  let globalDefaultRecipient = $state(automationEmailStore.config.defaultRecipient);
 
   function startCreateTask() {
     isCreatingTask = true;
@@ -38,6 +47,9 @@
     taskFormPrompt = "";
     taskFormInterval = 60;
     taskFormActive = true;
+    taskFormNotifyEmail = true;
+    taskFormEmailRecipient = automationEmailStore.config.defaultRecipient || "advisory@staggi.com.br";
+    taskFormEmailSubject = "";
   }
 
   function startEditTask(task: ScheduledTask) {
@@ -48,19 +60,26 @@
     taskFormPrompt = task.prompt;
     taskFormInterval = task.intervalMinutes;
     taskFormActive = task.active;
+    taskFormNotifyEmail = true;
+    taskFormEmailRecipient = task.emailRecipient || automationEmailStore.config.defaultRecipient || "advisory@staggi.com.br";
+    taskFormEmailSubject = task.emailSubject || "";
   }
 
   function handleSaveTask() {
     if (!taskFormName.trim() || !taskFormPrompt.trim()) return;
     const name = taskFormName.trim();
+    const recipient = (taskFormEmailRecipient.trim() || automationEmailStore.config.defaultRecipient || "advisory@staggi.com.br").trim();
 
     if (isCreatingTask) {
       tasksStore.addTask({
         name,
-        description: taskFormDesc.trim() || "Automated scheduled routine",
+        description: taskFormDesc.trim() || "Rotina automatizada de inteligência",
         prompt: taskFormPrompt.trim(),
         intervalMinutes: Math.max(1, Number(taskFormInterval) || 60),
         active: taskFormActive,
+        notifyEmail: true,
+        emailRecipient: recipient,
+        emailSubject: taskFormEmailSubject.trim() || undefined,
       });
       toastStore.success(
         t("toasts.taskScheduledTitle"),
@@ -73,6 +92,9 @@
         prompt: taskFormPrompt.trim(),
         intervalMinutes: Math.max(1, Number(taskFormInterval) || 60),
         active: taskFormActive,
+        notifyEmail: true,
+        emailRecipient: recipient,
+        emailSubject: taskFormEmailSubject.trim() || undefined,
       });
       toastStore.success(
         t("toasts.taskUpdatedTitle"),
@@ -96,29 +118,21 @@
 
   async function handleRunTaskNow(id: string) {
     const task = tasksStore.tasks.find((t) => t.id === id);
-    const name = task ? task.name : "Routine";
+    const name = task ? task.name : "Rotina";
     toastStore.info(
-      t("toasts.taskRunningTitle"),
-      t("toasts.taskRunningDesc", { name })
+      "Executando Rotina",
+      `Iniciando "${name}" em segundo plano...`
     );
     await tasksStore.runTaskNow(id);
     const updated = tasksStore.tasks.find((t) => t.id === id);
     if (updated && updated.lastResult) {
-      toastStore.success(
-        t("toasts.taskSuccessTitle"),
-        t("toasts.taskSuccessDesc", { name: updated.name })
-      );
       onViewResult(updated);
-    } else if (updated && updated.lastStatus === "error") {
-      toastStore.error(
-        t("toasts.taskErrorTitle"),
-        updated.lastError || "Error executing automated task."
-      );
     }
   }
 </script>
 
 <div class="space-y-4">
+  <!-- Create Button Banner -->
   {#if !isCreatingTask && !editingTaskId}
     <button
       type="button"
@@ -150,9 +164,10 @@
     </button>
   {/if}
 
+  <!-- Task Form (Create / Edit) -->
   {#if isCreatingTask || editingTaskId}
     <div
-      class="rounded-2xl bg-[#262626] border border-sky-500/30 p-4 space-y-3.5 animate-fade-in"
+      class="rounded-2xl bg-[#262626] border border-sky-500/30 p-4 space-y-3.5 animate-fade-in shadow-lg"
     >
       <div
         class="flex items-center justify-between pb-2 border-b border-white/[0.08]"
@@ -204,7 +219,7 @@
               <button
                 type="button"
                 onclick={() => (taskFormInterval = preset)}
-                class="px-2.5 py-1 rounded-lg text-xs  transition-all cursor-pointer {taskFormInterval === preset
+                class="px-2.5 py-1 rounded-lg text-xs transition-all cursor-pointer {taskFormInterval === preset
                   ? 'bg-sky-500/30 text-sky-200 border border-sky-500/50 font-semibold'
                   : 'bg-white/[0.04] text-zinc-400 hover:bg-white/[0.08]'}"
               >
@@ -237,6 +252,58 @@
             placeholder={t("settings.tasks.promptPlaceholder")}
             class="w-full bg-[#181818] border border-white/[0.1] rounded-xl p-3 text-zinc-100 text-xs placeholder:text-zinc-500 focus:outline-none focus:border-sky-500/50 resize-y leading-relaxed"
           ></textarea>
+        </div>
+
+        <!-- Automatic Email Dispatch Configuration Section -->
+        <div class="p-3.5 rounded-xl bg-[#1d1d1d] border border-sky-500/25 space-y-2.5">
+          <div class="flex items-center justify-between">
+            <span class="flex items-center gap-1.5 font-medium text-xs text-sky-300">
+              <Mail class="w-4 h-4 text-sky-400" />
+              Envio Automático do Relatório por E-mail
+            </span>
+            <span class="px-2 py-0.5 rounded text-[10px] bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 font-mono">
+              Automático a cada execução
+            </span>
+          </div>
+
+          <p class="text-[11px] text-zinc-400 leading-relaxed font-sans">
+            Cada execução desta rotina envia automaticamente o relatório formatado (template institucional) para o e-mail abaixo, sem necessidade de clicar para disparar.
+          </p>
+
+          <div class="space-y-2 pt-2 border-t border-white/[0.06]">
+            <div class="space-y-1">
+              <label for="task-email-recipient" class="text-[10px] text-zinc-400 uppercase font-sans flex items-center justify-between">
+                <span>E-mail de Destino *</span>
+                <span class="text-sky-400/80 normal-case">Obrigatório pela ferramenta MCP</span>
+              </label>
+              <input
+                id="task-email-recipient"
+                type="email"
+                required
+                bind:value={taskFormEmailRecipient}
+                placeholder="Ex: advisory@staggi.com.br"
+                class="w-full bg-[#181818] border border-white/[0.1] rounded-xl px-3 py-2 text-zinc-100 text-xs placeholder:text-zinc-500 focus:outline-none focus:border-sky-500/50 font-mono"
+              />
+            </div>
+
+            <div class="space-y-1">
+              <label for="task-email-subject" class="text-[10px] text-zinc-400 uppercase font-sans">
+                Assunto do E-mail (Opcional)
+              </label>
+              <input
+                id="task-email-subject"
+                type="text"
+                bind:value={taskFormEmailSubject}
+                placeholder={`Padrão: Staggi Automation Report: ${taskFormName || 'Nome da Automação'} [SUCCESS]`}
+                class="w-full bg-[#181818] border border-white/[0.1] rounded-xl px-3 py-2 text-zinc-100 text-xs placeholder:text-zinc-500 focus:outline-none focus:border-sky-500/50"
+              />
+            </div>
+
+            <p class="text-[11px] text-zinc-400 flex items-center gap-1.5 pt-0.5">
+              <span class="h-1.5 w-1.5 rounded-full bg-sky-400 shrink-0"></span>
+              Template institucional formatado com cabeçalho em gradiente, cards de métricas e detalhamento (padrão de Trade Ideas).
+            </p>
+          </div>
         </div>
 
         <div class="flex items-center gap-2 pt-1">
@@ -273,15 +340,92 @@
     </div>
   {/if}
 
+  <!-- Header with Global Email Settings Toggle -->
   <div class="flex items-center justify-between pt-1">
-    <h5 class="text-xs font-semibold text-zinc-300">
-      {t("settings.tasks.scheduledTasks", { count: tasksStore.tasks.length })}
-    </h5>
-    <span class="text-[10px] text-zinc-400">
-      {t("settings.tasks.activeTasksCount", { count: tasksStore.activeCount })}
-    </span>
+    <div class="flex items-center gap-2">
+      <h5 class="text-xs font-semibold text-zinc-300">
+        {t("settings.tasks.scheduledTasks", { count: tasksStore.tasks.length })}
+      </h5>
+      <span class="text-[10px] text-zinc-400">
+        {t("settings.tasks.activeTasksCount", { count: tasksStore.activeCount })}
+      </span>
+    </div>
+
+    <button
+      type="button"
+      onclick={() => (showEmailGlobalSettings = !showEmailGlobalSettings)}
+      class="flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs transition-all cursor-pointer {showEmailGlobalSettings
+        ? 'bg-sky-500/20 text-sky-200 border border-sky-500/40'
+        : 'bg-white/[0.04] hover:bg-white/[0.08] text-zinc-400 hover:text-zinc-200 border border-white/[0.06]'}"
+    >
+      <Mail class="w-3.5 h-3.5 text-sky-400" />
+      <span>Configuração de E-mail</span>
+    </button>
   </div>
 
+  <!-- Global Email Settings Collapsible -->
+  {#if showEmailGlobalSettings}
+    <div class="p-4 rounded-2xl bg-[#232323] border border-sky-500/30 space-y-3 text-xs animate-fade-in shadow-md">
+      <div class="flex items-center justify-between border-b border-white/[0.08] pb-2 text-sky-300 font-semibold">
+        <span class="flex items-center gap-2">
+          <Mail class="w-4 h-4 text-sky-400" />
+          Configuração de Disparo de E-mail das Automações
+        </span>
+        <button
+          type="button"
+          onclick={() => (showEmailGlobalSettings = false)}
+          class="text-zinc-400 hover:text-zinc-100 text-xs cursor-pointer"
+        >
+          Fechar
+        </button>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div class="space-y-1">
+          <label for="global-default-recipient" class="text-[10px] text-zinc-400 uppercase font-sans">E-mail Padrão do Assessor / Mesa</label>
+          <input
+            id="global-default-recipient"
+            type="email"
+            bind:value={globalDefaultRecipient}
+            placeholder="advisory@staggi.com.br"
+            class="w-full bg-[#181818] border border-white/[0.1] rounded-xl px-3 py-2 text-zinc-100 text-xs focus:outline-none focus:border-sky-500/50"
+          />
+        </div>
+
+        <div class="space-y-1">
+          <label for="global-sender-name" class="text-[10px] text-zinc-400 uppercase font-sans">Nome do Remetente Institucional</label>
+          <input
+            id="global-sender-name"
+            type="text"
+            value={automationEmailStore.config.senderName}
+            oninput={(e) => automationEmailStore.saveConfig({ senderName: (e.target as HTMLInputElement).value })}
+            placeholder="Staggi Wealth Management"
+            class="w-full bg-[#181818] border border-white/[0.1] rounded-xl px-3 py-2 text-zinc-100 text-xs focus:outline-none focus:border-sky-500/50"
+          />
+        </div>
+      </div>
+
+      <div class="flex items-center justify-between pt-2 border-t border-white/[0.06]">
+        <div class="text-[11px] text-zinc-400 flex items-center gap-1.5">
+          <span class="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
+          Disparo automático no padrão institucional de Trade Ideas (gradiente escuro, métricas e tese).
+        </div>
+        <button
+          type="button"
+          onclick={() => {
+            automationEmailStore.saveConfig({ defaultRecipient: globalDefaultRecipient });
+            toastStore.success("Configuração Salva", "E-mail padrão de automações atualizado.");
+            showEmailGlobalSettings = false;
+          }}
+          class="px-3.5 py-1.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-white font-semibold text-xs cursor-pointer shadow-sm transition-all"
+        >
+          Salvar Padrão
+        </button>
+      </div>
+    </div>
+  {/if}
+
+  <!-- Task List -->
   <div class="space-y-3.5">
     {#if tasksStore.tasks.length === 0}
       <div
@@ -302,7 +446,7 @@
         </div>
         <button
           type="button"
-          onclick={() => (isCreatingTask = true)}
+          onclick={startCreateTask}
           class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-white font-medium text-xs shadow-md shadow-sky-500/20 transition-all cursor-pointer"
         >
           <Plus class="w-3.5 h-3.5" />
@@ -328,12 +472,20 @@
               <div class="flex items-center gap-2 flex-wrap">
                 <span
                   class="font-semibold text-zinc-100 text-sm tracking-tight"
-                  >{task.name}</span
                 >
+                  {task.name}
+                </span>
                 <span
                   class="px-2 py-0.5 rounded-md text-[10px] bg-white/[0.06] text-sky-300 border border-sky-500/25"
                 >
                   {t("settings.tasks.every", { label: formatMinutesLabel(task.intervalMinutes) })}
+                </span>
+                <span
+                  class="px-2 py-0.5 rounded-md text-[10px] bg-sky-500/15 text-sky-300 border border-sky-500/25 flex items-center gap-1 font-mono"
+                  title={`Envio automático configurado para: ${task.emailRecipient || automationEmailStore.config.defaultRecipient || 'advisory@staggi.com.br'}`}
+                >
+                  <Mail class="w-2.5 h-2.5" />
+                  <span>Envio automático: {task.emailRecipient || automationEmailStore.config.defaultRecipient || 'advisory@staggi.com.br'}</span>
                 </span>
                 {#if task.lastStatus === "running"}
                   <span
@@ -377,7 +529,7 @@
             <button
               type="button"
               onclick={() => tasksStore.toggleTask(task.id)}
-              class="px-2.5 py-1 rounded-lg text-xs  font-semibold transition-all cursor-pointer {task.active
+              class="px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer {task.active
                 ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
                 : 'bg-white/[0.06] text-zinc-500 border border-white/[0.06]'}"
             >
@@ -401,23 +553,35 @@
           </div>
         </div>
 
+        <!-- Task Footer with Last Run, Email Status and Details -->
         <div
-          class="flex items-center justify-between text-[11px] text-zinc-400 pt-2 border-t border-white/[0.06]"
+          class="flex items-center justify-between pt-2 border-t border-white/[0.06] text-[11px] text-zinc-400"
         >
           <div class="flex items-center gap-3">
-            <span>{t("settings.tasks.lastRun", { time: formatRelativeTime(task.lastRun) })}</span>
-            {#if task.active && task.nextRun}
-              <span class="text-zinc-500">{t("settings.tasks.nextRun", { time: formatRelativeTime(task.nextRun) })}</span>
+            <span>
+              {t("settings.tasks.lastRun")}:{" "}
+              <strong class="text-zinc-300 font-sans">{formatRelativeTime(task.lastRun)}</strong>
+            </span>
+            <span>
+              {t("settings.tasks.nextRun")}:{" "}
+              <strong class="text-zinc-300 font-sans">{formatRelativeTime(task.nextRun)}</strong>
+            </span>
+            {#if task.lastEmailStatus}
+              <span class="flex items-center gap-1 text-sky-300 font-mono text-[10px]">
+                <Mail class="w-3 h-3 text-sky-400" />
+                <span>Envio automático: <strong class="uppercase {task.lastEmailStatus === 'sent' ? 'text-emerald-400' : 'text-sky-300'}">{task.lastEmailStatus}</strong></span>
+              </span>
             {/if}
           </div>
+
           {#if task.lastResult}
             <button
               type="button"
               onclick={() => onViewResult(task)}
-              class="text-sky-400 hover:text-sky-300 text-xs flex items-center gap-1 cursor-pointer hover:underline"
+              class="flex items-center gap-1 text-sky-400 hover:text-sky-300 cursor-pointer font-medium"
             >
               <FileText class="w-3 h-3" />
-              <span>{t("settings.tasks.viewResult")}</span>
+              <span>Ver Resultado & E-mail</span>
             </button>
           {/if}
         </div>

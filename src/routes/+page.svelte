@@ -335,54 +335,6 @@
   {/if}
 {/if}
 
-  {#if tasksStore.activeAlert}
-    <div
-      class="fixed top-3 left-1/2 -translate-x-1/2 z-50 w-[92%] max-w-[620px] rounded-2xl border p-3 shadow-2xl backdrop-blur-2xl flex items-center justify-between gap-3 animate-fade-in font-sans {tasksStore.activeAlert.status === 'success' ? 'bg-[#1a1a1a]/95 border-emerald-500/40 text-emerald-200 shadow-[0_8px_30px_rgba(16,185,129,0.2)]' : 'bg-[#1a1a1a]/95 border-rose-500/40 text-rose-200 shadow-[0_8px_30px_rgba(244,63,94,0.2)]'}"
-    >
-      <div class="flex items-center gap-2.5 min-w-0 flex-1">
-        <div class="h-8 w-8 rounded-xl flex items-center justify-center shrink-0 {tasksStore.activeAlert.status === 'success' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}">
-          {#if tasksStore.activeAlert.status === 'success'}
-            <CheckCircle2 class="w-4 h-4" />
-          {:else}
-            <AlertTriangle class="w-4 h-4" />
-          {/if}
-        </div>
-        <div class="truncate text-left min-w-0">
-          <div class="flex items-center gap-2">
-            <span class="font-semibold text-xs text-zinc-100 truncate">{tasksStore.activeAlert.taskName}</span>
-            <span class="text-[10px] opacity-75">{tasksStore.activeAlert.status === 'success' ? 'Finalizada com sucesso' : 'Falha na execução'}</span>
-          </div>
-          <p class="text-[11px] text-zinc-300 font-normal truncate opacity-90">{tasksStore.activeAlert.summary}</p>
-        </div>
-      </div>
-
-      <div class="flex items-center gap-1.5 shrink-0">
-        {#if tasksStore.activeAlert.result}
-          <button
-            type="button"
-            onclick={() => {
-              const taskId = tasksStore.activeAlert!.taskId;
-              tasksStore.dismissAlert();
-              tasksStore.openTaskResult(taskId);
-            }}
-            class="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-medium cursor-pointer transition-colors"
-          >
-            <Eye class="w-3.5 h-3.5" />
-            <span>{t("common.viewResult")}</span>
-          </button>
-        {/if}
-        <button
-          type="button"
-          onclick={() => tasksStore.dismissAlert()}
-          class="h-7 w-7 rounded-lg hover:bg-white/10 flex items-center justify-center text-zinc-400 hover:text-zinc-100 cursor-pointer"
-          title={t("common.close")}
-        >
-          <X class="w-4 h-4" />
-        </button>
-      </div>
-    </div>
-  {/if}
-
   {#if tasksStore.viewingTaskResult}
     <div
       class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in"
