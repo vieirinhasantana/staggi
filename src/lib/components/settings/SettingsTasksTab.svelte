@@ -33,8 +33,8 @@
   let taskFormPrompt = $state("");
   let taskFormInterval = $state<number>(60);
   let taskFormActive = $state(true);
-  let taskFormNotifyEmail = $state(false);
-  let taskFormEmailRecipient = $state("");
+  let taskFormNotifyEmail = $state(true);
+  let taskFormEmailRecipient = $state(automationEmailStore.config.defaultRecipient || "advisory@staggi.com.br");
   let taskFormEmailSubject = $state("");
 
   let globalDefaultRecipient = $state(automationEmailStore.config.defaultRecipient);
@@ -47,8 +47,8 @@
     taskFormPrompt = "";
     taskFormInterval = 60;
     taskFormActive = true;
-    taskFormNotifyEmail = automationEmailStore.config.enabled;
-    taskFormEmailRecipient = automationEmailStore.config.defaultRecipient || "";
+    taskFormNotifyEmail = true;
+    taskFormEmailRecipient = automationEmailStore.config.defaultRecipient || "advisory@staggi.com.br";
     taskFormEmailSubject = "";
   }
 
@@ -60,26 +60,24 @@
     taskFormPrompt = task.prompt;
     taskFormInterval = task.intervalMinutes;
     taskFormActive = task.active;
-    taskFormNotifyEmail = !!task.notifyEmail;
-    taskFormEmailRecipient = task.emailRecipient || automationEmailStore.config.defaultRecipient || "";
+    taskFormNotifyEmail = true;
+    taskFormEmailRecipient = task.emailRecipient || automationEmailStore.config.defaultRecipient || "advisory@staggi.com.br";
     taskFormEmailSubject = task.emailSubject || "";
   }
 
   function handleSaveTask() {
     if (!taskFormName.trim() || !taskFormPrompt.trim()) return;
     const name = taskFormName.trim();
-    const recipient = taskFormNotifyEmail
-      ? (taskFormEmailRecipient.trim() || automationEmailStore.config.defaultRecipient)
-      : undefined;
+    const recipient = (taskFormEmailRecipient.trim() || automationEmailStore.config.defaultRecipient || "advisory@staggi.com.br").trim();
 
     if (isCreatingTask) {
       tasksStore.addTask({
         name,
-        description: taskFormDesc.trim() || "Automated scheduled routine",
+        description: taskFormDesc.trim() || "Rotina automatizada de inteligência",
         prompt: taskFormPrompt.trim(),
         intervalMinutes: Math.max(1, Number(taskFormInterval) || 60),
         active: taskFormActive,
-        notifyEmail: taskFormNotifyEmail,
+        notifyEmail: true,
         emailRecipient: recipient,
         emailSubject: taskFormEmailSubject.trim() || undefined,
       });
@@ -94,7 +92,7 @@
         prompt: taskFormPrompt.trim(),
         intervalMinutes: Math.max(1, Number(taskFormInterval) || 60),
         active: taskFormActive,
-        notifyEmail: taskFormNotifyEmail,
+        notifyEmail: true,
         emailRecipient: recipient,
         emailSubject: taskFormEmailSubject.trim() || undefined,
       });
@@ -265,54 +263,56 @@
           ></textarea>
         </div>
 
-        <!-- Email Notification Section -->
-        <div class="p-3.5 rounded-xl bg-[#1d1d1d] border border-white/[0.08] space-y-2.5">
-          <label class="flex items-center gap-2 cursor-pointer text-xs text-zinc-200">
-            <input
-              type="checkbox"
-              bind:checked={taskFormNotifyEmail}
-              class="rounded bg-[#181818] border-white/20 text-sky-500 focus:ring-0 cursor-pointer"
-            />
-            <span class="flex items-center gap-1.5 font-medium">
-              <Mail class="w-3.5 h-3.5 text-sky-400" />
-              Disparar resultado por e-mail após a execução
+        <!-- Automatic Email Dispatch Configuration Section -->
+        <div class="p-3.5 rounded-xl bg-[#1d1d1d] border border-sky-500/25 space-y-2.5">
+          <div class="flex items-center justify-between">
+            <span class="flex items-center gap-1.5 font-medium text-xs text-sky-300">
+              <Mail class="w-4 h-4 text-sky-400" />
+              Envio Automático do Relatório por E-mail
             </span>
-          </label>
+            <span class="px-2 py-0.5 rounded text-[10px] bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 font-mono">
+              Automático a cada execução
+            </span>
+          </div>
 
-          {#if taskFormNotifyEmail}
-            <div class="space-y-2 pt-2 border-t border-white/[0.06] animate-fade-in">
-              <div class="space-y-1">
-                <label for="task-email-recipient" class="text-[10px] text-zinc-400 uppercase font-sans">
-                  E-mail(s) de Destino
-                </label>
-                <input
-                  id="task-email-recipient"
-                  type="text"
-                  bind:value={taskFormEmailRecipient}
-                  placeholder="Ex: advisory@staggi.com.br, gestor@staggi.com.br"
-                  class="w-full bg-[#181818] border border-white/[0.1] rounded-xl px-3 py-2 text-zinc-100 text-xs placeholder:text-zinc-500 focus:outline-none focus:border-sky-500/50"
-                />
-              </div>
+          <p class="text-[11px] text-zinc-400 leading-relaxed font-sans">
+            Cada execução desta rotina envia automaticamente o relatório formatado (template institucional) para o e-mail abaixo, sem necessidade de clicar para disparar.
+          </p>
 
-              <div class="space-y-1">
-                <label for="task-email-subject" class="text-[10px] text-zinc-400 uppercase font-sans">
-                  Assunto do E-mail (Opcional)
-                </label>
-                <input
-                  id="task-email-subject"
-                  type="text"
-                  bind:value={taskFormEmailSubject}
-                  placeholder="Padrão: Staggi Automation Report: {taskFormName || 'Nome da Automação'} [SUCCESS]"
-                  class="w-full bg-[#181818] border border-white/[0.1] rounded-xl px-3 py-2 text-zinc-100 text-xs placeholder:text-zinc-500 focus:outline-none focus:border-sky-500/50"
-                />
-              </div>
-
-              <p class="text-[11px] text-zinc-400 flex items-center gap-1.5 pt-0.5">
-                <span class="h-1.5 w-1.5 rounded-full bg-sky-400 shrink-0"></span>
-                Template institucional formatado com cabeçalho em gradiente, cards de métricas e detalhamento (padrão de Trade Ideas).
-              </p>
+          <div class="space-y-2 pt-2 border-t border-white/[0.06]">
+            <div class="space-y-1">
+              <label for="task-email-recipient" class="text-[10px] text-zinc-400 uppercase font-sans flex items-center justify-between">
+                <span>E-mail de Destino *</span>
+                <span class="text-sky-400/80 normal-case">Obrigatório pela ferramenta MCP</span>
+              </label>
+              <input
+                id="task-email-recipient"
+                type="email"
+                required
+                bind:value={taskFormEmailRecipient}
+                placeholder="Ex: advisory@staggi.com.br"
+                class="w-full bg-[#181818] border border-white/[0.1] rounded-xl px-3 py-2 text-zinc-100 text-xs placeholder:text-zinc-500 focus:outline-none focus:border-sky-500/50 font-mono"
+              />
             </div>
-          {/if}
+
+            <div class="space-y-1">
+              <label for="task-email-subject" class="text-[10px] text-zinc-400 uppercase font-sans">
+                Assunto do E-mail (Opcional)
+              </label>
+              <input
+                id="task-email-subject"
+                type="text"
+                bind:value={taskFormEmailSubject}
+                placeholder={`Padrão: Staggi Automation Report: ${taskFormName || 'Nome da Automação'} [SUCCESS]`}
+                class="w-full bg-[#181818] border border-white/[0.1] rounded-xl px-3 py-2 text-zinc-100 text-xs placeholder:text-zinc-500 focus:outline-none focus:border-sky-500/50"
+              />
+            </div>
+
+            <p class="text-[11px] text-zinc-400 flex items-center gap-1.5 pt-0.5">
+              <span class="h-1.5 w-1.5 rounded-full bg-sky-400 shrink-0"></span>
+              Template institucional formatado com cabeçalho em gradiente, cards de métricas e detalhamento (padrão de Trade Ideas).
+            </p>
+          </div>
         </div>
 
         <div class="flex items-center gap-2 pt-1">
@@ -489,15 +489,13 @@
                 >
                   {t("settings.tasks.every", { label: formatMinutesLabel(task.intervalMinutes) })}
                 </span>
-                {#if task.notifyEmail}
-                  <span
-                    class="px-2 py-0.5 rounded-md text-[10px] bg-sky-500/15 text-sky-300 border border-sky-500/25 flex items-center gap-1"
-                    title={`E-mail de destino: ${task.emailRecipient || 'advisory@staggi.com.br'}`}
-                  >
-                    <Mail class="w-2.5 h-2.5" />
-                    <span>E-mail Ativo</span>
-                  </span>
-                {/if}
+                <span
+                  class="px-2 py-0.5 rounded-md text-[10px] bg-sky-500/15 text-sky-300 border border-sky-500/25 flex items-center gap-1 font-mono"
+                  title={`Envio automático configurado para: ${task.emailRecipient || automationEmailStore.config.defaultRecipient || 'advisory@staggi.com.br'}`}
+                >
+                  <Mail class="w-2.5 h-2.5" />
+                  <span>Envio automático: {task.emailRecipient || automationEmailStore.config.defaultRecipient || 'advisory@staggi.com.br'}</span>
+                </span>
                 {#if task.lastStatus === "running"}
                   <span
                     class="px-2 py-0.5 rounded-md text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30 animate-pulse"
@@ -577,10 +575,10 @@
               {t("settings.tasks.nextRun")}:{" "}
               <strong class="text-zinc-300 font-sans">{formatRelativeTime(task.nextRun)}</strong>
             </span>
-            {#if task.notifyEmail && task.lastEmailStatus}
+            {#if task.lastEmailStatus}
               <span class="flex items-center gap-1 text-sky-300 font-mono text-[10px]">
                 <Mail class="w-3 h-3 text-sky-400" />
-                <span>E-mail: {task.lastEmailStatus}</span>
+                <span>Envio automático: <strong class="uppercase {task.lastEmailStatus === 'sent' ? 'text-emerald-400' : 'text-sky-300'}">{task.lastEmailStatus}</strong></span>
               </span>
             {/if}
           </div>

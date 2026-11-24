@@ -105,16 +105,14 @@
           <div>
             <h4 class="text-sm font-semibold text-zinc-100 flex items-center gap-2">
               {t("settings.tasks.resultModalTitle", { name: task.name })}
-              {#if task.notifyEmail}
-                <span class="px-2 py-0.5 rounded-full text-[10px] font-medium bg-sky-500/15 text-sky-300 border border-sky-500/25 flex items-center gap-1">
-                  <Mail class="w-2.5 h-2.5" /> E-mail Ativo
-                </span>
-              {/if}
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/15 text-emerald-300 border border-emerald-500/25 flex items-center gap-1 font-mono">
+                <Mail class="w-2.5 h-2.5" /> Disparo Automático Ativo
+              </span>
             </h4>
             <span class="text-[11px] text-zinc-400">
               {t("settings.tasks.executedAt", { time: formatRelativeTime(task.lastRun) })}
               {#if task.lastEmailStatus}
-                • Último disparo: <span class="text-sky-300 uppercase text-[10px]">{task.lastEmailStatus}</span>
+                • Envio automático: <span class="text-emerald-400 font-semibold uppercase text-[10px]">{task.lastEmailStatus}</span>
               {/if}
             </span>
           </div>
@@ -184,9 +182,9 @@
             {t("common.totalExecutions", { count: task.executionCount })}
           </span>
           <span class="text-zinc-600">•</span>
-          <span class="flex items-center gap-1 text-zinc-400">
-            <Mail class="w-3.5 h-3.5 text-sky-400" />
-            <span>Destinatário: <strong class="text-zinc-300 font-mono text-[11px]">{emailRecipient}</strong></span>
+          <span class="flex items-center gap-1.5 text-zinc-300 font-mono text-[11px]">
+            <Mail class="w-3.5 h-3.5 text-emerald-400" />
+            <span>Enviado automaticamente para: <strong class="text-white font-semibold">{emailRecipient}</strong></span>
           </span>
         </div>
 
@@ -209,10 +207,11 @@
             type="button"
             onclick={handleSendEmail}
             disabled={isSendingEmail || !task.lastResult}
-            class="flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-gradient-to-r from-sky-500 to-sky-600 hover:from-sky-400 hover:to-sky-500 text-white font-semibold transition-all cursor-pointer shadow-sm disabled:opacity-40"
+            class="flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-white/[0.08] hover:bg-white/[0.14] border border-sky-500/30 text-sky-200 font-semibold transition-all cursor-pointer shadow-sm disabled:opacity-40"
+            title="O e-mail é disparado automaticamente a cada execução. Use este botão para reenviar manualmente caso necessário."
           >
-            <Send class="w-3.5 h-3.5" />
-            <span>{isSendingEmail ? "Disparando..." : "Disparar por E-mail"}</span>
+            <Send class="w-3.5 h-3.5 text-sky-400" />
+            <span>{isSendingEmail ? "Reenviando..." : "Reenviar E-mail"}</span>
           </button>
 
           <button

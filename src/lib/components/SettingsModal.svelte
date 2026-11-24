@@ -209,7 +209,7 @@
       {:else if activeTab === "skills"}
         <SettingsSkillsTab />
       {:else if activeTab === "tasks"}
-        <SettingsTasksTab onViewResult={(task) => (viewingResultTask = task)} />
+        <SettingsTasksTab onViewResult={(task: ScheduledTask) => (viewingResultTask = task)} />
       {:else if activeTab === "memory"}
         <SettingsMemoryTab />
       {/if}

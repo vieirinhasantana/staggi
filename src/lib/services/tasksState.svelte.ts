@@ -184,17 +184,24 @@ class TasksStore {
 
       if (result.success) {
         let emailStatus: "sent" | "simulated" | "failed" | undefined = undefined;
-        const targetRecipient = task.emailRecipient?.trim() || automationEmailStore.config.defaultRecipient;
+        const targetRecipient = (
+          task.emailRecipient?.trim() ||
+          automationEmailStore.config.defaultRecipient ||
+          "advisory@staggi.com.br"
+        ).trim();
+
+        const logSummary = result.text.replace(/\s+/g, " ").trim().slice(0, 180) + (result.text.length > 180 ? "..." : "");
 
         const newLog: TaskExecutionLog = {
           id: String(Date.now()),
           timestamp: nowIso,
           status: "success",
-          summary: result.text.slice(0, 250) + (result.text.length > 250 ? "..." : ""),
+          summary: logSummary,
           durationMs
         };
 
-        if (task.notifyEmail && targetRecipient) {
+        // Automatic email dispatch upon every successful routine completion (no manual click needed)
+        if (targetRecipient) {
           try {
             const emailResult = await automationEmailStore.dispatchAutomationEmail(task, result.text, {
               overrideRecipient: targetRecipient
@@ -204,7 +211,7 @@ class TasksStore {
             newLog.emailRecipient = targetRecipient;
             newLog.emailStatus = emailResult.status;
           } catch (e) {
-            console.warn("[TasksStore] Failed to dispatch automation email:", e);
+            console.warn("[TasksStore] Failed to dispatch automation email automatically:", e);
             emailStatus = "failed";
             newLog.emailStatus = "failed";
           }
@@ -233,13 +240,12 @@ class TasksStore {
         this.runningTaskId = null;
         this.saveToStorage();
 
-        const summarySnippet = result.text.replace(/\s+/g, " ").trim().slice(0, 160) + (result.text.length > 160 ? "..." : "");
         this.activeAlert = {
           id: `alert-${Date.now()}`,
           taskId: task.id,
           taskName: task.name,
           status: "success",
-          summary: summarySnippet,
+          summary: logSummary,
           result: result.text,
           timestamp: nowIso,
           durationMs

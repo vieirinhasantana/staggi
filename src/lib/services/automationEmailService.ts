@@ -410,9 +410,9 @@ Staggi Wealth Management • advisory@staggi.com.br
     }
   ): Promise<EmailDispatchResult> {
     const recipient = (
-      options?.overrideRecipient ||
-      task.emailRecipient ||
-      this.config.defaultRecipient ||
+      (options?.overrideRecipient && options.overrideRecipient.trim()) ||
+      (task.emailRecipient && task.emailRecipient.trim()) ||
+      (this.config.defaultRecipient && this.config.defaultRecipient.trim()) ||
       "advisory@staggi.com.br"
     ).trim();
 
@@ -451,6 +451,14 @@ Staggi Wealth Management • advisory@staggi.com.br
             custom_notes: `Disparo automático do Staggi Desktop Scheduler (${subject}).`,
           }
         );
+
+        if (mcpResult?.error) {
+          throw new Error(mcpResult.error.message || JSON.stringify(mcpResult.error));
+        }
+        if (mcpResult?.result?.isError) {
+          const errText = mcpResult.result.content?.[0]?.text || "Erro retornado pela ferramenta de e-mail";
+          throw new Error(errText);
+        }
 
         return {
           success: true,
