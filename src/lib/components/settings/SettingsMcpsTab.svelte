@@ -48,7 +48,25 @@
     executingToolName = toolName;
     toolExecutionResult = null;
     try {
-      const res = await pluginsStore.callTool(mcpId, toolName, {});
+      let args: Record<string, unknown> = {};
+      if (toolName === "send_automation_report_email") {
+        args = {
+          automation_name: "Teste de Diagnóstico de Automação",
+          summary: "Varredura executada via teste de conexão no painel de configurações.",
+          details: "Rotina executada com sucesso. Parâmetros operacionais e templates validados.",
+          recipient_email: "advisory@staggi.com.br",
+          status: "SUCCESS"
+        };
+      } else if (toolName === "send_portfolio_proposal_email") {
+        args = {
+          client_id: "STG00000001",
+          trade_idea_id: "trade-001"
+        };
+      } else if (toolName === "get_stock_quote" || toolName.includes("quote") || toolName.includes("price")) {
+        args = { symbol: "PETR4.SA" };
+      }
+
+      const res = await pluginsStore.callTool(mcpId, toolName, args);
       const raw = res?.result?.content || res?.result || res;
       let text = typeof raw === "string" ? raw : JSON.stringify(raw, null, 2);
       toolExecutionResult = { toolName, resultText: text };
