@@ -836,10 +836,6 @@
                 : 'bg-zinc-600'}"
             ></div>
             <span class="font-bold text-zinc-100 truncate">{mcp.name}</span>
-            <span
-              class="px-2 py-0.5 rounded text-[10px] bg-white/[0.06] text-zinc-300 border border-white/[0.06] shrink-0"
-              >{mcp.type}</span
-            >
 
             <!-- Authentication Status Badge -->
             {#if mcp.authType === "oauth2" || mcp.oauth2}
@@ -883,14 +879,15 @@
                     : ''}"
                 />
               </button>
+            {:else if mcp.lastTestedStatus === 'connected'}
+              <span class="px-2 py-0.5 rounded text-[10px] bg-white/[0.04] text-zinc-400 border border-white/[0.06] flex items-center gap-1 shrink-0">
+                <Wrench class="w-2.5 h-2.5 text-zinc-500" />
+                <span>0 Tools</span>
+              </span>
             {/if}
           </div>
 
           <div class="flex items-center gap-1.5 shrink-0">
-            <span class="text-[10px] px-2 py-0.5 rounded-full font-mono uppercase tracking-wider bg-white/[0.04] text-zinc-400 border border-white/[0.06] mr-1 hidden sm:inline"
-              >{mcp.transport === "builtin (Native MCP)" ? "NATIVE" : mcp.transport}</span
-            >
-
             <button
               type="button"
               onclick={() => handleTestMcp(mcp.id)}

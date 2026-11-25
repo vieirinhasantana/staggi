@@ -216,30 +216,141 @@ pub async fn query_mcp_sse_tools(
     Ok(result_tools)
 }
 
+pub fn extract_tools_from_value(val: &serde_json::Value) -> Vec<McpTool> {
+    let mut tools = Vec::new();
+
+    let raw_tools = val
+        .get("result")
+        .and_then(|r| r.get("tools").and_then(|t| t.as_array()).or_else(|| r.as_array()))
+        .or_else(|| val.get("tools").and_then(|t| t.as_array()));
+
+    if let Some(arr) = raw_tools {
+        for item in arr {
+            if let Some(name) = item.get("name").and_then(|n| n.as_str()) {
+                let desc = item.get("description").and_then(|d| d.as_str()).map(String::from);
+                let schema = item.get("inputSchema").cloned();
+                tools.push(McpTool {
+                    name: name.to_string(),
+                    description: desc,
+                    input_schema: schema,
+                });
+            }
+        }
+    }
+
+    tools
+}
+
+pub fn extract_tools_from_raw_text(text: &str) -> Vec<McpTool> {
+    if let Ok(val) = serde_json::from_str::<serde_json::Value>(text) {
+        let tools = extract_tools_from_value(&val);
+        if !tools.is_empty() {
+            return tools;
+        }
+    }
+
+    // Try parsing SSE event data chunks
+    let mut tools = Vec::new();
+    for line in text.lines() {
+        let trimmed = line.trim();
+        if trimmed.starts_with("data:") {
+            let data_content = trimmed[5..].trim();
+            if let Ok(val) = serde_json::from_str::<serde_json::Value>(data_content) {
+                let found = extract_tools_from_value(&val);
+                if !found.is_empty() {
+                    tools = found;
+                    break;
+                }
+            }
+        }
+    }
+    tools
+}
+
 pub async fn query_direct_http_mcp_tools(
     client: &reqwest::Client,
     target_url: &str,
     api_key: Option<&str>,
     auth_header: Option<&str>,
 ) -> Result<Vec<McpTool>, String> {
-    let mut candidate_urls = vec![target_url.to_string()];
     let trimmed = target_url.trim_end_matches('/');
+    let mut candidate_urls = vec![target_url.to_string()];
     if !trimmed.ends_with("/mcp") {
         candidate_urls.push(format!("{}/mcp", trimmed));
+    }
+    if !trimmed.ends_with("/sse") {
+        candidate_urls.push(format!("{}/sse", trimmed));
     }
 
     let mut last_err = String::new();
 
     for url in candidate_urls {
-        let tools_payload = serde_json::json!({
+        // Step 1: Standard MCP Handshake (initialize -> notifications/initialized)
+        let init_payload = serde_json::json!({
             "jsonrpc": "2.0",
             "id": 1,
+            "method": "initialize",
+            "params": {
+                "protocolVersion": "2024-11-05",
+                "capabilities": {
+                    "tools": {}
+                },
+                "clientInfo": {
+                    "name": "staggi",
+                    "version": "0.1.1"
+                }
+            }
+        });
+
+        let mut req_init = client.post(&url)
+            .header("Accept", "application/json, text/event-stream")
+            .json(&init_payload);
+        req_init = apply_mcp_auth(req_init, api_key, auth_header);
+
+        let mut session_id: Option<String> = None;
+        let mut did_handshake = false;
+
+        if let Ok(res_init) = req_init.send().await {
+            let status = res_init.status();
+            if status == reqwest::StatusCode::UNAUTHORIZED || status == reqwest::StatusCode::FORBIDDEN {
+                return Err(format!("AUTH_ERROR: Status {}", status.as_u16()));
+            }
+            if status.is_success() {
+                did_handshake = true;
+                session_id = res_init.headers().get("mcp-session-id").and_then(|h| h.to_str().ok()).map(String::from);
+
+                let notif_payload = serde_json::json!({
+                    "jsonrpc": "2.0",
+                    "method": "notifications/initialized"
+                });
+                let mut notif_req = client.post(&url)
+                    .header("Accept", "application/json, text/event-stream")
+                    .json(&notif_payload);
+                notif_req = apply_mcp_auth(notif_req, api_key, auth_header);
+                if let Some(ref sid) = session_id {
+                    notif_req = notif_req.header("mcp-session-id", sid);
+                }
+                let _ = notif_req.send().await;
+            }
+        }
+
+        // Step 2: Query tools/list
+        let tools_payload = serde_json::json!({
+            "jsonrpc": "2.0",
+            "id": if did_handshake { 2 } else { 1 },
             "method": "tools/list",
             "params": {}
         });
-        let req = client.post(&url).json(&tools_payload);
-        let req = apply_mcp_auth(req, api_key, auth_header);
-        let res = match req.send().await {
+
+        let mut req_tools = client.post(&url)
+            .header("Accept", "application/json, text/event-stream")
+            .json(&tools_payload);
+        req_tools = apply_mcp_auth(req_tools, api_key, auth_header);
+        if let Some(ref sid) = session_id {
+            req_tools = req_tools.header("mcp-session-id", sid);
+        }
+
+        let res_tools = match req_tools.send().await {
             Ok(r) => r,
             Err(e) => {
                 last_err = e.to_string();
@@ -247,96 +358,23 @@ pub async fn query_direct_http_mcp_tools(
             }
         };
 
-        let status = res.status();
+        let status = res_tools.status();
         if status == reqwest::StatusCode::UNAUTHORIZED || status == reqwest::StatusCode::FORBIDDEN {
             return Err(format!("AUTH_ERROR: Status {}", status.as_u16()));
         }
-        if status == reqwest::StatusCode::METHOD_NOT_ALLOWED || status == reqwest::StatusCode::NOT_FOUND {
+        if !status.is_success() {
             last_err = format!("Status {}", status.as_u16());
             continue;
         }
-        if !status.is_success() {
-            return Err(format!("Status {}", status.as_u16()));
+
+        let text = res_tools.text().await.unwrap_or_default();
+        let tools = extract_tools_from_raw_text(&text);
+        if !tools.is_empty() {
+            return Ok(tools);
         }
-
-        let text = res.text().await.unwrap_or_default();
-        let json: serde_json::Value = serde_json::from_str(&text).map_err(|e| e.to_string())?;
-
-        // If error indicates initialization is needed, perform initialize handshake
-        if let Some(err) = json.get("error") {
-            let msg = err.get("message").and_then(|m| m.as_str()).unwrap_or("").to_lowercase();
-            if msg.contains("initialize") || msg.contains("session") {
-                let init_payload = serde_json::json!({
-                    "jsonrpc": "2.0",
-                    "id": 1,
-                    "method": "initialize",
-                    "params": {
-                        "protocolVersion": "2024-11-05",
-                        "capabilities": {},
-                        "clientInfo": { "name": "staggi", "version": "0.1.1" }
-                    }
-                });
-                let init_req = client.post(&url).json(&init_payload);
-                let init_req = apply_mcp_auth(init_req, api_key, auth_header);
-                let init_res = init_req.send().await.map_err(|e| e.to_string())?;
-                let session_id = init_res.headers().get("mcp-session-id").and_then(|h| h.to_str().ok()).map(String::from);
-
-                let notif_payload = serde_json::json!({
-                    "jsonrpc": "2.0",
-                    "method": "notifications/initialized"
-                });
-                let mut notif_req = client.post(&url).json(&notif_payload);
-                notif_req = apply_mcp_auth(notif_req, api_key, auth_header);
-                if let Some(ref sid) = session_id {
-                    notif_req = notif_req.header("mcp-session-id", sid);
-                }
-                let _ = notif_req.send().await;
-
-                let mut retry_req = client.post(&url).json(&tools_payload);
-                retry_req = apply_mcp_auth(retry_req, api_key, auth_header);
-                if let Some(ref sid) = session_id {
-                    retry_req = retry_req.header("mcp-session-id", sid);
-                }
-                let retry_res = retry_req.send().await.map_err(|e| e.to_string())?;
-                if let Ok(retry_json) = retry_res.json::<serde_json::Value>().await {
-                    let mut result_tools = Vec::new();
-                    if let Some(tools_arr) = retry_json.get("result").and_then(|r| r.get("tools")).and_then(|t| t.as_array()) {
-                        for t in tools_arr {
-                            if let Some(name) = t.get("name").and_then(|n| n.as_str()) {
-                                let desc = t.get("description").and_then(|d| d.as_str()).map(|s| s.to_string());
-                                let schema = t.get("inputSchema").cloned();
-                                result_tools.push(McpTool {
-                                    name: name.to_string(),
-                                    description: desc,
-                                    input_schema: schema,
-                                });
-                            }
-                        }
-                    }
-                    return Ok(result_tools);
-                }
-            }
-        }
-
-        let mut result_tools = Vec::new();
-        if let Some(tools_arr) = json.get("result").and_then(|r| r.get("tools")).and_then(|t| t.as_array()) {
-            for t in tools_arr {
-                if let Some(name) = t.get("name").and_then(|n| n.as_str()) {
-                    let desc = t.get("description").and_then(|d| d.as_str()).map(|s| s.to_string());
-                    let schema = t.get("inputSchema").cloned();
-                    result_tools.push(McpTool {
-                        name: name.to_string(),
-                        description: desc,
-                        input_schema: schema,
-                    });
-                }
-            }
-        }
-
-        return Ok(result_tools);
     }
 
-    Err(if last_err.is_empty() { "Failed to query MCP tools via HTTP".to_string() } else { last_err })
+    Err(if last_err.is_empty() { "Failed to discover MCP tools via HTTP".to_string() } else { last_err })
 }
 
 pub async fn test_mcp_connection(
@@ -390,23 +428,12 @@ pub async fn test_mcp_connection(
         let is_sse = (transport_lower == "sse" || target_url.ends_with("/sse") || target_url.ends_with("/sse/"))
             && transport_lower != "http";
 
+        let mut discovered_tools: Vec<McpTool> = Vec::new();
+
         if is_sse {
             match query_mcp_sse_tools(&client, &target_url, api_key.as_deref(), auth_header.as_deref()).await {
                 Ok(tools) => {
-                    let latency = start.elapsed().as_millis() as u64;
-                    let count = tools.len();
-                    return Ok(McpTestResult {
-                        success: true,
-                        status: "connected".to_string(),
-                        status_code: Some(200),
-                        message: if count > 0 {
-                            format!("Connected successfully • {} tools discovered ({}ms)", count, latency)
-                        } else {
-                            format!("Connected to MCP server (0 tools declared, {}ms)", latency)
-                        },
-                        latency_ms: Some(latency),
-                        tools,
-                    });
+                    discovered_tools = tools;
                 }
                 Err(err) => {
                     if err.contains("AUTH_ERROR") {
@@ -420,33 +447,55 @@ pub async fn test_mcp_connection(
                             tools: Vec::new(),
                         });
                     }
-                    if let Ok(direct_tools) = query_direct_http_mcp_tools(&client, &target_url, api_key.as_deref(), auth_header.as_deref()).await {
-                        let latency = start.elapsed().as_millis() as u64;
-                        let count = direct_tools.len();
-                        return Ok(McpTestResult {
-                            success: true,
-                            status: "connected".to_string(),
-                            status_code: Some(200),
-                            message: format!("Connected successfully • {} tools discovered ({}ms)", count, latency),
-                            latency_ms: Some(latency),
-                            tools: direct_tools,
-                        });
+                    if let Ok(tools) = query_direct_http_mcp_tools(&client, &target_url, api_key.as_deref(), auth_header.as_deref()).await {
+                        discovered_tools = tools;
                     }
                 }
             }
         } else {
-            if let Ok(direct_tools) = query_direct_http_mcp_tools(&client, &target_url, api_key.as_deref(), auth_header.as_deref()).await {
-                let latency = start.elapsed().as_millis() as u64;
-                let count = direct_tools.len();
-                return Ok(McpTestResult {
-                    success: true,
-                    status: "connected".to_string(),
-                    status_code: Some(200),
-                    message: format!("Connected successfully • {} tools discovered ({}ms)", count, latency),
-                    latency_ms: Some(latency),
-                    tools: direct_tools,
-                });
+            match query_direct_http_mcp_tools(&client, &target_url, api_key.as_deref(), auth_header.as_deref()).await {
+                Ok(tools) => {
+                    discovered_tools = tools;
+                }
+                Err(err) => {
+                    if err.contains("AUTH_ERROR") {
+                        let latency = start.elapsed().as_millis() as u64;
+                        return Ok(McpTestResult {
+                            success: false,
+                            status: "auth_error".to_string(),
+                            status_code: Some(401),
+                            message: "Authentication failed: API Key or Token is invalid or unauthorized.".to_string(),
+                            latency_ms: Some(latency),
+                            tools: Vec::new(),
+                        });
+                    }
+                }
             }
+
+            // Fallback to SSE discovery if HTTP direct didn't yield tools
+            if discovered_tools.is_empty() {
+                if let Ok(tools) = query_mcp_sse_tools(&client, &target_url, api_key.as_deref(), auth_header.as_deref()).await {
+                    discovered_tools = tools;
+                } else {
+                    let sse_candidate = format!("{}/sse", target_url.trim_end_matches('/'));
+                    if let Ok(tools) = query_mcp_sse_tools(&client, &sse_candidate, api_key.as_deref(), auth_header.as_deref()).await {
+                        discovered_tools = tools;
+                    }
+                }
+            }
+        }
+
+        if !discovered_tools.is_empty() {
+            let latency = start.elapsed().as_millis() as u64;
+            let count = discovered_tools.len();
+            return Ok(McpTestResult {
+                success: true,
+                status: "connected".to_string(),
+                status_code: Some(200),
+                message: format!("Connected successfully • {} tools discovered ({}ms)", count, latency),
+                latency_ms: Some(latency),
+                tools: discovered_tools,
+            });
         }
 
         let mut req = client.get(&target_url);
