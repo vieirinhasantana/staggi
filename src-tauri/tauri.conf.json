@@ -24,6 +24,7 @@
         "shadow": false,
         "center": true,
         "alwaysOnTop": true,
+        "contentProtected": true,
         "skipTaskbar": false
       }
     ],

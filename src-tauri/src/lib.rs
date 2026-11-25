@@ -92,6 +92,7 @@ pub fn run() {
             }
 
             if let Some(window) = app.get_webview_window("main") {
+                let _ = window.set_content_protected(true);
                 let window_clone = window.clone();
                 window.on_window_event(move |event| {
                     if let tauri::WindowEvent::CloseRequested { api, .. } = event {
