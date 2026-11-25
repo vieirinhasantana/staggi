@@ -7,10 +7,13 @@ fn main() {
         // Enforce GPU hardware acceleration and prevent Chromium occlusion/throttling
         // on Windows transparent/borderless windows, eliminating severe UI stutter and lag.
         if std::env::var("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS").is_err() {
-            std::env::set_var(
-                "WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS",
-                "--enable-gpu-rasterization --enable-zero-copy --disable-features=CalculateNativeWinOcclusion --disable-background-timer-throttling",
-            );
+            // Safety: Called before spawning threads or initializing WebView2
+            unsafe {
+                std::env::set_var(
+                    "WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS",
+                    "--enable-gpu-rasterization --enable-zero-copy --disable-features=CalculateNativeWinOcclusion --disable-background-timer-throttling",
+                );
+            }
         }
     }
 
