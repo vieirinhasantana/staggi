@@ -1,4 +1,4 @@
-export type AIProvider = "gemini" | "openai" | "anthropic" | "ollama";
+export type AIProvider = "gemini" | "openai" | "anthropic" | "bedrock";
 
 export type EnforcementLevel = "low" | "medium" | "high";
 

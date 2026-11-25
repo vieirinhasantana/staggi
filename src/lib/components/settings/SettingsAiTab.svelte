@@ -5,14 +5,14 @@
     Sparkles,
     Bot,
     Cpu,
-    Server,
+    Cloud,
     Key,
     ExternalLink,
     Sliders,
     CheckCircle2,
     RefreshCw,
     ChevronDown,
-    Globe,
+    Shield,
   } from "@lucide/svelte";
   import { aiStore } from "$lib/services/aiProviderState.svelte";
   import { toastStore } from "$lib/services/toastService.svelte";
@@ -20,14 +20,34 @@
 
   let isTestingAi = $state(false);
 
+  // Temporary local state for Bedrock inputs
+  let localBedrockAccessKey = $state(aiStore.bedrockAccessKeyId);
+  let localBedrockSecretKey = $state(aiStore.bedrockSecretAccessKey);
+  let localBedrockRegion = $state(aiStore.bedrockRegion || "us-east-1");
+  let localBedrockSessionToken = $state(aiStore.bedrockSessionToken);
+
+  const AWS_REGIONS = [
+    { id: "us-east-1", name: "US East (N. Virginia) — us-east-1" },
+    { id: "us-west-2", name: "US West (Oregon) — us-west-2" },
+    { id: "sa-east-1", name: "South America (São Paulo) — sa-east-1" },
+    { id: "eu-central-1", name: "Europe (Frankfurt) — eu-central-1" },
+    { id: "eu-west-1", name: "Europe (Ireland) — eu-west-1" },
+    { id: "ap-southeast-1", name: "Asia Pacific (Singapore) — ap-southeast-1" },
+    { id: "ap-northeast-1", name: "Asia Pacific (Tokyo) — ap-northeast-1" },
+  ];
+
   onMount(() => {
-    if (aiStore.provider === "ollama" || aiStore.apiKey.trim()) {
+    if (aiStore.provider === "bedrock" ? aiStore.isConfigured : aiStore.apiKey.trim()) {
       aiStore.fetchLiveModels();
     }
   });
 
   async function handleFetchLiveModels() {
-    if (aiStore.provider !== "ollama" && !aiStore.apiKey.trim()) {
+    if (aiStore.provider === "bedrock" && !aiStore.isConfigured) {
+      toastStore.warning(t("toasts.keyMissingTitle"), "Informe o Access Key ID e Secret Access Key da AWS.");
+      return;
+    }
+    if (aiStore.provider !== "bedrock" && !aiStore.apiKey.trim()) {
       toastStore.warning(t("toasts.keyMissingTitle"), t("toasts.keyMissingDesc"));
       return;
     }
@@ -38,11 +58,27 @@
     );
   }
 
+  function syncBedrockInputs() {
+    aiStore.setBedrockCredentials(
+      localBedrockAccessKey,
+      localBedrockSecretKey,
+      localBedrockRegion,
+      localBedrockSessionToken
+    );
+  }
+
   async function testAiKey() {
-    if (aiStore.provider !== "ollama" && !aiStore.apiKey.trim()) {
+    if (aiStore.provider === "bedrock") {
+      syncBedrockInputs();
+      if (!aiStore.bedrockAccessKeyId || !aiStore.bedrockSecretAccessKey) {
+        toastStore.warning("Credenciais Incompletas", "Informe o Access Key ID e Secret Access Key da AWS.");
+        return;
+      }
+    } else if (!aiStore.apiKey.trim()) {
       toastStore.warning(t("toasts.keyMissingTitle"), t("toasts.keyMissingDesc"));
       return;
     }
+
     isTestingAi = true;
 
     try {
@@ -57,18 +93,9 @@
         t("toasts.authSuccessTitle"),
         t("toasts.authSuccessDesc", { provider: aiStore.provider.toUpperCase() })
       );
-
-      // Automatically discover and refresh models for this validated key
-      const models = await aiStore.fetchLiveModels();
-      if (models.length > 0) {
-        toastStore.info(
-          t("settings.ai.refreshModels"),
-          t("settings.ai.modelsRefreshed", { count: models.length, provider: aiStore.provider.toUpperCase() })
-        );
-      }
-    } catch (e: any) {
+    } catch (err: any) {
       aiStore.setValidated(aiStore.provider, false);
-      const msg = String(e || `Failed to authenticate with ${aiStore.provider.toUpperCase()} API.`);
+      const msg = err?.message || String(err || "Authentication failed");
       toastStore.error(t("toasts.authErrorTitle"), msg);
     } finally {
       isTestingAi = false;
@@ -76,6 +103,9 @@
   }
 
   function saveAiSettings() {
+    if (aiStore.provider === "bedrock") {
+      syncBedrockInputs();
+    }
     aiStore.save();
     toastStore.success(
       t("toasts.configSavedTitle"),
@@ -84,12 +114,13 @@
   }
 </script>
 
-<div class="space-y-4">
+<div class="space-y-6">
   <div class="space-y-2">
-    <span class="text-xs text-zinc-300 block font-medium">
+    <span class="text-xs font-medium text-zinc-300">
       {t("settings.ai.selectProvider")}
     </span>
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
+
+    <div class="grid grid-cols-4 gap-2">
       <button
         type="button"
         onclick={() => {
@@ -102,7 +133,7 @@
       >
         <div class="flex items-center gap-2">
           <Sparkles class="w-4 h-4 text-amber-400" />
-          <span class="font-semibold text-[13px]">Google Gemini</span>
+          <span class="font-semibold text-[13px]">Gemini</span>
         </div>
         {#if aiStore.geminiApiKey}
           <span class="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">{t("settings.ai.configured")}</span>
@@ -121,7 +152,7 @@
       >
         <div class="flex items-center gap-2">
           <Bot class="w-4 h-4 text-emerald-400" />
-          <span class="font-semibold text-[13px]">OpenAI (GPT)</span>
+          <span class="font-semibold text-[13px]">OpenAI</span>
         </div>
         {#if aiStore.openaiApiKey}
           <span class="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">{t("settings.ai.configured")}</span>
@@ -150,75 +181,126 @@
       <button
         type="button"
         onclick={() => {
-          aiStore.setProvider("ollama");
+          aiStore.setProvider("bedrock");
         }}
         class="flex flex-col items-center justify-center gap-1.5 p-3 rounded-xl border transition-all cursor-pointer text-center {aiStore.provider ===
-        'ollama'
-          ? 'bg-sky-500/20 border-sky-500/50 text-sky-200 shadow-[0_0_15px_rgba(14,165,233,0.2)]'
+        'bedrock'
+          ? 'bg-orange-500/20 border-orange-500/50 text-orange-200 shadow-[0_0_15px_rgba(249,115,22,0.2)]'
           : 'bg-[#232323] border-white/[0.08] text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]'}"
       >
         <div class="flex items-center gap-2">
-          <Server class="w-4 h-4 text-sky-400" />
-          <span class="font-semibold text-[13px]">Ollama (Local)</span>
+          <Cloud class="w-4 h-4 text-orange-400" />
+          <span class="font-semibold text-[13px]">AWS Bedrock</span>
         </div>
-        {#if aiStore.ollamaValidated}
+        {#if aiStore.bedrockValidated}
           <span class="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Conectado</span>
-        {:else if aiStore.ollamaEndpoint}
-          <span class="text-[9px] px-1.5 py-0.5 rounded bg-sky-500/15 text-sky-300 border border-sky-500/30">Local</span>
+        {:else if aiStore.isConfigured}
+          <span class="text-[9px] px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-300 border border-orange-500/30">{t("settings.ai.configured")}</span>
         {/if}
       </button>
     </div>
   </div>
 
-  {#if aiStore.provider === "ollama"}
-    <div class="space-y-3 p-3.5 rounded-2xl bg-[#232323]/60 border border-white/[0.08]">
+  {#if aiStore.provider === "bedrock"}
+    <!-- Amazon Bedrock AWS Credentials Panel -->
+    <div class="space-y-3.5 p-4 rounded-2xl bg-[#232323]/60 border border-orange-500/20">
       <div class="flex items-center justify-between text-xs text-zinc-300">
-        <label for="ollama-endpoint" class="flex items-center gap-1.5 font-medium">
-          <Globe class="w-3.5 h-3.5 text-sky-400" />
-          Endpoint do Ollama
-        </label>
+        <span class="flex items-center gap-1.5 font-medium text-orange-300">
+          <Shield class="w-4 h-4 text-orange-400" />
+          Credenciais AWS Identity and Access Management (IAM)
+        </span>
         <a
-          href="https://ollama.com"
+          href="https://console.aws.amazon.com/bedrock/"
           target="_blank"
-          class="text-[11px] text-sky-300 hover:underline flex items-center gap-1"
+          class="text-[11px] text-orange-400 hover:underline flex items-center gap-1"
         >
-          ollama.com <ExternalLink class="w-2.5 h-2.5" />
+          AWS Bedrock Console <ExternalLink class="w-2.5 h-2.5" />
         </a>
       </div>
 
-      <div class="flex items-center gap-2">
-        <input
-          id="ollama-endpoint"
-          type="text"
-          value={aiStore.ollamaEndpoint}
-          oninput={(e) => aiStore.setOllamaEndpoint((e.target as HTMLInputElement).value)}
-          placeholder="http://localhost:11434"
-          class="flex-1 rounded-xl bg-[#1c1c1c] border border-white/[0.12] px-4 py-2.5 text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-sky-400/60 shadow-inner font-mono text-xs"
-        />
+      <div class="grid grid-cols-2 gap-3">
+        <div class="space-y-1">
+          <label for="bedrock-access-key" class="text-[11px] text-zinc-400 font-medium">
+            AWS Access Key ID *
+          </label>
+          <input
+            id="bedrock-access-key"
+            type="text"
+            bind:value={localBedrockAccessKey}
+            onblur={syncBedrockInputs}
+            placeholder="AKIAIOSFODNN7EXAMPLE"
+            class="w-full rounded-xl bg-[#1c1c1c] border border-white/[0.12] px-3.5 py-2 text-xs text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:border-orange-400/60 font-mono shadow-inner"
+          />
+        </div>
+
+        <div class="space-y-1">
+          <label for="bedrock-secret-key" class="text-[11px] text-zinc-400 font-medium">
+            AWS Secret Access Key *
+          </label>
+          <input
+            id="bedrock-secret-key"
+            type="password"
+            bind:value={localBedrockSecretKey}
+            onblur={syncBedrockInputs}
+            placeholder="wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+            class="w-full rounded-xl bg-[#1c1c1c] border border-white/[0.12] px-3.5 py-2 text-xs text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:border-orange-400/60 font-mono shadow-inner"
+          />
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div class="space-y-1">
+          <label for="bedrock-region" class="text-[11px] text-zinc-400 font-medium">
+            Região AWS (Region)
+          </label>
+          <div class="relative">
+            <select
+              id="bedrock-region"
+              bind:value={localBedrockRegion}
+              onchange={syncBedrockInputs}
+              class="w-full appearance-none rounded-xl bg-[#1c1c1c] border border-white/[0.12] px-3.5 py-2 text-xs text-zinc-100 focus:outline-none focus:border-orange-400/60 font-sans cursor-pointer"
+            >
+              {#each AWS_REGIONS as reg}
+                <option value={reg.id} class="bg-[#1c1c1c] text-zinc-100 py-1">
+                  {reg.name}
+                </option>
+              {/each}
+            </select>
+            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-zinc-400">
+              <ChevronDown class="w-3.5 h-3.5" />
+            </div>
+          </div>
+        </div>
+
+        <div class="space-y-1">
+          <label for="bedrock-session-token" class="text-[11px] text-zinc-400 font-medium">
+            AWS Session Token (Opcional — caso use STS / SSO)
+          </label>
+          <input
+            id="bedrock-session-token"
+            type="password"
+            bind:value={localBedrockSessionToken}
+            onblur={syncBedrockInputs}
+            placeholder="Opcional para credenciais temporárias"
+            class="w-full rounded-xl bg-[#1c1c1c] border border-white/[0.08] px-3.5 py-2 text-xs text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-orange-400/40 shadow-inner"
+          />
+        </div>
+      </div>
+
+      <div class="flex items-center justify-between pt-1">
+        <span class="text-[10px] text-zinc-500">
+          Autenticação criptográfica SigV4 direta no client Tauri sem envio para terceiros.
+        </span>
         <button
           type="button"
           onclick={testAiKey}
-          disabled={isTestingAi}
-          class="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-sky-500/20 hover:bg-sky-500/30 text-sky-200 border border-sky-500/40 text-xs font-semibold transition-all cursor-pointer disabled:opacity-40 shrink-0"
+          disabled={isTestingAi || !localBedrockAccessKey.trim() || !localBedrockSecretKey.trim()}
+          class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-orange-500/20 hover:bg-orange-500/30 text-orange-200 border border-orange-500/40 text-xs font-semibold transition-all cursor-pointer disabled:opacity-40 shrink-0"
           title={t("settings.ai.testConnection")}
         >
           <RefreshCw class="w-3.5 h-3.5 {isTestingAi ? 'animate-spin' : ''}" />
-          <span>{isTestingAi ? "Conectando..." : "Testar Conexão"}</span>
+          <span>{isTestingAi ? "Validando SigV4..." : "Testar Conexão AWS"}</span>
         </button>
-      </div>
-
-      <div class="space-y-1">
-        <label for="ollama-token" class="text-[11px] text-zinc-400 font-medium">
-          Bearer Token / Autenticação (Opcional — caso use proxy ou servidor protegido)
-        </label>
-        <input
-          id="ollama-token"
-          type="password"
-          value={aiStore.ollamaApiKey}
-          oninput={(e) => aiStore.setApiKeyForProvider("ollama", (e.target as HTMLInputElement).value)}
-          placeholder="Opcional (deixe em branco para Ollama local)"
-          class="w-full rounded-xl bg-[#1c1c1c] border border-white/[0.08] px-4 py-2 text-xs text-zinc-200 placeholder:text-zinc-500 focus:outline-none focus:border-sky-400/40 shadow-inner"
-        />
       </div>
     </div>
   {:else}
@@ -301,7 +383,7 @@
         <button
           type="button"
           onclick={handleFetchLiveModels}
-          disabled={aiStore.isFetchingModels || (aiStore.provider !== "ollama" && !aiStore.apiKey.trim())}
+          disabled={aiStore.isFetchingModels || (aiStore.provider === "bedrock" ? !aiStore.isConfigured : !aiStore.apiKey.trim())}
           class="flex items-center gap-1 text-[11px] text-sky-400 hover:text-sky-300 hover:underline transition-colors disabled:opacity-40 cursor-pointer ml-1"
           title={t("settings.ai.refreshModels")}
         >
@@ -315,7 +397,7 @@
           <span class="text-emerald-400 flex items-center gap-1">
             <CheckCircle2 class="w-3 h-3" /> {t("settings.ai.verified")}
           </span>
-        {:else if aiStore.apiKey.trim()}
+        {:else if (aiStore.provider === 'bedrock' ? aiStore.isConfigured : aiStore.apiKey.trim())}
           <span class="text-amber-400 flex items-center gap-1">
             <RefreshCw class="w-2.5 h-2.5" /> {t("settings.ai.unverified")}
           </span>

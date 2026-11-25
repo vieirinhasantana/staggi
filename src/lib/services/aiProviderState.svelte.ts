@@ -1,6 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { AIProvider, EnforcementLevel, AIModelOption } from "$lib/types";
-export type { AIProvider, EnforcementLevel, AIModelOption };
+import type { AIProvider, EnforcementLevel, AIModelOption } from "$lib/types/domain/ai";
 
 export interface AIModelPayload {
   id: string;
@@ -14,12 +13,22 @@ export const AI_MODELS: Record<AIProvider, AIModelOption[]> = {
       id: "gemini-2.0-flash",
       name: "Gemini 2.0 Flash",
       provider: "gemini"
+    },
+    {
+      id: "gemini-1.5-pro",
+      name: "Gemini 1.5 Pro",
+      provider: "gemini"
     }
   ],
   openai: [
     {
       id: "gpt-4o",
       name: "GPT-4o",
+      provider: "openai"
+    },
+    {
+      id: "gpt-4o-mini",
+      name: "GPT-4o Mini",
       provider: "openai"
     }
   ],
@@ -30,24 +39,36 @@ export const AI_MODELS: Record<AIProvider, AIModelOption[]> = {
       provider: "anthropic"
     }
   ],
-  ollama: [
+  bedrock: [
     {
-      id: "llama3.2:latest",
-      name: "Llama 3.2",
-      provider: "ollama",
-      description: "Meta Llama 3.2 Local"
+      id: "anthropic.claude-3-5-sonnet-20241022-v2:0",
+      name: "Claude 3.5 Sonnet v2 (Bedrock)",
+      provider: "bedrock",
+      description: "Anthropic Claude 3.5 Sonnet v2 on Amazon Bedrock"
     },
     {
-      id: "qwen2.5:latest",
-      name: "Qwen 2.5",
-      provider: "ollama",
-      description: "Qwen 2.5 Local"
+      id: "anthropic.claude-3-5-haiku-20241022-v1:0",
+      name: "Claude 3.5 Haiku (Bedrock)",
+      provider: "bedrock",
+      description: "High-speed, cost-effective reasoning"
     },
     {
-      id: "deepseek-r1:latest",
-      name: "DeepSeek R1",
-      provider: "ollama",
-      description: "DeepSeek Reasoning Local"
+      id: "meta.llama3-3-70b-instruct-v1:0",
+      name: "Llama 3.3 70B (Bedrock)",
+      provider: "bedrock",
+      description: "Meta Llama 3.3 70B on Amazon Bedrock"
+    },
+    {
+      id: "amazon.nova-pro-v1:0",
+      name: "Amazon Nova Pro",
+      provider: "bedrock",
+      description: "High-capability multimodal model by AWS"
+    },
+    {
+      id: "amazon.nova-lite-v1:0",
+      name: "Amazon Nova Lite",
+      provider: "bedrock",
+      description: "Fast, ultra-affordable multimodal model by AWS"
     }
   ]
 };
@@ -58,19 +79,22 @@ const PROVIDER_STORAGE = "staggi_ai_provider";
 const GEMINI_KEY_STORAGE = "staggi_gemini_api_key";
 const OPENAI_KEY_STORAGE = "staggi_openai_api_key";
 const ANTHROPIC_KEY_STORAGE = "staggi_anthropic_api_key";
-const OLLAMA_ENDPOINT_STORAGE = "staggi_ollama_endpoint";
-const OLLAMA_KEY_STORAGE = "staggi_ollama_api_key";
+
+const BEDROCK_ACCESS_KEY_STORAGE = "staggi_bedrock_access_key";
+const BEDROCK_SECRET_KEY_STORAGE = "staggi_bedrock_secret_key";
+const BEDROCK_REGION_STORAGE = "staggi_bedrock_region";
+const BEDROCK_SESSION_TOKEN_STORAGE = "staggi_bedrock_session_token";
 
 const GEMINI_MODEL_STORAGE = "staggi_gemini_model";
 const OPENAI_MODEL_STORAGE = "staggi_openai_model";
 const ANTHROPIC_MODEL_STORAGE = "staggi_anthropic_model";
-const OLLAMA_MODEL_STORAGE = "staggi_ollama_model";
+const BEDROCK_MODEL_STORAGE = "staggi_bedrock_model";
 const ENFORCEMENT_STORAGE = "staggi_enforcement_level";
 
 const GEMINI_VALIDATED_STORAGE = "staggi_gemini_validated";
 const OPENAI_VALIDATED_STORAGE = "staggi_openai_validated";
 const ANTHROPIC_VALIDATED_STORAGE = "staggi_anthropic_validated";
-const OLLAMA_VALIDATED_STORAGE = "staggi_ollama_validated";
+const BEDROCK_VALIDATED_STORAGE = "staggi_bedrock_validated";
 
 const DYNAMIC_MODELS_STORAGE_PREFIX = "staggi_dynamic_models_";
 
@@ -80,23 +104,24 @@ function getStorage(key: string, fallback: string = ""): string {
 }
 
 function setStorage(key: string, value: string) {
-  if (typeof window !== "undefined") {
-    localStorage.setItem(key, value);
-  }
+  if (typeof window === "undefined") return;
+  localStorage.setItem(key, value);
 }
 
-function loadCachedModels(p: AIProvider): AIModelOption[] {
-  if (typeof window === "undefined") return [];
+function loadCachedModels(provider: AIProvider): AIModelOption[] {
+  if (typeof window === "undefined") return AI_MODELS[provider] || [];
   try {
-    const raw = localStorage.getItem(`${DYNAMIC_MODELS_STORAGE_PREFIX}${p}`);
+    const raw = localStorage.getItem(`${DYNAMIC_MODELS_STORAGE_PREFIX}${provider}`);
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
         return parsed;
       }
     }
-  } catch {}
-  return [];
+  } catch {
+    // Fallback to static
+  }
+  return AI_MODELS[provider] || [];
 }
 
 export class AIProviderStore {
@@ -107,13 +132,17 @@ export class AIProviderStore {
   geminiApiKey = $state<string>(getStorage(GEMINI_KEY_STORAGE, ""));
   openaiApiKey = $state<string>(getStorage(OPENAI_KEY_STORAGE, ""));
   anthropicApiKey = $state<string>(getStorage(ANTHROPIC_KEY_STORAGE, ""));
-  ollamaEndpoint = $state<string>(getStorage(OLLAMA_ENDPOINT_STORAGE, "http://localhost:11434"));
-  ollamaApiKey = $state<string>(getStorage(OLLAMA_KEY_STORAGE, ""));
+
+  // Amazon Bedrock AWS Credentials
+  bedrockAccessKeyId = $state<string>(getStorage(BEDROCK_ACCESS_KEY_STORAGE, ""));
+  bedrockSecretAccessKey = $state<string>(getStorage(BEDROCK_SECRET_KEY_STORAGE, ""));
+  bedrockRegion = $state<string>(getStorage(BEDROCK_REGION_STORAGE, "us-east-1"));
+  bedrockSessionToken = $state<string>(getStorage(BEDROCK_SESSION_TOKEN_STORAGE, ""));
 
   geminiModel = $state<string>(getStorage(GEMINI_MODEL_STORAGE, "gemini-2.0-flash"));
   openaiModel = $state<string>(getStorage(OPENAI_MODEL_STORAGE, "gpt-4o"));
   anthropicModel = $state<string>(getStorage(ANTHROPIC_MODEL_STORAGE, "claude-3-7-sonnet-latest"));
-  ollamaModel = $state<string>(getStorage(OLLAMA_MODEL_STORAGE, "llama3.2:latest"));
+  bedrockModel = $state<string>(getStorage(BEDROCK_MODEL_STORAGE, "anthropic.claude-3-5-sonnet-20241022-v2:0"));
 
   enforcementLevel = $state<EnforcementLevel>(
     (getStorage(ENFORCEMENT_STORAGE, "medium") as EnforcementLevel) || "medium"
@@ -128,27 +157,34 @@ export class AIProviderStore {
   anthropicValidated = $state<boolean>(
     getStorage(ANTHROPIC_VALIDATED_STORAGE, "false") === "true" || !!getStorage(ANTHROPIC_KEY_STORAGE, "")
   );
-  ollamaValidated = $state<boolean>(
-    getStorage(OLLAMA_VALIDATED_STORAGE, "false") === "true"
+  bedrockValidated = $state<boolean>(
+    getStorage(BEDROCK_VALIDATED_STORAGE, "false") === "true"
   );
 
   discoveredModels = $state<Record<AIProvider, AIModelOption[]>>({
     gemini: loadCachedModels("gemini"),
     openai: loadCachedModels("openai"),
     anthropic: loadCachedModels("anthropic"),
-    ollama: loadCachedModels("ollama"),
+    bedrock: loadCachedModels("bedrock"),
   });
 
   isFetchingModels = $state<boolean>(false);
+
+  packedBedrockCredentials = $derived.by(() => {
+    if (!this.bedrockAccessKeyId.trim() || !this.bedrockSecretAccessKey.trim()) return "";
+    return JSON.stringify({
+      accessKeyId: this.bedrockAccessKeyId.trim(),
+      secretAccessKey: this.bedrockSecretAccessKey.trim(),
+      region: this.bedrockRegion.trim() || "us-east-1",
+      sessionToken: this.bedrockSessionToken.trim() || undefined,
+    });
+  });
 
   apiKey = $derived.by(() => {
     switch (this.provider) {
       case "openai": return this.openaiApiKey;
       case "anthropic": return this.anthropicApiKey;
-      case "ollama":
-        return this.ollamaApiKey.trim()
-          ? `${this.ollamaEndpoint.trim()}###${this.ollamaApiKey.trim()}`
-          : (this.ollamaEndpoint.trim() || "http://localhost:11434");
+      case "bedrock": return this.packedBedrockCredentials;
       default: return this.geminiApiKey;
     }
   });
@@ -157,14 +193,14 @@ export class AIProviderStore {
     switch (this.provider) {
       case "openai": return this.openaiModel;
       case "anthropic": return this.anthropicModel;
-      case "ollama": return this.ollamaModel;
+      case "bedrock": return this.bedrockModel;
       default: return this.geminiModel;
     }
   });
 
   isConfigured = $derived.by(() => {
-    if (this.provider === "ollama") {
-      return !!this.ollamaEndpoint.trim();
+    if (this.provider === "bedrock") {
+      return !!this.bedrockAccessKeyId.trim() && !!this.bedrockSecretAccessKey.trim();
     }
     return !!this.apiKey.trim();
   });
@@ -173,7 +209,7 @@ export class AIProviderStore {
     switch (this.provider) {
       case "openai": return !!this.openaiApiKey.trim() && this.openaiValidated;
       case "anthropic": return !!this.anthropicApiKey.trim() && this.anthropicValidated;
-      case "ollama": return this.ollamaValidated;
+      case "bedrock": return this.isConfigured && this.bedrockValidated;
       default: return !!this.geminiApiKey.trim() && this.geminiValidated;
     }
   });
@@ -216,8 +252,10 @@ export class AIProviderStore {
     this.provider = p;
     setStorage(PROVIDER_STORAGE, p);
     this.ensureValidActiveModel();
-    if (p === "ollama") {
-      this.fetchLiveModels("ollama");
+    if (p === "bedrock") {
+      if (this.isConfigured) {
+        this.fetchLiveModels("bedrock");
+      }
     } else {
       const key = p === "openai" ? this.openaiApiKey : p === "anthropic" ? this.anthropicApiKey : this.geminiApiKey;
       if (key.trim()) {
@@ -236,19 +274,29 @@ export class AIProviderStore {
     } else if (p === "anthropic") {
       this.anthropicValidated = val;
       setStorage(ANTHROPIC_VALIDATED_STORAGE, val ? "true" : "false");
-    } else if (p === "ollama") {
-      this.ollamaValidated = val;
-      setStorage(OLLAMA_VALIDATED_STORAGE, val ? "true" : "false");
+    } else if (p === "bedrock") {
+      this.bedrockValidated = val;
+      setStorage(BEDROCK_VALIDATED_STORAGE, val ? "true" : "false");
     }
   }
 
-  setOllamaEndpoint(endpoint: string) {
-    const clean = endpoint.trim() || "http://localhost:11434";
-    this.ollamaEndpoint = clean;
-    setStorage(OLLAMA_ENDPOINT_STORAGE, clean);
-    this.ollamaValidated = false;
-    setStorage(OLLAMA_VALIDATED_STORAGE, "false");
-    this.fetchLiveModels("ollama");
+  setBedrockCredentials(accessKeyId: string, secretAccessKey: string, region: string = "us-east-1", sessionToken: string = "") {
+    this.bedrockAccessKeyId = accessKeyId.trim();
+    this.bedrockSecretAccessKey = secretAccessKey.trim();
+    this.bedrockRegion = region.trim() || "us-east-1";
+    this.bedrockSessionToken = sessionToken.trim();
+
+    setStorage(BEDROCK_ACCESS_KEY_STORAGE, this.bedrockAccessKeyId);
+    setStorage(BEDROCK_SECRET_KEY_STORAGE, this.bedrockSecretAccessKey);
+    setStorage(BEDROCK_REGION_STORAGE, this.bedrockRegion);
+    setStorage(BEDROCK_SESSION_TOKEN_STORAGE, this.bedrockSessionToken);
+
+    this.bedrockValidated = false;
+    setStorage(BEDROCK_VALIDATED_STORAGE, "false");
+
+    if (this.bedrockAccessKeyId && this.bedrockSecretAccessKey) {
+      this.fetchLiveModels("bedrock");
+    }
   }
 
   setApiKeyForProvider(p: AIProvider, key: string) {
@@ -274,16 +322,9 @@ export class AIProviderStore {
       }
       this.anthropicApiKey = clean;
       setStorage(ANTHROPIC_KEY_STORAGE, clean);
-    } else if (p === "ollama") {
-      if (this.ollamaApiKey !== clean) {
-        this.ollamaValidated = false;
-        setStorage(OLLAMA_VALIDATED_STORAGE, "false");
-      }
-      this.ollamaApiKey = clean;
-      setStorage(OLLAMA_KEY_STORAGE, clean);
     }
 
-    if (clean.length > 15 || p === "ollama") {
+    if (clean.length > 15) {
       this.fetchLiveModels(p);
     }
   }
@@ -304,9 +345,9 @@ export class AIProviderStore {
     } else if (p === "anthropic") {
       this.anthropicModel = clean;
       setStorage(ANTHROPIC_MODEL_STORAGE, clean);
-    } else if (p === "ollama") {
-      this.ollamaModel = clean;
-      setStorage(OLLAMA_MODEL_STORAGE, clean);
+    } else if (p === "bedrock") {
+      this.bedrockModel = clean;
+      setStorage(BEDROCK_MODEL_STORAGE, clean);
     }
   }
 
@@ -325,13 +366,11 @@ export class AIProviderStore {
     if (prov === "openai") key = this.openaiApiKey;
     else if (prov === "anthropic") key = this.anthropicApiKey;
     else if (prov === "gemini") key = this.geminiApiKey;
-    else if (prov === "ollama") {
-      key = this.ollamaApiKey.trim()
-        ? `${this.ollamaEndpoint.trim()}###${this.ollamaApiKey.trim()}`
-        : (this.ollamaEndpoint.trim() || "http://localhost:11434");
+    else if (prov === "bedrock") {
+      key = this.packedBedrockCredentials;
     }
 
-    if (!key.trim() && prov !== "ollama") {
+    if (!key.trim()) {
       return AI_MODELS[prov] || [];
     }
 
@@ -369,19 +408,22 @@ export class AIProviderStore {
     setStorage(GEMINI_KEY_STORAGE, this.geminiApiKey);
     setStorage(OPENAI_KEY_STORAGE, this.openaiApiKey);
     setStorage(ANTHROPIC_KEY_STORAGE, this.anthropicApiKey);
-    setStorage(OLLAMA_ENDPOINT_STORAGE, this.ollamaEndpoint);
-    setStorage(OLLAMA_KEY_STORAGE, this.ollamaApiKey);
+
+    setStorage(BEDROCK_ACCESS_KEY_STORAGE, this.bedrockAccessKeyId);
+    setStorage(BEDROCK_SECRET_KEY_STORAGE, this.bedrockSecretAccessKey);
+    setStorage(BEDROCK_REGION_STORAGE, this.bedrockRegion);
+    setStorage(BEDROCK_SESSION_TOKEN_STORAGE, this.bedrockSessionToken);
 
     setStorage(GEMINI_MODEL_STORAGE, this.geminiModel);
     setStorage(OPENAI_MODEL_STORAGE, this.openaiModel);
     setStorage(ANTHROPIC_MODEL_STORAGE, this.anthropicModel);
-    setStorage(OLLAMA_MODEL_STORAGE, this.ollamaModel);
+    setStorage(BEDROCK_MODEL_STORAGE, this.bedrockModel);
 
     setStorage(ENFORCEMENT_STORAGE, this.enforcementLevel);
     setStorage(GEMINI_VALIDATED_STORAGE, this.geminiValidated ? "true" : "false");
     setStorage(OPENAI_VALIDATED_STORAGE, this.openaiValidated ? "true" : "false");
     setStorage(ANTHROPIC_VALIDATED_STORAGE, this.anthropicValidated ? "true" : "false");
-    setStorage(OLLAMA_VALIDATED_STORAGE, this.ollamaValidated ? "true" : "false");
+    setStorage(BEDROCK_VALIDATED_STORAGE, this.bedrockValidated ? "true" : "false");
   }
 
   reloadFromStorage() {
@@ -389,19 +431,22 @@ export class AIProviderStore {
     this.geminiApiKey = getStorage(GEMINI_KEY_STORAGE, "");
     this.openaiApiKey = getStorage(OPENAI_KEY_STORAGE, "");
     this.anthropicApiKey = getStorage(ANTHROPIC_KEY_STORAGE, "");
-    this.ollamaEndpoint = getStorage(OLLAMA_ENDPOINT_STORAGE, "http://localhost:11434");
-    this.ollamaApiKey = getStorage(OLLAMA_KEY_STORAGE, "");
+
+    this.bedrockAccessKeyId = getStorage(BEDROCK_ACCESS_KEY_STORAGE, "");
+    this.bedrockSecretAccessKey = getStorage(BEDROCK_SECRET_KEY_STORAGE, "");
+    this.bedrockRegion = getStorage(BEDROCK_REGION_STORAGE, "us-east-1");
+    this.bedrockSessionToken = getStorage(BEDROCK_SESSION_TOKEN_STORAGE, "");
 
     this.geminiModel = getStorage(GEMINI_MODEL_STORAGE, "gemini-2.0-flash");
     this.openaiModel = getStorage(OPENAI_MODEL_STORAGE, "gpt-4o");
     this.anthropicModel = getStorage(ANTHROPIC_MODEL_STORAGE, "claude-3-7-sonnet-latest");
-    this.ollamaModel = getStorage(OLLAMA_MODEL_STORAGE, "llama3.2:latest");
+    this.bedrockModel = getStorage(BEDROCK_MODEL_STORAGE, "anthropic.claude-3-5-sonnet-20241022-v2:0");
 
     this.enforcementLevel = (getStorage(ENFORCEMENT_STORAGE, "medium") as EnforcementLevel) || "medium";
     this.geminiValidated = getStorage(GEMINI_VALIDATED_STORAGE, "false") === "true" || !!this.geminiApiKey;
     this.openaiValidated = getStorage(OPENAI_VALIDATED_STORAGE, "false") === "true" || !!this.openaiApiKey;
     this.anthropicValidated = getStorage(ANTHROPIC_VALIDATED_STORAGE, "false") === "true" || !!this.anthropicApiKey;
-    this.ollamaValidated = getStorage(OLLAMA_VALIDATED_STORAGE, "false") === "true";
+    this.bedrockValidated = getStorage(BEDROCK_VALIDATED_STORAGE, "false") === "true";
   }
 }
 
