@@ -1,6 +1,6 @@
 [package]
 name = "staggi"
-version = "0.1.1"
+version = "0.1.2"
 description = "Staggi - AI Wealth Launcher"
 authors = ["you"]
 edition = "2024"

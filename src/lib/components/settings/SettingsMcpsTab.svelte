@@ -346,10 +346,15 @@
     let name = newMcpName.trim();
     if (!name) {
       try {
-        const u = new URL(endpoint.startsWith("http") ? endpoint : `http://${endpoint}`);
-        name = u.hostname === "localhost" || u.hostname === "127.0.0.1"
-          ? (u.pathname && u.pathname !== "/" ? `mcp-${u.pathname.replace(/^\//, "").replace(/\//g, "-")}` : "mcp-local")
-          : `mcp-${u.hostname.split(".")[0]}`;
+        const u = new URL(
+          endpoint.startsWith("http") ? endpoint : `http://${endpoint}`,
+        );
+        name =
+          u.hostname === "localhost" || u.hostname === "127.0.0.1"
+            ? u.pathname && u.pathname !== "/"
+              ? `mcp-${u.pathname.replace(/^\//, "").replace(/\//g, "-")}`
+              : "mcp-local"
+            : `mcp-${u.hostname.split(".")[0]}`;
       } catch {
         name = "mcp-server";
       }
@@ -378,7 +383,10 @@
     let transport = newMcpTransport;
     if (endpoint.includes("/sse")) {
       transport = "sse";
-    } else if (endpoint.startsWith("http://") || endpoint.startsWith("https://")) {
+    } else if (
+      endpoint.startsWith("http://") ||
+      endpoint.startsWith("https://")
+    ) {
       transport = "http";
     }
 
@@ -675,19 +683,30 @@
             class="p-3.5 rounded-xl bg-sky-500/10 border border-sky-500/30 space-y-2.5 animate-fade-in text-xs"
           >
             <div class="flex items-center justify-between">
-              <span class="font-semibold text-sky-300 flex items-center gap-1.5">
-                <ShieldCheck class="w-4 h-4 text-sky-400" /> OAuth 2.1 Automático (Zero Config)
+              <span
+                class="font-semibold text-sky-300 flex items-center gap-1.5"
+              >
+                <ShieldCheck class="w-4 h-4 text-sky-400" /> OAuth 2.1 Automático
+                (Zero Config)
               </span>
-              <span class="text-[10px] text-sky-400/80 font-mono">RFC 8414 • RFC 7591 • PKCE S256</span>
+              <span class="text-[10px] text-sky-400/80 font-mono"
+                >RFC 8414 • RFC 7591 • PKCE S256</span
+              >
             </div>
 
             <p class="text-[11px] text-zinc-300 leading-relaxed">
-              Basta informar a URL do servidor acima. A descoberta de rotas, registro dinâmico do cliente e o fluxo PKCE no navegador acontecem de forma 100% automática ao cadastrar.
+              Basta informar a URL do servidor acima. A descoberta de rotas,
+              registro dinâmico do cliente e o fluxo PKCE no navegador acontecem
+              de forma 100% automática ao cadastrar.
             </p>
 
             <details class="pt-1 text-[11px] text-zinc-400">
-              <summary class="cursor-pointer hover:text-zinc-200 select-none flex items-center gap-1">
-                <span>Parâmetros avançados (opcional / detecção automática)</span>
+              <summary
+                class="cursor-pointer hover:text-zinc-200 select-none flex items-center gap-1"
+              >
+                <span
+                  >Parâmetros avançados (opcional / detecção automática)</span
+                >
               </summary>
               <div class="space-y-2 pt-2.5">
                 <div class="flex items-center gap-1.5">
@@ -700,10 +719,13 @@
                   <button
                     type="button"
                     onclick={() => handleDiscoverEndpoints(true)}
-                    disabled={isDiscoveringAuth || (!newMcpOAuthIssuer.trim() && !newMcpEndpoint.trim())}
+                    disabled={isDiscoveringAuth ||
+                      (!newMcpOAuthIssuer.trim() && !newMcpEndpoint.trim())}
                     class="px-2.5 py-1.5 rounded-lg bg-sky-500/20 hover:bg-sky-500/30 border border-sky-500/40 text-sky-200 text-xs font-semibold cursor-pointer transition-colors shrink-0 disabled:opacity-40 flex items-center gap-1"
                   >
-                    <Compass class="w-3 h-3 {isDiscoveringAuth ? 'animate-spin' : ''}" />
+                    <Compass
+                      class="w-3 h-3 {isDiscoveringAuth ? 'animate-spin' : ''}"
+                    />
                     <span>Detectar</span>
                   </button>
                 </div>
@@ -879,8 +901,10 @@
                     : ''}"
                 />
               </button>
-            {:else if mcp.lastTestedStatus === 'connected'}
-              <span class="px-2 py-0.5 rounded text-[10px] bg-white/[0.04] text-zinc-400 border border-white/[0.06] flex items-center gap-1 shrink-0">
+            {:else if mcp.lastTestedStatus === "connected"}
+              <span
+                class="px-2 py-0.5 rounded text-[10px] bg-white/[0.04] text-zinc-400 border border-white/[0.06] flex items-center gap-1 shrink-0"
+              >
                 <Wrench class="w-2.5 h-2.5 text-zinc-500" />
                 <span>0 Tools</span>
               </span>
@@ -1122,9 +1146,14 @@
                 <details
                   class="p-3 rounded-xl bg-[#1e1e1e] border border-white/[0.08] space-y-2 text-zinc-400 text-[11px]"
                 >
-                  <summary class="cursor-pointer hover:text-zinc-200 select-none flex items-center justify-between">
-                    <span class="font-semibold text-sky-300 flex items-center gap-1.5">
-                      <Compass class="w-3 h-3" /> Parâmetros Avançados (opcional / detecção automática)
+                  <summary
+                    class="cursor-pointer hover:text-zinc-200 select-none flex items-center justify-between"
+                  >
+                    <span
+                      class="font-semibold text-sky-300 flex items-center gap-1.5"
+                    >
+                      <Compass class="w-3 h-3" /> Parâmetros Avançados (opcional
+                      / detecção automática)
                     </span>
                     <button
                       type="button"
@@ -1132,7 +1161,8 @@
                         e.stopPropagation();
                         handleDiscoverEndpoints(false);
                       }}
-                      disabled={isDiscoveringAuth || (!tempOAuthIssuer.trim() && !mcp.endpoint)}
+                      disabled={isDiscoveringAuth ||
+                        (!tempOAuthIssuer.trim() && !mcp.endpoint)}
                       class="text-[10px] text-sky-400 hover:text-sky-300 hover:underline flex items-center gap-1 cursor-pointer disabled:opacity-40"
                     >
                       <span>Auto-detectar (RFC 8414)</span>
@@ -1180,7 +1210,9 @@
                         />
                       </label>
                       <label class="text-[10px] text-zinc-400 mb-0.5 block">
-                        <span class="block mb-0.5">Client Secret (Opcional)</span>
+                        <span class="block mb-0.5"
+                          >Client Secret (Opcional)</span
+                        >
                         <input
                           type="password"
                           bind:value={tempOAuthClientSecret}
@@ -1195,25 +1227,26 @@
                         <span class="block mb-0.5"
                           >Scopes (separados por espaço)</span
                         >
-                      <input
-                        type="text"
-                        bind:value={tempOAuthScopes}
-                        placeholder="offline_access mcp:tools"
-                        class="w-full rounded-lg bg-[#282828] border border-white/[0.1] px-3 py-1.5 text-xs text-zinc-100 focus:outline-none focus:border-sky-400 font-normal"
-                      />
-                    </label>
-                    <label class="text-[10px] text-zinc-400 mb-0.5 block">
-                      <span class="block mb-0.5">Redirect URI (Loopback)</span>
-                      <input
-                        type="text"
-                        bind:value={tempOAuthRedirectUri}
-                        placeholder="http://localhost:18420/oauth/callback"
-                        class="w-full rounded-lg bg-[#282828] border border-white/[0.1] px-3 py-1.5 text-xs text-zinc-100 focus:outline-none focus:border-sky-400 font-normal"
-                      />
-                    </label>
+                        <input
+                          type="text"
+                          bind:value={tempOAuthScopes}
+                          placeholder="offline_access mcp:tools"
+                          class="w-full rounded-lg bg-[#282828] border border-white/[0.1] px-3 py-1.5 text-xs text-zinc-100 focus:outline-none focus:border-sky-400 font-normal"
+                        />
+                      </label>
+                      <label class="text-[10px] text-zinc-400 mb-0.5 block">
+                        <span class="block mb-0.5">Redirect URI (Loopback)</span
+                        >
+                        <input
+                          type="text"
+                          bind:value={tempOAuthRedirectUri}
+                          placeholder="http://localhost:18420/oauth/callback"
+                          class="w-full rounded-lg bg-[#282828] border border-white/[0.1] px-3 py-1.5 text-xs text-zinc-100 focus:outline-none focus:border-sky-400 font-normal"
+                        />
+                      </label>
+                    </div>
                   </div>
-                </div>
-              </details>
+                </details>
 
                 <!-- Manual code fallback option -->
                 <div class="pt-1">

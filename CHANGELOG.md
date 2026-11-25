@@ -6,6 +6,33 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ---
 
+## [0.1.2] - 2026-11-25
+
+### Added
+- **Amazon Bedrock Provider with AWS SigV4**:
+  - Direct native integration with Amazon Bedrock using AWS Signature Version 4 (SigV4) cryptographic signing in Rust.
+  - Dedicated configuration UI in Settings for AWS Access Key ID, Secret Access Key, Region selection (`us-east-1`, `us-west-2`, `sa-east-1`, etc.), and optional Session Token (STS/SSO).
+  - Out-of-the-box support for Anthropic Claude models on Bedrock (Claude 3.5 Sonnet v2, Claude 3.5 Haiku, Claude 3 Haiku), Amazon Nova (Nova Pro, Nova Lite), and Meta Llama 3.3 70B.
+  - Dynamic discovery of active foundation models enabled on the AWS account via Bedrock API.
+- **Native Always-On Screen Capture Protection**:
+  - Enforced OS-level content protection (`contentProtected: true` in Tauri) across all platforms to prevent screenshots, screen recording, and window capture in video conferencing software.
+
+### Changed
+- **Spotlight Bar Placeholder**:
+  - Standardized on a clean, fixed English placeholder (`"Ask anything, search tickers or type / for skills..."`) without text rotation or jumping animations.
+- **MCP Settings UI Refinement**:
+  - Cleaned up redundant status tags (`CUSTOM MCP SERVER`, `MARKET DATA MCP`, `NATIVE`, `HTTP`) for a cleaner card layout.
+- **Windows Overlay Scrollbars & Performance Optimization**:
+  - Standardized modern macOS-style overlay scrollbars across Windows, macOS, and Linux.
+  - Eliminated UI lag on Windows builds by enabling hardware acceleration and optimizing backdrop filters.
+
+### Fixed
+- **MCP Streamable HTTP Session ID Handshake**:
+  - Fixed `400 Bad Request: Missing session ID` errors during `tools/call` executions (e.g. `list_clients`).
+  - Added full lifecycle session preservation (`initialize` -> `notifications/initialized` -> `tools/call`), propagating the `mcp-session-id` header across both direct HTTP and SSE transports with automatic re-handshake recovery.
+
+---
+
 ## [0.1.1] - 2026-11-24
 
 ### Added
