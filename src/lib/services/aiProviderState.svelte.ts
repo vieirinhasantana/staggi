@@ -29,6 +29,26 @@ export const AI_MODELS: Record<AIProvider, AIModelOption[]> = {
       name: "Claude 3.7 Sonnet",
       provider: "anthropic"
     }
+  ],
+  ollama: [
+    {
+      id: "llama3.2:latest",
+      name: "Llama 3.2",
+      provider: "ollama",
+      description: "Meta Llama 3.2 Local"
+    },
+    {
+      id: "qwen2.5:latest",
+      name: "Qwen 2.5",
+      provider: "ollama",
+      description: "Qwen 2.5 Local"
+    },
+    {
+      id: "deepseek-r1:latest",
+      name: "DeepSeek R1",
+      provider: "ollama",
+      description: "DeepSeek Reasoning Local"
+    }
   ]
 };
 
@@ -38,15 +58,19 @@ const PROVIDER_STORAGE = "staggi_ai_provider";
 const GEMINI_KEY_STORAGE = "staggi_gemini_api_key";
 const OPENAI_KEY_STORAGE = "staggi_openai_api_key";
 const ANTHROPIC_KEY_STORAGE = "staggi_anthropic_api_key";
+const OLLAMA_ENDPOINT_STORAGE = "staggi_ollama_endpoint";
+const OLLAMA_KEY_STORAGE = "staggi_ollama_api_key";
 
 const GEMINI_MODEL_STORAGE = "staggi_gemini_model";
 const OPENAI_MODEL_STORAGE = "staggi_openai_model";
 const ANTHROPIC_MODEL_STORAGE = "staggi_anthropic_model";
+const OLLAMA_MODEL_STORAGE = "staggi_ollama_model";
 const ENFORCEMENT_STORAGE = "staggi_enforcement_level";
 
 const GEMINI_VALIDATED_STORAGE = "staggi_gemini_validated";
 const OPENAI_VALIDATED_STORAGE = "staggi_openai_validated";
 const ANTHROPIC_VALIDATED_STORAGE = "staggi_anthropic_validated";
+const OLLAMA_VALIDATED_STORAGE = "staggi_ollama_validated";
 
 const DYNAMIC_MODELS_STORAGE_PREFIX = "staggi_dynamic_models_";
 
@@ -83,10 +107,13 @@ export class AIProviderStore {
   geminiApiKey = $state<string>(getStorage(GEMINI_KEY_STORAGE, ""));
   openaiApiKey = $state<string>(getStorage(OPENAI_KEY_STORAGE, ""));
   anthropicApiKey = $state<string>(getStorage(ANTHROPIC_KEY_STORAGE, ""));
+  ollamaEndpoint = $state<string>(getStorage(OLLAMA_ENDPOINT_STORAGE, "http://localhost:11434"));
+  ollamaApiKey = $state<string>(getStorage(OLLAMA_KEY_STORAGE, ""));
 
   geminiModel = $state<string>(getStorage(GEMINI_MODEL_STORAGE, "gemini-2.0-flash"));
   openaiModel = $state<string>(getStorage(OPENAI_MODEL_STORAGE, "gpt-4o"));
   anthropicModel = $state<string>(getStorage(ANTHROPIC_MODEL_STORAGE, "claude-3-7-sonnet-latest"));
+  ollamaModel = $state<string>(getStorage(OLLAMA_MODEL_STORAGE, "llama3.2:latest"));
 
   enforcementLevel = $state<EnforcementLevel>(
     (getStorage(ENFORCEMENT_STORAGE, "medium") as EnforcementLevel) || "medium"
@@ -101,11 +128,15 @@ export class AIProviderStore {
   anthropicValidated = $state<boolean>(
     getStorage(ANTHROPIC_VALIDATED_STORAGE, "false") === "true" || !!getStorage(ANTHROPIC_KEY_STORAGE, "")
   );
+  ollamaValidated = $state<boolean>(
+    getStorage(OLLAMA_VALIDATED_STORAGE, "false") === "true"
+  );
 
   discoveredModels = $state<Record<AIProvider, AIModelOption[]>>({
     gemini: loadCachedModels("gemini"),
     openai: loadCachedModels("openai"),
     anthropic: loadCachedModels("anthropic"),
+    ollama: loadCachedModels("ollama"),
   });
 
   isFetchingModels = $state<boolean>(false);
@@ -114,6 +145,10 @@ export class AIProviderStore {
     switch (this.provider) {
       case "openai": return this.openaiApiKey;
       case "anthropic": return this.anthropicApiKey;
+      case "ollama":
+        return this.ollamaApiKey.trim()
+          ? `${this.ollamaEndpoint.trim()}###${this.ollamaApiKey.trim()}`
+          : (this.ollamaEndpoint.trim() || "http://localhost:11434");
       default: return this.geminiApiKey;
     }
   });
@@ -122,16 +157,23 @@ export class AIProviderStore {
     switch (this.provider) {
       case "openai": return this.openaiModel;
       case "anthropic": return this.anthropicModel;
+      case "ollama": return this.ollamaModel;
       default: return this.geminiModel;
     }
   });
 
-  isConfigured = $derived(!!this.apiKey.trim());
+  isConfigured = $derived.by(() => {
+    if (this.provider === "ollama") {
+      return !!this.ollamaEndpoint.trim();
+    }
+    return !!this.apiKey.trim();
+  });
 
   isValidated = $derived.by(() => {
     switch (this.provider) {
       case "openai": return !!this.openaiApiKey.trim() && this.openaiValidated;
       case "anthropic": return !!this.anthropicApiKey.trim() && this.anthropicValidated;
+      case "ollama": return this.ollamaValidated;
       default: return !!this.geminiApiKey.trim() && this.geminiValidated;
     }
   });
@@ -174,9 +216,13 @@ export class AIProviderStore {
     this.provider = p;
     setStorage(PROVIDER_STORAGE, p);
     this.ensureValidActiveModel();
-    const key = p === "openai" ? this.openaiApiKey : p === "anthropic" ? this.anthropicApiKey : this.geminiApiKey;
-    if (key.trim()) {
-      this.fetchLiveModels(p);
+    if (p === "ollama") {
+      this.fetchLiveModels("ollama");
+    } else {
+      const key = p === "openai" ? this.openaiApiKey : p === "anthropic" ? this.anthropicApiKey : this.geminiApiKey;
+      if (key.trim()) {
+        this.fetchLiveModels(p);
+      }
     }
   }
 
@@ -190,7 +236,19 @@ export class AIProviderStore {
     } else if (p === "anthropic") {
       this.anthropicValidated = val;
       setStorage(ANTHROPIC_VALIDATED_STORAGE, val ? "true" : "false");
+    } else if (p === "ollama") {
+      this.ollamaValidated = val;
+      setStorage(OLLAMA_VALIDATED_STORAGE, val ? "true" : "false");
     }
+  }
+
+  setOllamaEndpoint(endpoint: string) {
+    const clean = endpoint.trim() || "http://localhost:11434";
+    this.ollamaEndpoint = clean;
+    setStorage(OLLAMA_ENDPOINT_STORAGE, clean);
+    this.ollamaValidated = false;
+    setStorage(OLLAMA_VALIDATED_STORAGE, "false");
+    this.fetchLiveModels("ollama");
   }
 
   setApiKeyForProvider(p: AIProvider, key: string) {
@@ -216,9 +274,16 @@ export class AIProviderStore {
       }
       this.anthropicApiKey = clean;
       setStorage(ANTHROPIC_KEY_STORAGE, clean);
+    } else if (p === "ollama") {
+      if (this.ollamaApiKey !== clean) {
+        this.ollamaValidated = false;
+        setStorage(OLLAMA_VALIDATED_STORAGE, "false");
+      }
+      this.ollamaApiKey = clean;
+      setStorage(OLLAMA_KEY_STORAGE, clean);
     }
 
-    if (clean.length > 15) {
+    if (clean.length > 15 || p === "ollama") {
       this.fetchLiveModels(p);
     }
   }
@@ -239,6 +304,9 @@ export class AIProviderStore {
     } else if (p === "anthropic") {
       this.anthropicModel = clean;
       setStorage(ANTHROPIC_MODEL_STORAGE, clean);
+    } else if (p === "ollama") {
+      this.ollamaModel = clean;
+      setStorage(OLLAMA_MODEL_STORAGE, clean);
     }
   }
 
@@ -253,8 +321,17 @@ export class AIProviderStore {
 
   async fetchLiveModels(targetProvider?: AIProvider): Promise<AIModelOption[]> {
     const prov = targetProvider || this.provider;
-    const key = prov === "openai" ? this.openaiApiKey : prov === "anthropic" ? this.anthropicApiKey : this.geminiApiKey;
-    if (!key.trim()) {
+    let key = "";
+    if (prov === "openai") key = this.openaiApiKey;
+    else if (prov === "anthropic") key = this.anthropicApiKey;
+    else if (prov === "gemini") key = this.geminiApiKey;
+    else if (prov === "ollama") {
+      key = this.ollamaApiKey.trim()
+        ? `${this.ollamaEndpoint.trim()}###${this.ollamaApiKey.trim()}`
+        : (this.ollamaEndpoint.trim() || "http://localhost:11434");
+    }
+
+    if (!key.trim() && prov !== "ollama") {
       return AI_MODELS[prov] || [];
     }
 
@@ -292,13 +369,19 @@ export class AIProviderStore {
     setStorage(GEMINI_KEY_STORAGE, this.geminiApiKey);
     setStorage(OPENAI_KEY_STORAGE, this.openaiApiKey);
     setStorage(ANTHROPIC_KEY_STORAGE, this.anthropicApiKey);
+    setStorage(OLLAMA_ENDPOINT_STORAGE, this.ollamaEndpoint);
+    setStorage(OLLAMA_KEY_STORAGE, this.ollamaApiKey);
+
     setStorage(GEMINI_MODEL_STORAGE, this.geminiModel);
     setStorage(OPENAI_MODEL_STORAGE, this.openaiModel);
     setStorage(ANTHROPIC_MODEL_STORAGE, this.anthropicModel);
+    setStorage(OLLAMA_MODEL_STORAGE, this.ollamaModel);
+
     setStorage(ENFORCEMENT_STORAGE, this.enforcementLevel);
     setStorage(GEMINI_VALIDATED_STORAGE, this.geminiValidated ? "true" : "false");
     setStorage(OPENAI_VALIDATED_STORAGE, this.openaiValidated ? "true" : "false");
     setStorage(ANTHROPIC_VALIDATED_STORAGE, this.anthropicValidated ? "true" : "false");
+    setStorage(OLLAMA_VALIDATED_STORAGE, this.ollamaValidated ? "true" : "false");
   }
 
   reloadFromStorage() {
@@ -306,13 +389,19 @@ export class AIProviderStore {
     this.geminiApiKey = getStorage(GEMINI_KEY_STORAGE, "");
     this.openaiApiKey = getStorage(OPENAI_KEY_STORAGE, "");
     this.anthropicApiKey = getStorage(ANTHROPIC_KEY_STORAGE, "");
+    this.ollamaEndpoint = getStorage(OLLAMA_ENDPOINT_STORAGE, "http://localhost:11434");
+    this.ollamaApiKey = getStorage(OLLAMA_KEY_STORAGE, "");
+
     this.geminiModel = getStorage(GEMINI_MODEL_STORAGE, "gemini-2.0-flash");
     this.openaiModel = getStorage(OPENAI_MODEL_STORAGE, "gpt-4o");
     this.anthropicModel = getStorage(ANTHROPIC_MODEL_STORAGE, "claude-3-7-sonnet-latest");
+    this.ollamaModel = getStorage(OLLAMA_MODEL_STORAGE, "llama3.2:latest");
+
     this.enforcementLevel = (getStorage(ENFORCEMENT_STORAGE, "medium") as EnforcementLevel) || "medium";
     this.geminiValidated = getStorage(GEMINI_VALIDATED_STORAGE, "false") === "true" || !!this.geminiApiKey;
     this.openaiValidated = getStorage(OPENAI_VALIDATED_STORAGE, "false") === "true" || !!this.openaiApiKey;
     this.anthropicValidated = getStorage(ANTHROPIC_VALIDATED_STORAGE, "false") === "true" || !!this.anthropicApiKey;
+    this.ollamaValidated = getStorage(OLLAMA_VALIDATED_STORAGE, "false") === "true";
   }
 }
 

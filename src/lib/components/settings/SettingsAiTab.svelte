@@ -5,12 +5,14 @@
     Sparkles,
     Bot,
     Cpu,
+    Server,
     Key,
     ExternalLink,
     Sliders,
     CheckCircle2,
     RefreshCw,
     ChevronDown,
+    Globe,
   } from "@lucide/svelte";
   import { aiStore } from "$lib/services/aiProviderState.svelte";
   import { toastStore } from "$lib/services/toastService.svelte";
@@ -19,13 +21,13 @@
   let isTestingAi = $state(false);
 
   onMount(() => {
-    if (aiStore.apiKey.trim()) {
+    if (aiStore.provider === "ollama" || aiStore.apiKey.trim()) {
       aiStore.fetchLiveModels();
     }
   });
 
   async function handleFetchLiveModels() {
-    if (!aiStore.apiKey.trim()) {
+    if (aiStore.provider !== "ollama" && !aiStore.apiKey.trim()) {
       toastStore.warning(t("toasts.keyMissingTitle"), t("toasts.keyMissingDesc"));
       return;
     }
@@ -37,7 +39,7 @@
   }
 
   async function testAiKey() {
-    if (!aiStore.apiKey.trim()) {
+    if (aiStore.provider !== "ollama" && !aiStore.apiKey.trim()) {
       toastStore.warning(t("toasts.keyMissingTitle"), t("toasts.keyMissingDesc"));
       return;
     }
@@ -87,7 +89,7 @@
     <span class="text-xs text-zinc-300 block font-medium">
       {t("settings.ai.selectProvider")}
     </span>
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
       <button
         type="button"
         onclick={() => {
@@ -138,80 +140,154 @@
       >
         <div class="flex items-center gap-2">
           <Cpu class="w-4 h-4 text-violet-400" />
-          <span class="font-semibold text-[13px]">Anthropic (Claude)</span>
+          <span class="font-semibold text-[13px]">Anthropic</span>
         </div>
         {#if aiStore.anthropicApiKey}
           <span class="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">{t("settings.ai.configured")}</span>
         {/if}
       </button>
-    </div>
-  </div>
 
-  <div class="space-y-2">
-    <div
-      class="flex items-center justify-between text-xs text-zinc-300"
-    >
-      <label for="ai-key" class="flex items-center gap-1.5 font-medium">
-        <Key class="w-3.5 h-3.5 text-amber-400" />
-        {t("settings.ai.apiKeyLabel")} ({aiStore.provider === "gemini"
-          ? "Google AI Studio"
-          : aiStore.provider === "openai"
-            ? "OpenAI Platform"
-            : "Anthropic Console"})
-      </label>
-      {#if aiStore.provider === "gemini"}
-        <a
-          href="https://aistudio.google.com/app/apikey"
-          target="_blank"
-          class="text-[11px] text-amber-300 hover:underline flex items-center gap-1"
-        >
-          {t("settings.ai.getApiKey")} <ExternalLink class="w-2.5 h-2.5" />
-        </a>
-      {:else if aiStore.provider === "openai"}
-        <a
-          href="https://platform.openai.com/api-keys"
-          target="_blank"
-          class="text-[11px] text-emerald-300 hover:underline flex items-center gap-1"
-        >
-          {t("settings.ai.getApiKey")} <ExternalLink class="w-2.5 h-2.5" />
-        </a>
-      {:else}
-        <a
-          href="https://console.anthropic.com/settings/keys"
-          target="_blank"
-          class="text-[11px] text-violet-300 hover:underline flex items-center gap-1"
-        >
-          {t("settings.ai.getApiKey")} <ExternalLink class="w-2.5 h-2.5" />
-        </a>
-      {/if}
-    </div>
-
-    <div class="flex items-center gap-2">
-      <input
-        id="ai-key"
-        type="password"
-        value={aiStore.apiKey}
-        oninput={(e) =>
-          aiStore.setApiKey((e.target as HTMLInputElement).value)}
-        placeholder={aiStore.provider === "gemini"
-          ? "Paste Google AI Studio Key (e.g. AIzaSy...)"
-          : aiStore.provider === "openai"
-            ? "Paste OpenAI Key (e.g. sk-proj-...)"
-            : "Paste Anthropic Key (e.g. sk-ant-...)"}
-        class="flex-1 rounded-xl bg-[#232323] border border-white/[0.12] px-4 py-2.5 text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-amber-400/60 shadow-inner"
-      />
       <button
         type="button"
-        onclick={testAiKey}
-        disabled={isTestingAi || !aiStore.apiKey.trim()}
-        class="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-500/40 text-xs font-semibold transition-all cursor-pointer disabled:opacity-40 shrink-0"
-        title={t("settings.ai.testConnection")}
+        onclick={() => {
+          aiStore.setProvider("ollama");
+        }}
+        class="flex flex-col items-center justify-center gap-1.5 p-3 rounded-xl border transition-all cursor-pointer text-center {aiStore.provider ===
+        'ollama'
+          ? 'bg-sky-500/20 border-sky-500/50 text-sky-200 shadow-[0_0_15px_rgba(14,165,233,0.2)]'
+          : 'bg-[#232323] border-white/[0.08] text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]'}"
       >
-        <RefreshCw class="w-3.5 h-3.5 {isTestingAi ? 'animate-spin' : ''}" />
-        <span>{isTestingAi ? t("settings.ai.testing") : t("settings.ai.testConnection")}</span>
+        <div class="flex items-center gap-2">
+          <Server class="w-4 h-4 text-sky-400" />
+          <span class="font-semibold text-[13px]">Ollama (Local)</span>
+        </div>
+        {#if aiStore.ollamaValidated}
+          <span class="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Conectado</span>
+        {:else if aiStore.ollamaEndpoint}
+          <span class="text-[9px] px-1.5 py-0.5 rounded bg-sky-500/15 text-sky-300 border border-sky-500/30">Local</span>
+        {/if}
       </button>
     </div>
   </div>
+
+  {#if aiStore.provider === "ollama"}
+    <div class="space-y-3 p-3.5 rounded-2xl bg-[#232323]/60 border border-white/[0.08]">
+      <div class="flex items-center justify-between text-xs text-zinc-300">
+        <label for="ollama-endpoint" class="flex items-center gap-1.5 font-medium">
+          <Globe class="w-3.5 h-3.5 text-sky-400" />
+          Endpoint do Ollama
+        </label>
+        <a
+          href="https://ollama.com"
+          target="_blank"
+          class="text-[11px] text-sky-300 hover:underline flex items-center gap-1"
+        >
+          ollama.com <ExternalLink class="w-2.5 h-2.5" />
+        </a>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <input
+          id="ollama-endpoint"
+          type="text"
+          value={aiStore.ollamaEndpoint}
+          oninput={(e) => aiStore.setOllamaEndpoint((e.target as HTMLInputElement).value)}
+          placeholder="http://localhost:11434"
+          class="flex-1 rounded-xl bg-[#1c1c1c] border border-white/[0.12] px-4 py-2.5 text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-sky-400/60 shadow-inner font-mono text-xs"
+        />
+        <button
+          type="button"
+          onclick={testAiKey}
+          disabled={isTestingAi}
+          class="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-sky-500/20 hover:bg-sky-500/30 text-sky-200 border border-sky-500/40 text-xs font-semibold transition-all cursor-pointer disabled:opacity-40 shrink-0"
+          title={t("settings.ai.testConnection")}
+        >
+          <RefreshCw class="w-3.5 h-3.5 {isTestingAi ? 'animate-spin' : ''}" />
+          <span>{isTestingAi ? "Conectando..." : "Testar Conexão"}</span>
+        </button>
+      </div>
+
+      <div class="space-y-1">
+        <label for="ollama-token" class="text-[11px] text-zinc-400 font-medium">
+          Bearer Token / Autenticação (Opcional — caso use proxy ou servidor protegido)
+        </label>
+        <input
+          id="ollama-token"
+          type="password"
+          value={aiStore.ollamaApiKey}
+          oninput={(e) => aiStore.setApiKeyForProvider("ollama", (e.target as HTMLInputElement).value)}
+          placeholder="Opcional (deixe em branco para Ollama local)"
+          class="w-full rounded-xl bg-[#1c1c1c] border border-white/[0.08] px-4 py-2 text-xs text-zinc-200 placeholder:text-zinc-500 focus:outline-none focus:border-sky-400/40 shadow-inner"
+        />
+      </div>
+    </div>
+  {:else}
+    <div class="space-y-2">
+      <div
+        class="flex items-center justify-between text-xs text-zinc-300"
+      >
+        <label for="ai-key" class="flex items-center gap-1.5 font-medium">
+          <Key class="w-3.5 h-3.5 text-amber-400" />
+          {t("settings.ai.apiKeyLabel")} ({aiStore.provider === "gemini"
+            ? "Google AI Studio"
+            : aiStore.provider === "openai"
+              ? "OpenAI Platform"
+              : "Anthropic Console"})
+        </label>
+        {#if aiStore.provider === "gemini"}
+          <a
+            href="https://aistudio.google.com/app/apikey"
+            target="_blank"
+            class="text-[11px] text-amber-300 hover:underline flex items-center gap-1"
+          >
+            {t("settings.ai.getApiKey")} <ExternalLink class="w-2.5 h-2.5" />
+          </a>
+        {:else if aiStore.provider === "openai"}
+          <a
+            href="https://platform.openai.com/api-keys"
+            target="_blank"
+            class="text-[11px] text-emerald-300 hover:underline flex items-center gap-1"
+          >
+            {t("settings.ai.getApiKey")} <ExternalLink class="w-2.5 h-2.5" />
+          </a>
+        {:else}
+          <a
+            href="https://console.anthropic.com/settings/keys"
+            target="_blank"
+            class="text-[11px] text-violet-300 hover:underline flex items-center gap-1"
+          >
+            {t("settings.ai.getApiKey")} <ExternalLink class="w-2.5 h-2.5" />
+          </a>
+        {/if}
+      </div>
+
+      <div class="flex items-center gap-2">
+        <input
+          id="ai-key"
+          type="password"
+          value={aiStore.apiKey}
+          oninput={(e) =>
+            aiStore.setApiKey((e.target as HTMLInputElement).value)}
+          placeholder={aiStore.provider === "gemini"
+            ? "Paste Google AI Studio Key (e.g. AIzaSy...)"
+            : aiStore.provider === "openai"
+              ? "Paste OpenAI Key (e.g. sk-proj-...)"
+              : "Paste Anthropic Key (e.g. sk-ant-...)"}
+          class="flex-1 rounded-xl bg-[#232323] border border-white/[0.12] px-4 py-2.5 text-sm text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-amber-400/60 shadow-inner"
+        />
+        <button
+          type="button"
+          onclick={testAiKey}
+          disabled={isTestingAi || !aiStore.apiKey.trim()}
+          class="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-500/40 text-xs font-semibold transition-all cursor-pointer disabled:opacity-40 shrink-0"
+          title={t("settings.ai.testConnection")}
+        >
+          <RefreshCw class="w-3.5 h-3.5 {isTestingAi ? 'animate-spin' : ''}" />
+          <span>{isTestingAi ? t("settings.ai.testing") : t("settings.ai.testConnection")}</span>
+        </button>
+      </div>
+    </div>
+  {/if}
 
   <div class="space-y-2">
     <div
@@ -225,7 +301,7 @@
         <button
           type="button"
           onclick={handleFetchLiveModels}
-          disabled={aiStore.isFetchingModels || !aiStore.apiKey.trim()}
+          disabled={aiStore.isFetchingModels || (aiStore.provider !== "ollama" && !aiStore.apiKey.trim())}
           class="flex items-center gap-1 text-[11px] text-sky-400 hover:text-sky-300 hover:underline transition-colors disabled:opacity-40 cursor-pointer ml-1"
           title={t("settings.ai.refreshModels")}
         >
