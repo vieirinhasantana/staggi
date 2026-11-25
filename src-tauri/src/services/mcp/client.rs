@@ -704,14 +704,26 @@ pub async fn call_mcp_tool(
         });
         let req_init = client.post(&post_url).json(&init_payload);
         let req_init = apply_mcp_auth(req_init, api_key.as_deref(), auth_header.as_deref());
-        let _ = req_init.send().await;
+        let mut session_id: Option<String> = None;
+        if let Ok(init_res) = req_init.send().await {
+            session_id = init_res.headers().get("mcp-session-id")
+                .or_else(|| init_res.headers().get("Mcp-Session-Id"))
+                .or_else(|| init_res.headers().get("MCP-Session-ID"))
+                .and_then(|h| h.to_str().ok())
+                .map(String::from);
+        }
 
         tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
-        // Drain initialize response (id: 1)
+        // Drain initialize response (id: 1) and check if sessionId is in the body
         let _ = tokio::time::timeout(std::time::Duration::from_secs(3), async {
             while let Some(msg) = rx.recv().await {
                 if msg.get("id").and_then(|i| i.as_i64()) == Some(1) {
+                    if session_id.is_none() {
+                        if let Some(sid) = msg.pointer("/result/sessionId").and_then(|s| s.as_str()) {
+                            session_id = Some(sid.to_string());
+                        }
+                    }
                     break;
                 }
             }
@@ -722,8 +734,11 @@ pub async fn call_mcp_tool(
             "jsonrpc": "2.0",
             "method": "notifications/initialized"
         });
-        let req_notif = client.post(&post_url).json(&notif_payload);
-        let req_notif = apply_mcp_auth(req_notif, api_key.as_deref(), auth_header.as_deref());
+        let mut req_notif = client.post(&post_url).json(&notif_payload);
+        req_notif = apply_mcp_auth(req_notif, api_key.as_deref(), auth_header.as_deref());
+        if let Some(ref sid) = session_id {
+            req_notif = req_notif.header("mcp-session-id", sid);
+        }
         let _ = req_notif.send().await;
 
         tokio::time::sleep(std::time::Duration::from_millis(100)).await;
@@ -738,8 +753,11 @@ pub async fn call_mcp_tool(
                 "arguments": arguments.unwrap_or_else(|| serde_json::json!({}))
             }
         });
-        let req_call = client.post(&post_url).json(&call_payload);
-        let req_call = apply_mcp_auth(req_call, api_key.as_deref(), auth_header.as_deref());
+        let mut req_call = client.post(&post_url).json(&call_payload);
+        req_call = apply_mcp_auth(req_call, api_key.as_deref(), auth_header.as_deref());
+        if let Some(ref sid) = session_id {
+            req_call = req_call.header("mcp-session-id", sid);
+        }
         let call_res = req_call.send().await.map_err(|e| format!("Failed to call tool: {}", e))?;
 
         if call_res.status().is_success() {
@@ -766,11 +784,14 @@ pub async fn call_mcp_tool(
 
         Err("Timeout waiting for tool response from MCP server".to_string())
     } else {
-        // Direct HTTP tool call
+        // Direct HTTP tool call with full MCP Streamable HTTP handshake
         let mut candidate_urls = vec![target_url.to_string()];
         let trimmed = target_url.trim_end_matches('/');
         if !trimmed.ends_with("/mcp") {
             candidate_urls.push(format!("{}/mcp", trimmed));
+        }
+        if !trimmed.ends_with("/sse") {
+            candidate_urls.push(format!("{}/sse", trimmed));
         }
 
         let call_payload = serde_json::json!({
@@ -786,8 +807,76 @@ pub async fn call_mcp_tool(
         let mut last_err = String::new();
 
         for url in candidate_urls {
-            let req = client.post(&url).json(&call_payload);
-            let req = apply_mcp_auth(req, api_key.as_deref(), auth_header.as_deref());
+            // 1. Send initialize first to establish session and get mcp-session-id
+            let init_payload = serde_json::json!({
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "initialize",
+                "params": {
+                    "protocolVersion": "2024-11-05",
+                    "capabilities": {
+                        "tools": {}
+                    },
+                    "clientInfo": {
+                        "name": "staggi",
+                        "version": "0.1.1"
+                    }
+                }
+            });
+
+            let mut req_init = client.post(&url)
+                .header("Accept", "application/json, text/event-stream")
+                .json(&init_payload);
+            req_init = apply_mcp_auth(req_init, api_key.as_deref(), auth_header.as_deref());
+
+            let mut session_id: Option<String> = None;
+            let mut init_succeeded = false;
+
+            if let Ok(res_init) = req_init.send().await {
+                let init_status = res_init.status();
+                if init_status.is_success() {
+                    init_succeeded = true;
+                    // Check header case variants
+                    session_id = res_init.headers().get("mcp-session-id")
+                        .or_else(|| res_init.headers().get("Mcp-Session-Id"))
+                        .or_else(|| res_init.headers().get("MCP-Session-ID"))
+                        .and_then(|h| h.to_str().ok())
+                        .map(String::from);
+
+                    let init_body = res_init.text().await.unwrap_or_default();
+                    if session_id.is_none() {
+                        if let Ok(body_json) = serde_json::from_str::<serde_json::Value>(&init_body) {
+                            if let Some(sid) = body_json.pointer("/result/sessionId").and_then(|s| s.as_str()) {
+                                session_id = Some(sid.to_string());
+                            }
+                        }
+                    }
+
+                    // 2. Send notifications/initialized
+                    let notif_payload = serde_json::json!({
+                        "jsonrpc": "2.0",
+                        "method": "notifications/initialized"
+                    });
+                    let mut notif_req = client.post(&url)
+                        .header("Accept", "application/json, text/event-stream")
+                        .json(&notif_payload);
+                    notif_req = apply_mcp_auth(notif_req, api_key.as_deref(), auth_header.as_deref());
+                    if let Some(ref sid) = session_id {
+                        notif_req = notif_req.header("mcp-session-id", sid);
+                    }
+                    let _ = notif_req.send().await;
+                }
+            }
+
+            // 3. Send tools/call with session_id header
+            let mut req = client.post(&url)
+                .header("Accept", "application/json, text/event-stream")
+                .json(&call_payload);
+            req = apply_mcp_auth(req, api_key.as_deref(), auth_header.as_deref());
+            if let Some(ref sid) = session_id {
+                req = req.header("mcp-session-id", sid);
+            }
+
             let res = match req.send().await {
                 Ok(r) => r,
                 Err(e) => {
@@ -803,52 +892,81 @@ pub async fn call_mcp_tool(
             }
 
             let text = res.text().await.unwrap_or_default();
-            let val: serde_json::Value = serde_json::from_str(&text).map_err(|e| format!("Error parsing JSON: {} (Raw: {})", e, text))?;
 
-            // If server requires initialization handshake
-            if let Some(err) = val.get("error") {
-                let msg = err.get("message").and_then(|m| m.as_str()).unwrap_or("").to_lowercase();
-                if msg.contains("initialize") || msg.contains("session") {
-                    let init_payload = serde_json::json!({
-                        "jsonrpc": "2.0",
-                        "id": 1,
-                        "method": "initialize",
-                        "params": {
-                            "protocolVersion": "2024-11-05",
-                            "capabilities": {},
-                            "clientInfo": { "name": "staggi", "version": "0.1.1" }
+            // Check if server returned 400 Bad Request: Missing session ID (or error requiring session)
+            let is_missing_session = status.as_u16() == 400 && text.to_lowercase().contains("session");
+            if is_missing_session && !init_succeeded {
+                // If we didn't succeed with initialize earlier, retry full handshake now
+                let init_payload = serde_json::json!({
+                    "jsonrpc": "2.0",
+                    "id": 1,
+                    "method": "initialize",
+                    "params": {
+                        "protocolVersion": "2024-11-05",
+                        "capabilities": { "tools": {} },
+                        "clientInfo": { "name": "staggi", "version": "0.1.1" }
+                    }
+                });
+                let mut retry_init = client.post(&url)
+                    .header("Accept", "application/json, text/event-stream")
+                    .json(&init_payload);
+                retry_init = apply_mcp_auth(retry_init, api_key.as_deref(), auth_header.as_deref());
+                if let Ok(retry_init_res) = retry_init.send().await {
+                    let mut new_session_id = retry_init_res.headers().get("mcp-session-id")
+                        .or_else(|| retry_init_res.headers().get("Mcp-Session-Id"))
+                        .or_else(|| retry_init_res.headers().get("MCP-Session-ID"))
+                        .and_then(|h| h.to_str().ok())
+                        .map(String::from);
+                    let body_str = retry_init_res.text().await.unwrap_or_default();
+                    if new_session_id.is_none() {
+                        if let Ok(val) = serde_json::from_str::<serde_json::Value>(&body_str) {
+                            if let Some(sid) = val.pointer("/result/sessionId").and_then(|s| s.as_str()) {
+                                new_session_id = Some(sid.to_string());
+                            }
                         }
-                    });
-                    let init_req = client.post(&url).json(&init_payload);
-                    let init_req = apply_mcp_auth(init_req, api_key.as_deref(), auth_header.as_deref());
-                    let init_res = init_req.send().await.map_err(|e| e.to_string())?;
-                    let session_id = init_res.headers().get("mcp-session-id").and_then(|h| h.to_str().ok()).map(String::from);
-
-                    let notif_payload = serde_json::json!({
-                        "jsonrpc": "2.0",
-                        "method": "notifications/initialized"
-                    });
-                    let mut notif_req = client.post(&url).json(&notif_payload);
-                    notif_req = apply_mcp_auth(notif_req, api_key.as_deref(), auth_header.as_deref());
-                    if let Some(ref sid) = session_id {
-                        notif_req = notif_req.header("mcp-session-id", sid);
                     }
-                    let _ = notif_req.send().await;
 
-                    let mut retry_req = client.post(&url).json(&call_payload);
-                    retry_req = apply_mcp_auth(retry_req, api_key.as_deref(), auth_header.as_deref());
-                    if let Some(ref sid) = session_id {
-                        retry_req = retry_req.header("mcp-session-id", sid);
-                    }
-                    if let Ok(retry_res) = retry_req.send().await {
-                        if let Ok(retry_val) = retry_res.json::<serde_json::Value>().await {
-                            return Ok(retry_val);
+                    if let Some(ref sid) = new_session_id {
+                        let notif_payload = serde_json::json!({
+                            "jsonrpc": "2.0",
+                            "method": "notifications/initialized"
+                        });
+                        let mut notif_req = client.post(&url).json(&notif_payload).header("mcp-session-id", sid);
+                        notif_req = apply_mcp_auth(notif_req, api_key.as_deref(), auth_header.as_deref());
+                        let _ = notif_req.send().await;
+
+                        let mut retry_call = client.post(&url)
+                            .header("Accept", "application/json, text/event-stream")
+                            .header("mcp-session-id", sid)
+                            .json(&call_payload);
+                        retry_call = apply_mcp_auth(retry_call, api_key.as_deref(), auth_header.as_deref());
+                        if let Ok(final_res) = retry_call.send().await {
+                            let final_text = final_res.text().await.unwrap_or_default();
+                            if let Ok(val) = serde_json::from_str::<serde_json::Value>(&final_text) {
+                                return Ok(val);
+                            }
                         }
                     }
                 }
             }
 
-            return Ok(val);
+            // Parse response body as JSON or extract from SSE stream format if returned as event-stream
+            if let Ok(val) = serde_json::from_str::<serde_json::Value>(&text) {
+                return Ok(val);
+            }
+
+            // Check if returned as SSE data lines
+            for line in text.lines() {
+                let trimmed_line = line.trim();
+                if trimmed_line.starts_with("data:") {
+                    let data_part = trimmed_line[5..].trim();
+                    if let Ok(val) = serde_json::from_str::<serde_json::Value>(data_part) {
+                        return Ok(val);
+                    }
+                }
+            }
+
+            last_err = format!("Error parsing tool response from {}: {}", url, text);
         }
 
         Err(if last_err.is_empty() { "Failed to call MCP tool via direct HTTP".to_string() } else { last_err })
