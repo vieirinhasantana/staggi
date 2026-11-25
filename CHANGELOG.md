@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ---
 
+## [0.1.21] - 2026-11-25
+
+### Fixed
+- **Amazon Bedrock Cross-Region Inference Profiles**:
+  - Automatically resolve model IDs to cross-region system-defined inference profiles (`us.<model_id>`), resolving AWS 400 Bad Request on-demand invocation errors.
+- **MCP Tool Invocation & Dynamic Tool Calling**:
+  - Automated dynamic tool planning and multi-tool parallel calling with session schema caching.
+  - Enhanced Brazilian/US asset ticker recognition and client portfolio disambiguation logic.
+- **Windows Build Compatibility**:
+  - Wrapped WebView2 environment configuration in `unsafe` blocks for Rust 2024 edition compatibility.
+
+---
+
 ## [0.1.2] - 2026-11-25
 
 ### Added

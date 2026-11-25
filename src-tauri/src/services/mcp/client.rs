@@ -126,7 +126,7 @@ pub async fn query_mcp_sse_tools(
             "capabilities": {},
             "clientInfo": {
                 "name": "staggi",
-                "version": "0.1.2"
+                "version": "0.1.21"
             }
         }
     });
@@ -297,7 +297,7 @@ pub async fn query_direct_http_mcp_tools(
                 },
                 "clientInfo": {
                     "name": "staggi",
-                    "version": "0.1.2"
+                    "version": "0.1.21"
                 }
             }
         });
@@ -699,7 +699,7 @@ pub async fn call_mcp_tool(
             "params": {
                 "protocolVersion": "2024-11-05",
                 "capabilities": {},
-                "clientInfo": { "name": "staggi", "version": "0.1.2" }
+                "clientInfo": { "name": "staggi", "version": "0.1.21" }
             }
         });
         let req_init = client.post(&post_url).json(&init_payload);
@@ -819,7 +819,7 @@ pub async fn call_mcp_tool(
                     },
                     "clientInfo": {
                         "name": "staggi",
-                        "version": "0.1.2"
+                        "version": "0.1.21"
                     }
                 }
             });
@@ -904,7 +904,7 @@ pub async fn call_mcp_tool(
                     "params": {
                         "protocolVersion": "2024-11-05",
                         "capabilities": { "tools": {} },
-                        "clientInfo": { "name": "staggi", "version": "0.1.2" }
+                        "clientInfo": { "name": "staggi", "version": "0.1.21" }
                     }
                 });
                 let mut retry_init = client.post(&url)
