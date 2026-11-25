@@ -129,6 +129,9 @@ ${relevantMemories.map(m => `- **${m.title}**: ${m.content}`).join("\n")}
 Atenção: Trate essas diretrizes como preferências e estilo de trabalho do assessor, correlacionando-as com os dados cadastrais e documentos retornados por MCPs e RAG.`;
   }
 
+  // Match skills via slash command or explicit skill mention
+  const allSkills = pluginsStore.skills;
+  const availableSkills = activeSkills.length > 0 ? activeSkills : allSkills;
   let explicitSkillDirective = "";
   const slashMatch = cleanPrompt.match(/^\/([a-zA-Z0-9_-]+)(?:\s+(.*))?$/s);
 
@@ -136,9 +139,10 @@ Atenção: Trate essas diretrizes como preferências e estilo de trabalho do ass
     const requestedSlug = slashMatch[1].toLowerCase();
     const restOfPrompt = slashMatch[2] ? slashMatch[2].trim() : "";
 
-    const targetSkill = activeSkills.find(s => {
+    const targetSkill = availableSkills.find(s => {
       const slug = getSkillSlug(s).toLowerCase();
-      return slug === requestedSlug || s.name.toLowerCase().includes(requestedSlug) || s.id.toLowerCase().includes(requestedSlug);
+      const rawSlug = (s.slug || "").toLowerCase();
+      return slug === requestedSlug || rawSlug === requestedSlug || s.name.toLowerCase().includes(requestedSlug) || s.id.toLowerCase().includes(requestedSlug);
     });
 
     if (targetSkill) {
@@ -154,6 +158,19 @@ ${targetSkill.systemPrompt}`;
       onProgress?.("Thinking...");
     }
   } else {
+    // Check if the prompt mentions any registered skill by name or slug
+    const promptLower = cleanPrompt.toLowerCase();
+    const matchedSkill = availableSkills.find(s => {
+      const slug = getSkillSlug(s).toLowerCase();
+      const name = s.name.toLowerCase();
+      return (slug.length >= 4 && promptLower.includes(slug)) || promptLower.includes(name);
+    });
+    if (matchedSkill) {
+      activeSkillName = matchedSkill.name;
+      explicitSkillDirective = `\n\n[SKILL RELEVANTE IDENTIFICADA: ${matchedSkill.name.toUpperCase()}]:
+Aplique as regras e metodologias da skill ${matchedSkill.name}:
+${matchedSkill.systemPrompt}`;
+    }
     onProgress?.("Thinking...");
   }
 
@@ -184,25 +201,52 @@ ${targetSkill.systemPrompt}`;
       const toolName = tool.name.toLowerCase();
       let shouldExecute = false;
 
+      // Extract potential ticker (B3 format like PETR4, VALE3, BBAS3, HGLG11 or US ticker)
+      const b3Match = cleanPrompt.match(/\b([A-Za-z]{4}\d{1,2}(?:\.SA)?)\b/i);
+      const usMatch = cleanPrompt.match(/\b(AAPL|MSFT|NVDA|GOOGL|GOOG|AMZN|TSLA|META|SPY|QQQ|IVV|VOO|BRK\.B)\b/i);
+      const detectedTicker = b3Match ? b3Match[1].toUpperCase() : (usMatch ? usMatch[1].toUpperCase() : undefined);
+
       if (cleanPrompt.toLowerCase().includes(toolName)) {
         shouldExecute = true;
-      } else if (toolName === "list_clients" && /\b(clientes?|clients?|investidores?|carteira de clientes)\b/i.test(cleanPrompt)) {
+      } else if (
+        (toolName === "list_clients" || toolName.includes("client")) &&
+        /\b(clientes?|clients?|investidores?|carteira de clientes|base de clientes|contas?)\b/i.test(cleanPrompt)
+      ) {
         shouldExecute = true;
-      } else if (toolName === "list_trade_ideas" && /\b(trade ideas?|ideias? de trade|teses?|recomendações?|oportunidades?)\b/i.test(cleanPrompt)) {
+      } else if (
+        (toolName === "list_trade_ideas" || toolName.includes("trade_idea")) &&
+        /\b(trade ideas?|ideias? de trade|teses?|recomendações?|oportunidades?|sugest[oõ]es?)\b/i.test(cleanPrompt)
+      ) {
         shouldExecute = true;
-      } else if ((toolName === "send_automation_report_email" || toolName === "send_portfolio_proposal_email") &&
-        /\b(envi(?:ar|e)|dispar(?:ar|e)|notific(?:ar|que)|mand(?:ar|e))\b.*\b(e-?mails?|relat[oó]rio|proposta|resultado)\b/i.test(cleanPrompt)) {
+      } else if (
+        (toolName === "get_portfolio_positions" || toolName === "get_asset_allocation" || toolName === "get_portfolio_metrics" || toolName.includes("portfolio") || toolName.includes("carteira") || toolName.includes("alocacao") || toolName.includes("posicao") || toolName.includes("position") || toolName.includes("asset")) &&
+        /\b(portf[oó]lio|carteira|aloca[çc][aã]o|posi[çc][oõ]es|posicao|patrim[oô]nio|distribui[çc][aã]o|aum)\b/i.test(cleanPrompt)
+      ) {
         shouldExecute = true;
-      } else if (toolName === "list_indexed_documents" && /\b(documentos?|pdfs?|relat[oó]rios? indexados?)\b/i.test(cleanPrompt)) {
+      } else if (
+        (toolName === "get_stock_quote" || toolName === "quote" || toolName.includes("quote") || toolName.includes("price") || toolName.includes("preco") || toolName.includes("cotacao")) &&
+        (detectedTicker || /\b(cota[çc][aã]o|pre[çc]o|quanto est[aá]|ticker|a[çc][aã]o|valor|m[uú]ltiplos?|valuation)\b/i.test(cleanPrompt))
+      ) {
         shouldExecute = true;
-      } else if ((toolName.includes("quote") || toolName.includes("price") || toolName.includes("ticker") || toolName.includes("cotacao") || toolName.includes("preco") || toolName.includes("dividend") || toolName.includes("provento")) &&
-        /\b(cota[çc][aã]o|pre[çc]o|quanto est[aá]|ticker|a[çc][aã]o|valor|proventos?|dividendos?)\b/i.test(cleanPrompt)) {
+      } else if (
+        (toolName === "get_historical_dividends" || toolName.includes("dividend") || toolName.includes("provento") || toolName.includes("rendimento")) &&
+        (detectedTicker || /\b(proventos?|dividendos?|jcp|yield|dy|rendimentos?)\b/i.test(cleanPrompt))
+      ) {
         shouldExecute = true;
-      } else if ((toolName.includes("news") || toolName.includes("noticia")) &&
-        /\b(not[ií]cias?|manchetes?|fatos? relevantes?|notici[aá]rio)\b/i.test(cleanPrompt)) {
+      } else if (
+        (toolName === "get_market_news" || toolName.includes("news") || toolName.includes("noticia")) &&
+        /\b(not[ií]cias?|manchetes?|fatos? relevantes?|notici[aá]rio|novidades?)\b/i.test(cleanPrompt)
+      ) {
         shouldExecute = true;
-      } else if ((toolName.includes("portfolio") || toolName.includes("carteira") || toolName.includes("alocacao") || toolName.includes("posicao") || toolName.includes("position") || toolName.includes("asset")) &&
-        /\b(portf[oó]lio|carteira|aloca[çc][aã]o|posi[çc][oõ]es|posicao|patrim[oô]nio|distribui[çc][aã]o)\b/i.test(cleanPrompt)) {
+      } else if (
+        (toolName === "send_automation_report_email" || toolName === "send_portfolio_proposal_email") &&
+        /\b(envi(?:ar|e)|dispar(?:ar|e)|notific(?:ar|que)|mand(?:ar|e))\b.*\b(e-?mails?|relat[oó]rio|proposta|resultado)\b/i.test(cleanPrompt)
+      ) {
+        shouldExecute = true;
+      } else if (
+        toolName === "list_indexed_documents" &&
+        /\b(documentos?|pdfs?|relat[oó]rios? indexados?)\b/i.test(cleanPrompt)
+      ) {
         shouldExecute = true;
       }
 
@@ -214,19 +258,47 @@ ${targetSkill.systemPrompt}`;
           : `Thinking... [${toolsLabel}]`;
         onProgress?.(statusText);
 
-        const b3Match = cleanPrompt.match(/\b([A-Za-z]{4}\d{1,2}(?:\.SA)?)\b/i);
-        const usMatch = cleanPrompt.match(/\b(AAPL|MSFT|NVDA|GOOGL|AMZN|TSLA|META)\b/i);
-        const detectedTicker = b3Match ? b3Match[1] : (usMatch ? usMatch[1] : undefined);
-        const toolArgs: Record<string, unknown> = detectedTicker
-          ? { symbol: detectedTicker, query: detectedTicker }
-          : {};
+        // Build robust arguments according to the tool requirements
+        const toolArgs: Record<string, unknown> = {};
+        if (detectedTicker) {
+          toolArgs.symbol = detectedTicker;
+          toolArgs.ticker = detectedTicker;
+          toolArgs.query = detectedTicker;
+        }
+
+        // Account number / Client ID detection
+        const accountMatch = cleanPrompt.match(/\b(STG[\w-]{4,15})\b/i);
+        if (accountMatch) {
+          toolArgs.account_number = accountMatch[1].toUpperCase();
+          toolArgs.client_id = accountMatch[1].toUpperCase();
+        }
+
+        // Risk profile detection
+        const riskMatch = cleanPrompt.match(/\b(CONSERVATIVE|MODERATE|AGGRESSIVE|SPECULATIVE|LOW|HIGH|MODERADO|CONSERVADOR|AGRESSIVO)\b/i);
+        if (riskMatch) {
+          toolArgs.risk_profile = riskMatch[1].toUpperCase();
+        }
 
         try {
           const res = await pluginsStore.callTool(mcp.id, tool.name, toolArgs);
           if (res) {
-            const rawContent = res.result?.content || res.result || res;
-            const contentStr = typeof rawContent === "string" ? rawContent : JSON.stringify(rawContent, null, 2);
-            const trimmed = contentStr.length > 5000 ? contentStr.slice(0, 5000) + "\n...[truncated]" : contentStr;
+            // Handle various tool response formats (MCP text content array, JSON result, or raw value)
+            let contentStr = "";
+            if (res.result?.content && Array.isArray(res.result.content)) {
+              contentStr = res.result.content
+                .map((item: any) => (typeof item === "string" ? item : item?.text || JSON.stringify(item)))
+                .join("\n");
+            } else if (res.content && Array.isArray(res.content)) {
+              contentStr = res.content
+                .map((item: any) => (typeof item === "string" ? item : item?.text || JSON.stringify(item)))
+                .join("\n");
+            } else if (res.result) {
+              contentStr = typeof res.result === "string" ? res.result : JSON.stringify(res.result, null, 2);
+            } else {
+              contentStr = typeof res === "string" ? res : JSON.stringify(res, null, 2);
+            }
+
+            const trimmed = contentStr.length > 8000 ? contentStr.slice(0, 8000) + "\n...[truncated]" : contentStr;
             liveMcpData += `\n\n[DADOS AUDITADOS RETORNADOS DO MCP LOCAL: ${mcp.name} • FERRAMENTA: ${tool.name}]:\n${trimmed}\nATENÇÃO: Utilize com rigor fiduciário esses dados factuais reais retornados pelo servidor MCP para responder à consulta do usuário.`;
           }
         } catch (e: any) {
