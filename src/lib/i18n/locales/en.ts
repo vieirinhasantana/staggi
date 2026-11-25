@@ -50,7 +50,7 @@ export const en: TranslationDictionary = {
     emptyStateTitle: "Wealth Advisory & Market Intelligence",
     emptyStateSubtitle: "Select a quick analysis prompt below or type any ticker, company, or market query.",
     sessionFallbackTitle: "New Conversation",
-    inputPlaceholder: "Ask anything, analyze tickers, or run skills (e.g. /valuation BBAS3)...",
+    inputPlaceholder: "Pergunte sobre ações, proventos ou digite / para habilidades...",
   },
   spotlight: {
     searchPlaceholder: "Search assets, skills, or enter queries... (Press Esc to close)",

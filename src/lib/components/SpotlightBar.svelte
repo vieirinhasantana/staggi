@@ -36,7 +36,27 @@
     disabled = false
   }: Props = $props();
 
-  let effectivePlaceholder = $derived(placeholder || t("chat.inputPlaceholder"));
+  const PLACEHOLDER_HINTS = [
+    "Pergunte sobre ações, cotações ou múltiplos (ex: PETR4, AAPL, VALE3)...",
+    "Analise proventos, dividend yield ou balanços recentes...",
+    "Digite / para acionar habilidades e análises especializadas...",
+    "Como está o mercado hoje ou quais os destaques do Ibovespa e S&P 500?",
+    "Consulte teses de alocação, indicadores e dados financeiros...",
+  ];
+
+  let hintIndex = $state(0);
+
+  $effect(() => {
+    if (placeholder) return;
+    const interval = setInterval(() => {
+      if (!inputVal) {
+        hintIndex = (hintIndex + 1) % PLACEHOLDER_HINTS.length;
+      }
+    }, 4500);
+    return () => clearInterval(interval);
+  });
+
+  let effectivePlaceholder = $derived(placeholder || PLACEHOLDER_HINTS[hintIndex]);
 
   let inputVal = $state("");
   let textareaEl = $state<HTMLTextAreaElement | null>(null);
