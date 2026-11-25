@@ -217,9 +217,15 @@ ${matchedSkill.systemPrompt}`;
       text: h.text
     }));
 
-  // Refresh MCP tool schemas once per app session so newly registered tools/schemas are always discovered
+  // Refresh MCP tool schemas only if tools are missing or newly added server tools aren't cached yet
   for (const m of pluginsStore.activeMcps) {
-    if (!refreshedMcpSchemasInSession.has(m.id) || !m.tools || m.tools.length === 0) {
+    const needsDiscovery =
+      !m.tools ||
+      m.tools.length === 0 ||
+      (!refreshedMcpSchemasInSession.has(m.id) &&
+        m.tools.some(t => t.name === "get_client_portfolios") &&
+        !m.tools.some(t => t.name === "screen_firm_transactions"));
+    if (needsDiscovery) {
       refreshedMcpSchemasInSession.add(m.id);
       try {
         await pluginsStore.testMcp(m.id);
@@ -270,39 +276,64 @@ ${matchedSkill.systemPrompt}`;
       "index_pdf_document"
     ]);
 
+    // Build a compact, low-token signature catalog directly from MCP schemas (~350 tokens vs 8,000 tokens)
+    const eligibleCatalog = availableToolCatalog.filter(
+      t => explicitOutboundIntent || !mutationToolNames.has(t.toolName)
+    );
+
+    const compactCatalogLines = eligibleCatalog.map(t => {
+      const props = (t.parameters || {}) as Record<string, any>;
+      const reqSet = new Set(Array.isArray(t.required) ? (t.required as string[]) : []);
+      const paramSig = Object.entries(props)
+        .filter(([k]) => !["name", "client_name"].includes(k)) // hide redundant alias params to keep signature crisp
+        .map(([k, v]) => {
+          let pType = v?.type || "";
+          if (!pType && Array.isArray(v?.anyOf)) {
+            pType = v.anyOf.map((x: any) => x?.type).filter((x: any) => x && x !== "null").join("|");
+          }
+          return `${k}${reqSet.has(k) ? "" : "?"}: ${pType || "any"}`;
+        })
+        .join(", ");
+      const shortDesc = (t.description || "").replace(/\s+/g, " ").trim().slice(0, 220);
+      return `- [mcpId="${t.mcpId}"] ${t.toolName}(${paramSig}): ${shortDesc}`;
+    });
+
     const recentTurnsText = cleanHistory
-      .slice(-6)
-      .map(t => `${t.role === "user" ? "USUÁRIO" : "ASSISTENTE"}: ${t.text.slice(0, 800)}`)
-      .join("\n\n");
+      .slice(-4)
+      .map(t => `${t.role === "user" ? "U" : "A"}: ${t.text.slice(0, 500)}`)
+      .join("\n");
 
-    const plannerSystemInstruction = `Você é o Planejador de Chamadas MCP (Function Calling Router) do Staggi Wealth Management.
-Sua ÚNICA tarefa é analisar o pedido atual do usuário (e o histórico recente da conversa) e retornar ESTRITAMENTE um array JSON válido indicando quais ferramentas MCP chamar e com quais argumentos exatos ("args").
+    const plannerSystemInstruction = `You are the MCP Function-Calling Router for Staggi Wealth Management (Today: ${currentDateStr}).
+Output ONLY a valid JSON array of tool calls: [{"mcpId":"...","toolName":"...","args":{...}}] or [] if no MCP tool is needed. No prose.
 
-REGRAS OBRIGATÓRIAS:
-1. Retorne APENAS JSON puro no formato: [{"mcpId": "...", "toolName": "...", "args": {...}}] (ou [] se nenhuma ferramenta MCP for necessária). Sem explicações fora do JSON.
-2. SEMPRE extraia e preencha os argumentos reais ("search", "client_id", "advisor_name", "account_number", "ticker", "query", etc.) a partir do texto do usuário e do histórico. NUNCA envie "args": {} quando o usuário mencionar um nome de pessoa, código de conta (STG...), assessor, ativo ou termo de pesquisa.
-3. NOMES PARCIAIS / HOMÔNIMOS / DESAMBIGUAÇÃO ASSESSOR vs. CLIENTE:
-   - Se o usuário perguntar sobre "carteira", "portfólio", "contas" ou "clientes" citando apenas um primeiro nome ou nome parcial (ex: "qual a carteira do Lucas?", "quais são as contas do Lucas?"), chame EM CONJUNTO:
-     a) "list_clients" com {"search": "<nome>", "limit": 50} (para listar todos os clientes homônimos na base)
-     b) "get_client_portfolios" com {"client_id": "<nome>"} (para detectar assessores e carteiras correspondentes)
-4. BOOK DO ASSESSOR:
-   - Se o usuário pedir o book/carteira de um assessor (ex: "carteira do assessor Lucas", "clientes do assessor ...", ou responder "do assessor" em continuação ao histórico), chame "get_advisor_book" com {"advisor_name": "<nome>"} (e opcionalmente "list_clients" com {"advisor_name": "<nome>", "limit": 50}).
-5. CLIENTE ESPECÍFICO (NOME E SOBRENOME OU CONTA STG...):
-   - Se o usuário informar nome completo (ex: nome + sobrenome) ou código de conta (ex: STG...) pedindo carteira/portfólio/diagnóstico, chame em conjunto: "get_client_portfolios", "get_portfolio_positions", "get_asset_allocation" e "get_portfolio_metrics", passando {"client_id": "<nome_completo_ou_conta>"} em TODAS elas.
-   - Se pedir apenas as contas ou dados cadastrais desse cliente específico, chame "get_client_portfolios" e "get_client_details" com {"client_id": "<nome_completo_ou_conta>"}.
-6. SEGURANÇA DE FERRAMENTAS DE DISPARO/MUTAÇÃO:
-   - NUNCA inclua ferramentas de envio de e-mail, ligação Vapi, proposta/decisão de trade ou indexação de PDF em consultas de leitura/análise. Só as selecione se o usuário ordenar explicitamente o disparo/registro.
-7. Limite máximo: até 6 ferramentas por turno.`;
+ROUTING RULES:
+1. NEVER pass verbs, phrases, or question words in "client_id" or "search" — ONLY pass a real person's name, email, account code (STG...), or UUID.
+2. FIRM-WIDE / CROSS-ADVISOR FLOWS & SCREENING (all clients / all advisors):
+   - Cash deposits/inflows ("aportaram", "aportes", "cash", "depósitos"), withdrawals ("resgates", "saques"), buys, sells, or dividends across clients/advisors -> call "screen_firm_transactions" with {"transaction_type": "DEPOSIT"|"WITHDRAWAL"|"BUY"|"SELL"|"DIVIDEND", "days_back": 30 (for last month, 7 for week, 90 for quarter, 365 for year), "limit": 250} (add "advisor_name" only if filtered to one advisor).
+   - Clients holding a specific ticker/asset class/sector across the firm -> call "screen_firm_positions".
+   - Compare all advisors -> call "get_advisor_book" with {"advisor_name": "ALL"}. Single advisor book -> {"advisor_name": "<name>"}.
+3. PARTIAL / FIRST NAME ONLY (e.g. a single first name): call BOTH "list_clients" ({"search":"<name>","limit":50}) AND "get_client_portfolios" ({"client_id":"<name>"}) so all homonym clients and any matching advisor are returned.
+4. SPECIFIC CLIENT (full name with surname OR STG... account code):
+   - Portfolio/holdings/allocation query -> call "get_client_portfolios", "get_portfolio_positions", "get_asset_allocation", "get_portfolio_metrics" with {"client_id":"<full_name_or_STG>"}.
+   - Accounts/registration only -> call "get_client_portfolios" and "get_client_details" with {"client_id":"<full_name_or_STG>"}.`;
 
-    const plannerPrompt = `${recentTurnsText ? `[HISTÓRICO RECENTE DA CONVERSA]:\n${recentTurnsText}\n\n` : ""}[CATÁLOGO DE FERRAMENTAS MCP ATIVAS]:\n${JSON.stringify(availableToolCatalog, null, 2)}\n\n[MENSAGEM ATUAL DO USUÁRIO]:\n${cleanPrompt}\n\nRetorne APENAS o array JSON de chamadas MCP:`;
+    const plannerPrompt = `${recentTurnsText ? `HISTORY:\n${recentTurnsText}\n\n` : ""}TOOLS:\n${compactCatalogLines.join("\n")}\n\nUSER: ${cleanPrompt}\nJSON:`;
+
+    const fastRouterModelByProvider: Record<string, string> = {
+      gemini: "gemini-2.0-flash",
+      openai: "gpt-4o-mini",
+      anthropic: "claude-3-5-haiku-latest",
+      bedrock: "us.anthropic.claude-3-5-haiku-20241022-v1:0"
+    };
+    const preferredRouterModel = fastRouterModelByProvider[provider] || model.trim();
 
     let plannedCalls: PlannedMcpCall[] = [];
+    onProgress?.(activeSkillName ? `Thinking... [Skill: ${activeSkillName}]` : "Thinking...");
     try {
-      onProgress?.("Selecionando ferramentas MCP...");
       const rawPlan = await invoke<string>("ask_ai", {
         provider,
         apiKey: apiKey.trim(),
-        model: model.trim(),
+        model: preferredRouterModel,
         prompt: plannerPrompt,
         history: [],
         systemInstruction: plannerSystemInstruction,
@@ -310,31 +341,23 @@ REGRAS OBRIGATÓRIAS:
         enforcementLevel: "low"
       });
       plannedCalls = parsePlannedToolCalls(rawPlan);
-    } catch (planErr) {
-      console.warn("[MCP Planner] Fallback triggered:", planErr);
-      // Safe deterministic fallback if planner call fails
-      const accountMatch = cleanPrompt.match(/\b(STG[\w-]{4,15})\b/i);
-      const nameAfterPrep = cleanPrompt.match(/\b(?:do|da|de|cliente|investidor|assessor)\s+([A-ZÀ-Úa-zà-ú]{2,}(?:\s+[A-ZÀ-Úa-zà-ú]{2,})?)/i);
-      const stopWords = new Set(["qual", "quais", "carteira", "carteiras", "portfolio", "portfólio", "contas", "conta", "clientes", "cliente", "staggi", "todos", "todas"]);
-      const extractedTarget = accountMatch
-        ? accountMatch[1].toUpperCase()
-        : nameAfterPrep && !stopWords.has(nameAfterPrep[1].toLowerCase())
-          ? nameAfterPrep[1].trim()
-          : undefined;
-
-      for (const item of availableToolCatalog) {
-        if (item.toolName === "list_clients" && /\b(clientes?|contas?|carteiras?|portf[oó]lios?)\b/i.test(cleanPrompt)) {
-          plannedCalls.push({
-            mcpId: item.mcpId,
-            toolName: "list_clients",
-            args: extractedTarget ? { search: extractedTarget, limit: 50 } : { limit: 50 }
+    } catch {
+      if (preferredRouterModel !== model.trim()) {
+        try {
+          const rawFallbackPlan = await invoke<string>("ask_ai", {
+            provider,
+            apiKey: apiKey.trim(),
+            model: model.trim(),
+            prompt: plannerPrompt,
+            history: [],
+            systemInstruction: plannerSystemInstruction,
+            enableSearch: false,
+            enforcementLevel: "low"
           });
-        } else if (item.toolName === "get_client_portfolios" && extractedTarget && /\b(carteiras?|portf[oó]lios?|contas?)\b/i.test(cleanPrompt)) {
-          plannedCalls.push({
-            mcpId: item.mcpId,
-            toolName: "get_client_portfolios",
-            args: { client_id: extractedTarget }
-          });
+          plannedCalls = parsePlannedToolCalls(rawFallbackPlan);
+        } catch (planErr) {
+          console.warn("[MCP Router] Planner failed:", planErr);
+          plannedCalls = [];
         }
       }
     }
@@ -375,34 +398,33 @@ REGRAS OBRIGATÓRIAS:
         : `Thinking... [${toolsLabel}]`;
       onProgress?.(statusText);
 
-      const results = await Promise.all(
-        validCalls.map(async c => {
-          try {
-            const res = await pluginsStore.callTool(c.mcpId, c.toolName, c.args);
-            if (!res) return "";
-            let contentStr = "";
-            if (res.result?.content && Array.isArray(res.result.content)) {
-              contentStr = res.result.content
-                .map((item: any) => (typeof item === "string" ? item : item?.text || JSON.stringify(item)))
-                .join("\n");
-            } else if (res.content && Array.isArray(res.content)) {
-              contentStr = res.content
-                .map((item: any) => (typeof item === "string" ? item : item?.text || JSON.stringify(item)))
-                .join("\n");
-            } else if (res.result) {
-              contentStr = typeof res.result === "string" ? res.result : JSON.stringify(res.result, null, 2);
-            } else {
-              contentStr = typeof res === "string" ? res : JSON.stringify(res, null, 2);
-            }
-            const trimmed = contentStr.length > 32000 ? contentStr.slice(0, 32000) + "\n...[truncated]" : contentStr;
-            return `\n\n[DADOS AUDITADOS RETORNADOS DO MCP LOCAL: ${c.mcpName} • FERRAMENTA: ${c.toolName} • ARGS: ${JSON.stringify(c.args)}]:\n${trimmed}\nATENÇÃO: Utilize com rigor fiduciário esses dados factuais reais retornados pelo servidor MCP para responder à consulta do usuário.`;
-          } catch (e: any) {
-            console.warn(`[MCP] Failed to call ${c.toolName}:`, e);
-            return "";
+      // Sequential execution avoids concurrent StreamableHTTP initialize session collisions (20s stall)
+      const results: string[] = [];
+      for (const c of validCalls) {
+        try {
+          const res = await pluginsStore.callTool(c.mcpId, c.toolName, c.args);
+          if (!res) continue;
+          let contentStr = "";
+          if (res.result?.content && Array.isArray(res.result.content)) {
+            contentStr = res.result.content
+              .map((item: any) => (typeof item === "string" ? item : item?.text || JSON.stringify(item)))
+              .join("\n");
+          } else if (res.content && Array.isArray(res.content)) {
+            contentStr = res.content
+              .map((item: any) => (typeof item === "string" ? item : item?.text || JSON.stringify(item)))
+              .join("\n");
+          } else if (res.result) {
+            contentStr = typeof res.result === "string" ? res.result : JSON.stringify(res.result, null, 2);
+          } else {
+            contentStr = typeof res === "string" ? res : JSON.stringify(res, null, 2);
           }
-        })
-      );
-      liveMcpData = results.filter(Boolean).join("");
+          const trimmed = contentStr.length > 32000 ? contentStr.slice(0, 32000) + "\n...[truncated]" : contentStr;
+          results.push(`\n\n[DADOS AUDITADOS RETORNADOS DO MCP LOCAL: ${c.mcpName} • FERRAMENTA: ${c.toolName} • ARGS: ${JSON.stringify(c.args)}]:\n${trimmed}\nATENÇÃO: Utilize com rigor fiduciário esses dados factuais reais retornados pelo servidor MCP para responder à consulta do usuário.`);
+        } catch (e: any) {
+          console.warn(`[MCP] Failed to call ${c.toolName}:`, e);
+        }
+      }
+      liveMcpData = results.join("");
     }
   }
 
@@ -410,7 +432,7 @@ REGRAS OBRIGATÓRIAS:
 1. DIRETRIZ GERAL & TOM EXECUTIVO:
    - Responda como Staggi, motor analítico e copiloto fiduciário de alta inteligência para assessores de investimento e wealth managers.
    - Linguagem executiva, concisa, matemática e sem prolixidade. Utilize Markdown com tabelas limpas.
-   - NUNCA use prefixos técnicos ou menções a nomes de ferramentas internas (ex: "consultando mcp...", "acessando base...", "usando ferramenta..."). Responda diretamente com naturalidade e autoridade.
+   - NUNCA use prefixos técnicos, narrações de processo, metalinguagem ou menções a ferramentas internas (ex: "selecionando ferramenta...", "consultando mcp...", "acessando base...", "usando ferramenta...", "vou buscar..."). Responda diretamente com naturalidade, dados e autoridade.
 
 2. FIDELIDADE ESTRITA AO PEDIDO DO USUÁRIO & RECORTE TEMPORAL:
    - Responda estritamente sobre o ativo, carteira, período ou tópico solicitado na mensagem do usuário e no histórico.
