@@ -41,22 +41,28 @@ export const AI_MODELS: Record<AIProvider, AIModelOption[]> = {
   ],
   bedrock: [
     {
-      id: "anthropic.claude-3-5-sonnet-20241022-v2:0",
-      name: "Claude 3.5 Sonnet v2 (Bedrock)",
+      id: "us.anthropic.claude-3-5-sonnet-20241022-v2:0",
+      name: "Claude 3.5 Sonnet v2 (Inference Profile)",
       provider: "bedrock",
-      description: "Anthropic Claude 3.5 Sonnet v2 on Amazon Bedrock"
+      description: "Anthropic Claude 3.5 Sonnet v2 via Bedrock US Profile"
     },
     {
-      id: "anthropic.claude-3-5-haiku-20241022-v1:0",
-      name: "Claude 3.5 Haiku (Bedrock)",
+      id: "us.anthropic.claude-3-5-haiku-20241022-v1:0",
+      name: "Claude 3.5 Haiku (Inference Profile)",
       provider: "bedrock",
-      description: "High-speed, cost-effective reasoning"
+      description: "High-speed, cost-effective reasoning via US Profile"
     },
     {
-      id: "meta.llama3-3-70b-instruct-v1:0",
-      name: "Llama 3.3 70B (Bedrock)",
+      id: "us.anthropic.claude-3-7-sonnet-20250219-v1:0",
+      name: "Claude 3.7 Sonnet (Inference Profile)",
       provider: "bedrock",
-      description: "Meta Llama 3.3 70B on Amazon Bedrock"
+      description: "Anthropic Claude 3.7 Hybrid Reasoning via US Profile"
+    },
+    {
+      id: "us.meta.llama3-3-70b-instruct-v1:0",
+      name: "Llama 3.3 70B (Inference Profile)",
+      provider: "bedrock",
+      description: "Meta Llama 3.3 70B via Bedrock US Profile"
     },
     {
       id: "amazon.nova-pro-v1:0",
@@ -142,7 +148,7 @@ export class AIProviderStore {
   geminiModel = $state<string>(getStorage(GEMINI_MODEL_STORAGE, "gemini-2.0-flash"));
   openaiModel = $state<string>(getStorage(OPENAI_MODEL_STORAGE, "gpt-4o"));
   anthropicModel = $state<string>(getStorage(ANTHROPIC_MODEL_STORAGE, "claude-3-7-sonnet-latest"));
-  bedrockModel = $state<string>(getStorage(BEDROCK_MODEL_STORAGE, "anthropic.claude-3-5-sonnet-20241022-v2:0"));
+  bedrockModel = $state<string>(getStorage(BEDROCK_MODEL_STORAGE, "us.anthropic.claude-3-5-sonnet-20241022-v2:0"));
 
   enforcementLevel = $state<EnforcementLevel>(
     (getStorage(ENFORCEMENT_STORAGE, "medium") as EnforcementLevel) || "medium"
@@ -440,7 +446,7 @@ export class AIProviderStore {
     this.geminiModel = getStorage(GEMINI_MODEL_STORAGE, "gemini-2.0-flash");
     this.openaiModel = getStorage(OPENAI_MODEL_STORAGE, "gpt-4o");
     this.anthropicModel = getStorage(ANTHROPIC_MODEL_STORAGE, "claude-3-7-sonnet-latest");
-    this.bedrockModel = getStorage(BEDROCK_MODEL_STORAGE, "anthropic.claude-3-5-sonnet-20241022-v2:0");
+    this.bedrockModel = getStorage(BEDROCK_MODEL_STORAGE, "us.anthropic.claude-3-5-sonnet-20241022-v2:0");
 
     this.enforcementLevel = (getStorage(ENFORCEMENT_STORAGE, "medium") as EnforcementLevel) || "medium";
     this.geminiValidated = getStorage(GEMINI_VALIDATED_STORAGE, "false") === "true" || !!this.geminiApiKey;

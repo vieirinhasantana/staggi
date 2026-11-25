@@ -198,27 +198,68 @@ fn get_current_amz_dates() -> (String, String) {
     (amz_date, date_stamp)
 }
 
+/// Resolves a requested model ID to the mandatory AWS Bedrock Cross-Region Inference Profile
+/// when required by AWS Bedrock for on-demand invocations (e.g. `us.anthropic.claude-3-5-sonnet-20241022-v2:0`).
+pub fn resolve_inference_profile_id(model_id: &str, region: &str) -> String {
+    let trimmed = model_id.trim();
+
+    // If it's already an inference profile ID (starts with us., eu., apc., global. or an arn:)
+    if trimmed.starts_with("us.")
+        || trimmed.starts_with("eu.")
+        || trimmed.starts_with("apc.")
+        || trimmed.starts_with("global.")
+        || trimmed.starts_with("arn:aws:bedrock:")
+    {
+        return trimmed.to_string();
+    }
+
+    // Determine geographic prefix based on the AWS region
+    let prefix = if region.starts_with("eu-") {
+        "eu."
+    } else if region.starts_with("ap-") {
+        "apc."
+    } else {
+        // Default to US cross-region profile (works for us-east-1, us-west-2, sa-east-1, etc.)
+        "us."
+    };
+
+    // Models that AWS Bedrock requires an inference profile for on-demand invocation
+    if trimmed.contains("claude-3-5-sonnet")
+        || trimmed.contains("claude-3-5-haiku")
+        || trimmed.contains("claude-3-7-sonnet")
+        || trimmed.contains("claude-3-opus")
+        || trimmed.contains("claude-3-haiku")
+        || trimmed.contains("llama3-3-70b")
+        || trimmed.contains("llama3-2")
+        || trimmed.contains("llama3-1")
+    {
+        return format!("{}{}", prefix, trimmed);
+    }
+
+    trimmed.to_string()
+}
+
 pub fn get_default_bedrock_models() -> Vec<AIModel> {
     vec![
         AIModel {
-            id: "anthropic.claude-3-5-sonnet-20241022-v2:0".to_string(),
-            name: "Claude 3.5 Sonnet v2 (Bedrock)".to_string(),
-            description: Some("Anthropic Claude 3.5 Sonnet v2 on Amazon Bedrock".to_string()),
+            id: "us.anthropic.claude-3-5-sonnet-20241022-v2:0".to_string(),
+            name: "Claude 3.5 Sonnet v2 (Inference Profile)".to_string(),
+            description: Some("Anthropic Claude 3.5 Sonnet v2 via Bedrock US Profile".to_string()),
         },
         AIModel {
-            id: "anthropic.claude-3-5-haiku-20241022-v1:0".to_string(),
-            name: "Claude 3.5 Haiku (Bedrock)".to_string(),
-            description: Some("High-speed, cost-effective reasoning".to_string()),
+            id: "us.anthropic.claude-3-5-haiku-20241022-v1:0".to_string(),
+            name: "Claude 3.5 Haiku (Inference Profile)".to_string(),
+            description: Some("High-speed, cost-effective reasoning via US Profile".to_string()),
         },
         AIModel {
-            id: "anthropic.claude-3-haiku-20240307-v1:0".to_string(),
-            name: "Claude 3 Haiku (Bedrock)".to_string(),
-            description: Some("Ultra fast responsiveness".to_string()),
+            id: "us.anthropic.claude-3-7-sonnet-20250219-v1:0".to_string(),
+            name: "Claude 3.7 Sonnet (Inference Profile)".to_string(),
+            description: Some("Anthropic Claude 3.7 Hybrid Reasoning via US Profile".to_string()),
         },
         AIModel {
-            id: "meta.llama3-3-70b-instruct-v1:0".to_string(),
-            name: "Llama 3.3 70B (Bedrock)".to_string(),
-            description: Some("Meta Llama 3.3 70B on Amazon Bedrock".to_string()),
+            id: "us.meta.llama3-3-70b-instruct-v1:0".to_string(),
+            name: "Llama 3.3 70B (Inference Profile)".to_string(),
+            description: Some("Meta Llama 3.3 70B via Bedrock US Profile".to_string()),
         },
         AIModel {
             id: "amazon.nova-pro-v1:0".to_string(),
@@ -241,52 +282,93 @@ pub async fn list_bedrock_models_api(credentials_raw: &str) -> Result<Vec<AIMode
         .map_err(|e| e.to_string())?;
 
     let host = format!("bedrock.{}.amazonaws.com", creds.region);
-    let uri = "/foundation-models";
-    let url = format!("https://{}{}", host, uri);
-
     let (amz_date, date_stamp) = get_current_amz_dates();
-    let headers = sign_request("GET", uri, "bedrock", &creds, b"", &amz_date, &date_stamp, &host);
 
-    let mut req = client.get(&url);
-    for (k, v) in headers {
-        req = req.header(k, v);
+    let mut discovered_models = Vec::new();
+
+    // 1. First, query Cross-Region Inference Profiles (/inference-profiles)
+    let inf_uri = "/inference-profiles?typeEquals=SYSTEM_DEFINED";
+    let inf_url = format!("https://{}{}", host, inf_uri);
+    let inf_headers = sign_request("GET", inf_uri, "bedrock", &creds, b"", &amz_date, &date_stamp, &host);
+
+    let mut req_inf = client.get(&inf_url);
+    for (k, v) in inf_headers {
+        req_inf = req_inf.header(k, v);
     }
 
-    match req.send().await {
-        Ok(res) => {
-            if res.status().is_success() {
-                if let Ok(json) = res.json::<serde_json::Value>().await {
-                    if let Some(arr) = json.get("modelSummaries").and_then(|m| m.as_array()) {
-                        let mut models = Vec::new();
-                        for m in arr {
-                            let id = m.get("modelId").and_then(|s| s.as_str()).unwrap_or("");
-                            let name = m.get("modelName").and_then(|s| s.as_str()).unwrap_or(id);
-                            let provider = m.get("providerName").and_then(|s| s.as_str()).unwrap_or("AWS Bedrock");
+    if let Ok(res_inf) = req_inf.send().await {
+        if res_inf.status().is_success() {
+            if let Ok(json) = res_inf.json::<serde_json::Value>().await {
+                if let Some(arr) = json.get("inferenceProfileSummaries").and_then(|m| m.as_array()) {
+                    for p in arr {
+                        let id = p.get("inferenceProfileId").and_then(|s| s.as_str()).unwrap_or("");
+                        let name = p.get("inferenceProfileName").and_then(|s| s.as_str()).unwrap_or(id);
+                        let status = p.get("status").and_then(|s| s.as_str()).unwrap_or("ACTIVE");
 
-                            // Filter for text generation models
-                            let modalities = m.get("outputModalities").and_then(|o| o.as_array());
-                            let is_text = modalities.map_or(true, |mods| {
-                                mods.iter().any(|v| v.as_str() == Some("TEXT"))
-                            });
-
-                            if is_text && !id.is_empty() {
-                                models.push(AIModel {
+                        if status == "ACTIVE" && !id.is_empty() {
+                            // Focus on Claude, Llama, and text models
+                            let is_relevant = id.contains("claude") || id.contains("llama") || id.contains("nova");
+                            if is_relevant {
+                                discovered_models.push(AIModel {
                                     id: id.to_string(),
+                                    name: format!("{} [Inference Profile]", name),
+                                    description: Some(format!("Bedrock Cross-Region Profile • {}", id)),
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // 2. Query Foundation Models (/foundation-models)
+    let fm_uri = "/foundation-models";
+    let fm_url = format!("https://{}{}", host, fm_uri);
+    let fm_headers = sign_request("GET", fm_uri, "bedrock", &creds, b"", &amz_date, &date_stamp, &host);
+
+    let mut req_fm = client.get(&fm_url);
+    for (k, v) in fm_headers {
+        req_fm = req_fm.header(k, v);
+    }
+
+    if let Ok(res_fm) = req_fm.send().await {
+        if res_fm.status().is_success() {
+            if let Ok(json) = res_fm.json::<serde_json::Value>().await {
+                if let Some(arr) = json.get("modelSummaries").and_then(|m| m.as_array()) {
+                    for m in arr {
+                        let raw_id = m.get("modelId").and_then(|s| s.as_str()).unwrap_or("");
+                        let name = m.get("modelName").and_then(|s| s.as_str()).unwrap_or(raw_id);
+                        let provider = m.get("providerName").and_then(|s| s.as_str()).unwrap_or("AWS Bedrock");
+
+                        let modalities = m.get("outputModalities").and_then(|o| o.as_array());
+                        let is_text = modalities.map_or(true, |mods| {
+                            mods.iter().any(|v| v.as_str() == Some("TEXT"))
+                        });
+
+                        if is_text && !raw_id.is_empty() {
+                            // Resolve to inference profile id automatically if needed
+                            let resolved_id = resolve_inference_profile_id(raw_id, &creds.region);
+                            let already_in = discovered_models.iter().any(|existing| existing.id == resolved_id);
+                            if !already_in {
+                                discovered_models.push(AIModel {
+                                    id: resolved_id,
                                     name: format!("{} ({})", name, provider),
                                     description: Some(format!("Amazon Bedrock • {}", provider)),
                                 });
                             }
                         }
-                        if !models.is_empty() {
-                            return Ok(models);
-                        }
                     }
                 }
             }
-            Ok(get_default_bedrock_models())
         }
-        Err(_) => Ok(get_default_bedrock_models()),
     }
+
+    if !discovered_models.is_empty() {
+        return Ok(discovered_models);
+    }
+
+    Ok(get_default_bedrock_models())
 }
 
 pub async fn test_bedrock_connection(credentials_raw: &str) -> Result<String, String> {
@@ -327,7 +409,9 @@ pub async fn ask_bedrock(
     _enforcement_level: Option<String>,
 ) -> Result<String, String> {
     let creds = parse_bedrock_credentials(credentials_raw)?;
-    let model_id = model.unwrap_or_else(|| "anthropic.claude-3-5-sonnet-20241022-v2:0".to_string());
+    let raw_model_id = model.unwrap_or_else(|| "us.anthropic.claude-3-5-sonnet-20241022-v2:0".to_string());
+    // Auto-resolve bare model IDs (e.g. anthropic.claude-3-5-sonnet...) into valid Inference Profile IDs
+    let model_id = resolve_inference_profile_id(&raw_model_id, &creds.region);
 
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(90))
