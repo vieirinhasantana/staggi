@@ -6,6 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ---
 
+## [0.1.22] - 2026-11-25
+
+### Fixed
+- **Amazon Bedrock Converse API & Smart Cross-Region Routing**:
+  - Adopted AWS Bedrock modern Converse API (`/converse`) as primary conversation protocol with automatic fallback to `InvokeModel`.
+  - Added intelligent runtime region routing: automatically routes US cross-region inference profiles (`us.*`) and Nova models to compute regions (`us-east-1`), completely eliminating HTTP 400 ValidationException errors when using regional credentials (e.g. `sa-east-1`).
+  - Standardized message roles (`user` / `assistant`), merged consecutive identical roles, and ensured conversations always start with a user message.
+  - Upgraded Bedrock connection test to execute a real 1-token live invocation test for early validation of AWS Model Access permissions.
+- **Executive UI Progress & Thinking State**:
+  - Standardized all AI thinking states to clean executive English (`Thinking...`), removing intermediate Portuguese messages.
+  - Enforced strict anti-metalanguage directives in system instructions.
+
+---
+
 ## [0.1.21] - 2026-11-25
 
 ### Fixed
