@@ -22,6 +22,7 @@
   import { onMount } from "svelte";
   import { invoke } from "@tauri-apps/api/core";
   import { listen } from "@tauri-apps/api/event";
+  import { getCurrentWindow } from "@tauri-apps/api/window";
   import { 
     Plus, 
     History, 
@@ -49,6 +50,19 @@
   let chatScrollArea = $state<HTMLDivElement | null>(null);
   let isSettingsOpen = $state(false);
   let settingsInitialTab = $state<"ai" | "gemini" | "mcps" | "skills" | "tasks">("ai");
+
+  async function handleWindowDrag(e: MouseEvent) {
+    if (e.button !== 0) return;
+    const target = e.target as HTMLElement | null;
+    if (!target) return;
+    if (target.closest("input, textarea, button, a, select, [role='button'], [role='menuitem'], .no-drag, pre, code, .cursor-text, .cursor-pointer")) {
+      return;
+    }
+    try {
+      const win = getCurrentWindow();
+      await win.startDragging();
+    } catch {}
+  }
 
   let currentSession = $derived(
     sessions.find(s => s.id === currentSessionId) || null
@@ -263,6 +277,9 @@
 </script>
 
 <main
+  role="presentation"
+  data-tauri-drag-region
+  onmousedown={handleWindowDrag}
   class="relative w-[800px] h-[600px] flex flex-col items-center justify-start bg-transparent p-4 sm:p-5 m-0 overflow-hidden select-none"
 >
   {#if isSettingsOpen}
@@ -274,7 +291,12 @@
 
     {#if messages.length > 0 || showHistoryDrawer}
       <div class="w-full flex-1 flex flex-col mt-3.5 rounded-[24px] border border-white/[0.12] ring-1 ring-white/[0.05] bg-[#1c1c1c]/95 backdrop-blur-2xl shadow-[0_4px_20px_rgba(0,0,0,0.35),0_16px_40px_-6px_rgba(0,0,0,0.55),inset_0_1px_0_0_rgba(255,255,255,0.08)] overflow-hidden transition-[opacity] animate-fade-in relative z-10">
-      <div class="w-full flex items-center justify-between px-4 py-2.5 bg-[#141414]/75 border-b border-white/[0.06] text-[11px] shrink-0">
+      <div
+        role="presentation"
+        data-tauri-drag-region
+        onmousedown={handleWindowDrag}
+        class="w-full flex items-center justify-between px-4 py-2.5 bg-[#141414]/75 border-b border-white/[0.06] text-[11px] shrink-0 cursor-grab active:cursor-grabbing"
+      >
         <button
           type="button"
           onclick={() => showHistoryDrawer = !showHistoryDrawer}

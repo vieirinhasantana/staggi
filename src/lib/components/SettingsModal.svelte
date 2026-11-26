@@ -16,6 +16,7 @@
   import { tasksStore } from "$lib/services/tasksState.svelte";
   import { memoryStore } from "$lib/services/memoryState.svelte";
   import { updaterStore } from "$lib/services/updaterService.svelte";
+  import { getCurrentWindow } from "@tauri-apps/api/window";
   import { t } from "$lib/i18n";
   import type { ScheduledTask } from "$lib/types";
 
@@ -58,6 +59,19 @@
     tasksStore.reloadFromStorage();
     memoryStore.reloadFromStorage();
   });
+
+  async function handleWindowDrag(e: MouseEvent) {
+    if (e.button !== 0) return;
+    const target = e.target as HTMLElement | null;
+    if (!target) return;
+    if (target.closest("input, textarea, button, a, select, [role='button'], [role='menuitem'], .no-drag, pre, code, .cursor-text, .cursor-pointer")) {
+      return;
+    }
+    try {
+      const win = getCurrentWindow();
+      await win.startDragging();
+    } catch {}
+  }
 </script>
 
 {#if open}
@@ -65,7 +79,9 @@
     class="w-full h-full rounded-[24px] border border-white/[0.14] ring-1 ring-white/[0.05] bg-[#1c1c1c]/98 backdrop-blur-2xl shadow-[0_4px_20px_rgba(0,0,0,0.35),0_16px_40px_-6px_rgba(0,0,0,0.55),inset_0_1px_0_0_rgba(255,255,255,0.08)] overflow-hidden flex flex-col animate-fade-in relative z-30 select-none"
   >
     <div
+      role="presentation"
       data-tauri-drag-region
+      onmousedown={handleWindowDrag}
       class="flex items-center justify-between px-6 py-3.5 border-b border-white/[0.08] bg-[#141414]/85 shrink-0 cursor-move"
     >
       <div data-tauri-drag-region class="flex items-center gap-2.5 pointer-events-none">
