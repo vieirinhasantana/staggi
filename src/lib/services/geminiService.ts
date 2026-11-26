@@ -322,8 +322,7 @@ ROUTING RULES:
     const fastRouterModelByProvider: Record<string, string> = {
       gemini: "gemini-2.0-flash",
       openai: "gpt-4o-mini",
-      anthropic: "claude-3-5-haiku-latest",
-      bedrock: "us.anthropic.claude-3-5-haiku-20241022-v1:0"
+      anthropic: "claude-3-5-haiku-latest"
     };
     const preferredRouterModel = fastRouterModelByProvider[provider] || model.trim();
 

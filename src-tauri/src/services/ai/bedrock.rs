@@ -198,6 +198,48 @@ fn get_current_amz_dates() -> (String, String) {
     (amz_date, date_stamp)
 }
 
+/// Determines the appropriate runtime region for Bedrock invocation based on the model ID and configured region.
+/// Cross-region profiles (us.*, eu.*, apc.*) and models like Nova must be invoked against endpoints
+/// in their supported geographic footprint.
+pub fn determine_runtime_region(model_id: &str, configured_region: &str) -> String {
+    let m = model_id.trim();
+    if m.starts_with("us.") {
+        if configured_region == "us-west-2" || configured_region == "us-east-2" {
+            configured_region.to_string()
+        } else {
+            "us-east-1".to_string()
+        }
+    } else if m.starts_with("eu.") {
+        if configured_region == "eu-central-1" {
+            configured_region.to_string()
+        } else {
+            "eu-west-1".to_string()
+        }
+    } else if m.starts_with("apc.") {
+        if configured_region == "ap-northeast-1" {
+            configured_region.to_string()
+        } else {
+            "ap-southeast-1".to_string()
+        }
+    } else if m.starts_with("amazon.nova") {
+        if configured_region.starts_with("us-") {
+            configured_region.to_string()
+        } else {
+            "us-east-1".to_string()
+        }
+    } else if m.contains("claude") || m.contains("llama") || m.contains("mistral") {
+        if configured_region.starts_with("eu-") {
+            "eu-west-1".to_string()
+        } else if configured_region.starts_with("ap-") {
+            "ap-southeast-1".to_string()
+        } else {
+            "us-east-1".to_string()
+        }
+    } else {
+        configured_region.to_string()
+    }
+}
+
 /// Resolves a requested model ID to the mandatory AWS Bedrock Cross-Region Inference Profile
 /// when required by AWS Bedrock for on-demand invocations (e.g. `us.anthropic.claude-3-5-sonnet-20241022-v2:0`).
 pub fn resolve_inference_profile_id(model_id: &str, region: &str) -> String {
@@ -223,15 +265,10 @@ pub fn resolve_inference_profile_id(model_id: &str, region: &str) -> String {
         "us."
     };
 
-    // Models that AWS Bedrock requires an inference profile for on-demand invocation
-    if trimmed.contains("claude-3-5-sonnet")
-        || trimmed.contains("claude-3-5-haiku")
-        || trimmed.contains("claude-3-7-sonnet")
-        || trimmed.contains("claude-3-opus")
-        || trimmed.contains("claude-3-haiku")
-        || trimmed.contains("llama3-3-70b")
-        || trimmed.contains("llama3-2")
-        || trimmed.contains("llama3-1")
+    // Any Claude, Llama 3+, or Mistral model on Bedrock requires an inference profile for on-demand invocation
+    if trimmed.contains("claude")
+        || trimmed.contains("llama")
+        || trimmed.contains("mistral")
     {
         return format!("{}{}", prefix, trimmed);
     }
@@ -306,7 +343,6 @@ pub async fn list_bedrock_models_api(credentials_raw: &str) -> Result<Vec<AIMode
                         let status = p.get("status").and_then(|s| s.as_str()).unwrap_or("ACTIVE");
 
                         if status == "ACTIVE" && !id.is_empty() {
-                            // Focus on Claude, Llama, and text models
                             let is_relevant = id.contains("claude") || id.contains("llama") || id.contains("nova");
                             if is_relevant {
                                 discovered_models.push(AIModel {
@@ -347,7 +383,6 @@ pub async fn list_bedrock_models_api(credentials_raw: &str) -> Result<Vec<AIMode
                         });
 
                         if is_text && !raw_id.is_empty() {
-                            // Resolve to inference profile id automatically if needed
                             let resolved_id = resolve_inference_profile_id(raw_id, &creds.region);
                             let already_in = discovered_models.iter().any(|existing| existing.id == resolved_id);
                             if !already_in {
@@ -371,7 +406,7 @@ pub async fn list_bedrock_models_api(credentials_raw: &str) -> Result<Vec<AIMode
     Ok(get_default_bedrock_models())
 }
 
-pub async fn test_bedrock_connection(credentials_raw: &str) -> Result<String, String> {
+pub async fn test_bedrock_connection(credentials_raw: &str, model: Option<String>) -> Result<String, String> {
     let creds = parse_bedrock_credentials(credentials_raw)?;
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(10))
@@ -392,11 +427,29 @@ pub async fn test_bedrock_connection(credentials_raw: &str) -> Result<String, St
 
     let res = req.send().await.map_err(|e| format!("Falha ao conectar com o endpoint AWS Bedrock: {}", e))?;
     let status = res.status();
-    if status.is_success() {
-        Ok(format!("Conexão com Amazon Bedrock (região {}) validada com sucesso!", creds.region))
-    } else {
+    if !status.is_success() {
         let err_body = res.text().await.unwrap_or_default();
-        Err(format!("Amazon Bedrock retornou HTTP {}: {}", status.as_u16(), err_body))
+        return Err(format!("Amazon Bedrock retornou HTTP {}: {}", status.as_u16(), err_body));
+    }
+
+    // If a model is provided, test a live 1-token prompt to verify runtime authorization
+    if let Some(target_model) = model.filter(|m| !m.trim().is_empty()) {
+        match ask_bedrock(credentials_raw, Some(target_model.clone()), "Hi", None, None, None).await {
+            Ok(_) => {
+                Ok(format!(
+                    "Conexão e invocação do modelo '{}' no Amazon Bedrock validadas com sucesso!",
+                    target_model
+                ))
+            }
+            Err(e) => {
+                Err(format!(
+                    "Credenciais AWS válidas, mas a invocação do modelo '{}' falhou: {}",
+                    target_model, e
+                ))
+            }
+        }
+    } else {
+        Ok(format!("Conexão com Amazon Bedrock (região {}) validada com sucesso!", creds.region))
     }
 }
 
@@ -410,63 +463,220 @@ pub async fn ask_bedrock(
 ) -> Result<String, String> {
     let creds = parse_bedrock_credentials(credentials_raw)?;
     let raw_model_id = model.unwrap_or_else(|| "us.anthropic.claude-3-5-sonnet-20241022-v2:0".to_string());
-    // Auto-resolve bare model IDs (e.g. anthropic.claude-3-5-sonnet...) into valid Inference Profile IDs
     let model_id = resolve_inference_profile_id(&raw_model_id, &creds.region);
+    let runtime_region = determine_runtime_region(&model_id, &creds.region);
+
+    let mut runtime_creds = creds.clone();
+    runtime_creds.region = runtime_region.clone();
 
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(90))
         .build()
         .map_err(|e| e.to_string())?;
 
-    let host = format!("bedrock-runtime.{}.amazonaws.com", creds.region);
+    let host = format!("bedrock-runtime.{}.amazonaws.com", runtime_region);
+
+    // Build clean alternating messages (role must be strictly "user" | "assistant")
+    let mut messages: Vec<serde_json::Value> = Vec::new();
+    if let Some(hist) = history {
+        for turn in hist {
+            let role = if turn.role == "user" { "user" } else { "assistant" };
+            let text = turn.text.trim();
+            if text.is_empty() || (text.starts_with('{') && text.contains("\"candidates\"")) {
+                continue;
+            }
+            if let Some(last) = messages.last_mut() {
+                if last.get("role").and_then(|r| r.as_str()) == Some(role) {
+                    if let Some(content_arr) = last.get_mut("content").and_then(|c| c.as_array_mut()) {
+                        if let Some(first_block) = content_arr.first_mut() {
+                            if let Some(existing_text) = first_block.get_mut("text").and_then(|t| t.as_str()) {
+                                let merged = format!("{}\n\n{}", existing_text, text);
+                                *first_block = serde_json::json!({ "text": merged });
+                                continue;
+                            }
+                        }
+                    }
+                }
+            }
+            messages.push(serde_json::json!({
+                "role": role,
+                "content": [{ "text": text }]
+            }));
+        }
+    }
+
+    // Merge or append the user prompt
+    let clean_prompt = prompt.trim();
+    if let Some(last) = messages.last_mut() {
+        if last.get("role").and_then(|r| r.as_str()) == Some("user") {
+            if let Some(content_arr) = last.get_mut("content").and_then(|c| c.as_array_mut()) {
+                if let Some(first_block) = content_arr.first_mut() {
+                    if let Some(existing_text) = first_block.get_mut("text").and_then(|t| t.as_str()) {
+                        let merged = format!("{}\n\n{}", existing_text, clean_prompt);
+                        *first_block = serde_json::json!({ "text": merged });
+                    }
+                }
+            }
+        } else {
+            messages.push(serde_json::json!({
+                "role": "user",
+                "content": [{ "text": clean_prompt }]
+            }));
+        }
+    } else {
+        messages.push(serde_json::json!({
+            "role": "user",
+            "content": [{ "text": clean_prompt }]
+        }));
+    }
+
+    // Ensure conversation starts with user message
+    if let Some(first) = messages.first() {
+        if first.get("role").and_then(|r| r.as_str()) != Some("user") {
+            messages.insert(0, serde_json::json!({
+                "role": "user",
+                "content": [{ "text": "Hello" }]
+            }));
+        }
+    }
+
+    // 1. Primary Strategy: AWS Bedrock Converse API (POST /model/{model_id}/converse)
+    // Standard cross-model conversation API supporting Anthropic Claude, Nova, Llama, and Mistral
+    let mut converse_payload = serde_json::json!({
+        "messages": messages,
+        "inferenceConfig": {
+            "maxTokens": 4096,
+            "temperature": 0.5
+        }
+    });
+    if let Some(sys) = system_instruction.as_deref() {
+        if !sys.trim().is_empty() {
+            converse_payload["system"] = serde_json::json!([{ "text": sys.trim() }]);
+        }
+    }
+
+    let converse_uri = format!("/model/{}/converse", model_id);
+    let converse_url = format!("https://{}{}", host, converse_uri);
+    let converse_bytes = serde_json::to_vec(&converse_payload).map_err(|e| e.to_string())?;
+
+    let (amz_date, date_stamp) = get_current_amz_dates();
+    let converse_headers = sign_request(
+        "POST",
+        &converse_uri,
+        "bedrock",
+        &runtime_creds,
+        &converse_bytes,
+        &amz_date,
+        &date_stamp,
+        &host,
+    );
+
+    let mut req = client.post(&converse_url);
+    for (k, v) in converse_headers {
+        req = req.header(k, v);
+    }
+    req = req.body(converse_bytes);
+
+    let res = req.send().await.map_err(|e| {
+        format!("Falha ao conectar com o Bedrock Runtime na região {}: {}", runtime_region, e)
+    })?;
+    let status = res.status();
+    let raw_text = res.text().await.unwrap_or_default();
+
+    if status.is_success() {
+        if let Ok(val) = serde_json::from_str::<serde_json::Value>(&raw_text) {
+            if let Some(content_arr) = val.pointer("/output/message/content").and_then(|c| c.as_array()) {
+                let texts: Vec<String> = content_arr
+                    .iter()
+                    .filter_map(|item| item.get("text").and_then(|t| t.as_str()).map(String::from))
+                    .collect();
+                if !texts.is_empty() {
+                    return Ok(texts.join("\n"));
+                }
+            }
+        }
+    }
+
+    // 2. Secondary Fallback: Direct InvokeModel API (/model/{model_id}/invoke)
+    if status.as_u16() == 404 || status.as_u16() == 400 {
+        if let Ok(fallback_text) = invoke_bedrock_model_fallback(
+            &client,
+            &host,
+            &runtime_creds,
+            &model_id,
+            clean_prompt,
+            &messages,
+            system_instruction.as_deref(),
+        ).await {
+            return Ok(fallback_text);
+        }
+    }
+
+    // Extract detailed, actionable error message from AWS response
+    let friendly_detail = if let Ok(v) = serde_json::from_str::<serde_json::Value>(&raw_text) {
+        v.get("message")
+            .or_else(|| v.get("Message"))
+            .and_then(|m| m.as_str())
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| raw_text.clone())
+    } else {
+        raw_text.clone()
+    };
+
+    Err(format!(
+        "Amazon Bedrock [{}] retornou erro (HTTP {}): {}",
+        runtime_region,
+        status.as_u16(),
+        friendly_detail
+    ))
+}
+
+async fn invoke_bedrock_model_fallback(
+    client: &reqwest::Client,
+    host: &str,
+    creds: &BedrockCredentials,
+    model_id: &str,
+    prompt: &str,
+    messages: &[serde_json::Value],
+    system_instruction: Option<&str>,
+) -> Result<String, String> {
     let uri = format!("/model/{}/invoke", model_id);
     let url = format!("https://{}{}", host, uri);
 
-    // Format body based on model type
     let body_bytes: Vec<u8> = if model_id.contains("anthropic") {
-        let mut messages = Vec::new();
-        if let Some(hist) = history {
-            for turn in hist {
-                messages.push(serde_json::json!({
-                    "role": turn.role,
-                    "content": turn.text
-                }));
-            }
+        let mut anthropic_msgs = Vec::new();
+        for m in messages {
+            let role = m.get("role").and_then(|r| r.as_str()).unwrap_or("user");
+            let text = m.pointer("/content/0/text").and_then(|t| t.as_str()).unwrap_or("");
+            anthropic_msgs.push(serde_json::json!({
+                "role": role,
+                "content": text
+            }));
         }
-        messages.push(serde_json::json!({
-            "role": "user",
-            "content": prompt
-        }));
 
         let mut payload = serde_json::json!({
             "anthropic_version": "bedrock-2023-05-31",
             "max_tokens": 4096,
-            "messages": messages
+            "messages": anthropic_msgs
         });
-
         if let Some(sys) = system_instruction {
             if !sys.trim().is_empty() {
-                payload["system"] = serde_json::Value::String(sys);
+                payload["system"] = serde_json::Value::String(sys.to_string());
             }
         }
         serde_json::to_vec(&payload).map_err(|e| e.to_string())?
     } else if model_id.contains("amazon.nova") {
-        let mut messages = Vec::new();
-        if let Some(hist) = history {
-            for turn in hist {
-                messages.push(serde_json::json!({
-                    "role": turn.role,
-                    "content": [{"text": turn.text}]
-                }));
-            }
+        let mut nova_msgs = Vec::new();
+        for m in messages {
+            let role = m.get("role").and_then(|r| r.as_str()).unwrap_or("user");
+            let text = m.pointer("/content/0/text").and_then(|t| t.as_str()).unwrap_or("");
+            nova_msgs.push(serde_json::json!({
+                "role": role,
+                "content": [{"text": text}]
+            }));
         }
-        messages.push(serde_json::json!({
-            "role": "user",
-            "content": [{"text": prompt}]
-        }));
-
         let mut payload = serde_json::json!({
-            "messages": messages,
+            "messages": nova_msgs,
             "inferenceConfig": {
                 "max_new_tokens": 4096
             }
@@ -478,14 +688,14 @@ pub async fn ask_bedrock(
         }
         serde_json::to_vec(&payload).map_err(|e| e.to_string())?
     } else {
-        // Generic / Llama model on Bedrock
-        let formatted_prompt = if let Some(sys) = system_instruction {
+        // Llama / Generic format
+        let formatted = if let Some(sys) = system_instruction {
             format!("<system>\n{}\n</system>\n\nUser: {}\nAssistant:", sys, prompt)
         } else {
             format!("User: {}\nAssistant:", prompt)
         };
         let payload = serde_json::json!({
-            "prompt": formatted_prompt,
+            "prompt": formatted,
             "max_gen_len": 2048,
             "temperature": 0.5
         });
@@ -493,7 +703,7 @@ pub async fn ask_bedrock(
     };
 
     let (amz_date, date_stamp) = get_current_amz_dates();
-    let headers = sign_request("POST", &uri, "bedrock", &creds, &body_bytes, &amz_date, &date_stamp, &host);
+    let headers = sign_request("POST", &uri, "bedrock", creds, &body_bytes, &amz_date, &date_stamp, host);
 
     let mut req = client.post(&url);
     for (k, v) in headers {
@@ -501,18 +711,16 @@ pub async fn ask_bedrock(
     }
     req = req.body(body_bytes);
 
-    let res = req.send().await.map_err(|e| format!("Falha ao invocar modelo no Bedrock: {}", e))?;
+    let res = req.send().await.map_err(|e| e.to_string())?;
     let status = res.status();
     let raw_text = res.text().await.unwrap_or_default();
 
     if !status.is_success() {
-        return Err(format!("Amazon Bedrock retornou erro (HTTP {}): {}", status.as_u16(), raw_text));
+        return Err(format!("InvokeModel failed: {}", raw_text));
     }
 
-    let val: serde_json::Value = serde_json::from_str(&raw_text)
-        .map_err(|e| format!("Erro ao parsear resposta do Bedrock: {} (Corpo: {})", e, raw_text))?;
+    let val: serde_json::Value = serde_json::from_str(&raw_text).map_err(|e| e.to_string())?;
 
-    // Anthropic response extraction
     if let Some(content_arr) = val.get("content").and_then(|c| c.as_array()) {
         let texts: Vec<String> = content_arr
             .iter()
@@ -522,20 +730,11 @@ pub async fn ask_bedrock(
             return Ok(texts.join("\n"));
         }
     }
-
-    // Amazon Nova response extraction
     if let Some(nova_text) = val.pointer("/output/message/content/0/text").and_then(|s| s.as_str()) {
         return Ok(nova_text.to_string());
     }
-
-    // Meta Llama response extraction
     if let Some(gen_text) = val.get("generation").and_then(|g| g.as_str()) {
         return Ok(gen_text.to_string());
-    }
-
-    // Fallback: search for output or completion
-    if let Some(comp) = val.get("completion").and_then(|c| c.as_str()) {
-        return Ok(comp.to_string());
     }
 
     Ok(raw_text)

@@ -40,7 +40,7 @@ pub async fn test_ai_connection(
     match prov.as_str() {
         "openai" => openai::test_openai_connection(key).await,
         "anthropic" => anthropic::test_anthropic_connection(key, model).await,
-        "bedrock" => bedrock::test_bedrock_connection(key).await,
+        "bedrock" => bedrock::test_bedrock_connection(key, model).await,
         _ => gemini::test_gemini_connection(api_key, model).await,
     }
 }
