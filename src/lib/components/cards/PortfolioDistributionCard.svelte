@@ -569,7 +569,7 @@
     <div class="flex items-center gap-1.5">
       <ShieldCheck class="w-3.5 h-3.5 text-emerald-400 shrink-0" />
       <span class="text-zinc-400">Audited Source:</span>
-      <span class="text-zinc-200 font-medium">{source || (data.isRebalancing ? "staggi-rebalance • Fiduciary Optimization" : "staggi-portfolio • Fiduciary Allocation")}</span>
+      <span class="text-zinc-200 font-medium">{source || (data.isRebalancing ? "Fiduciary Optimization" : "Asset Allocation")}</span>
     </div>
 
     <div class="flex items-center gap-2">

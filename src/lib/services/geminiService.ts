@@ -312,20 +312,15 @@ ${matchedSkill.systemPrompt}`;
     };
   });
 
-  // Refresh MCP tool schemas only if tools are missing or newly added server tools aren't cached yet
+  // Refresh tool schemas for any active MCP whose tools haven't been discovered yet
   for (const m of pluginsStore.activeMcps) {
-    const needsDiscovery =
-      !m.tools ||
-      m.tools.length === 0 ||
-      (!refreshedMcpSchemasInSession.has(m.id) &&
-        m.tools.some(t => t.name === "get_client_portfolios") &&
-        !m.tools.some(t => t.name === "screen_firm_transactions"));
+    const needsDiscovery = !m.tools || m.tools.length === 0 || !refreshedMcpSchemasInSession.has(m.id);
     if (needsDiscovery) {
       refreshedMcpSchemasInSession.add(m.id);
       try {
         await pluginsStore.testMcp(m.id);
       } catch {
-        // Keep cached tools if endpoint temporarily fails
+        // Keep existing cached tools if endpoint temporarily fails
       }
     }
   }
@@ -398,23 +393,15 @@ ${matchedSkill.systemPrompt}`;
       .map(t => `${t.role === "user" ? "U" : "A"}: ${t.text.slice(0, 500)}`)
       .join("\n");
 
-    const plannerSystemInstruction = `You are the MCP Function-Calling Router for Staggi Wealth Management (Today: ${currentDateStr}).
-Output ONLY a valid JSON array of tool calls: [{"mcpId":"...","toolName":"...","args":{...}}] or [] if no MCP tool is needed. No prose.
+    const plannerSystemInstruction = `You are the MCP Function-Calling Router (Date: ${currentDateStr}).
+Inspect the user prompt, conversation history, and the available tools in the catalog.
+Output ONLY a valid JSON array of tool calls: [{"mcpId":"...","toolName":"...","args":{...}}] or [] if no external tool is needed. No explanation or prose.
 
-ROUTING RULES:
-1. NEVER pass verbs, phrases, or question words in "client_id" or "search" — ONLY pass a real person's name, email, account code (STG...), or UUID.
-2. FIRM-WIDE / CROSS-ADVISOR FLOWS & SCREENING (all clients / all advisors):
-   - Cash deposits/inflows ("aportaram", "aportes", "cash", "depósitos"), withdrawals ("resgates", "saques"), buys, sells, or dividends across clients/advisors -> call "screen_firm_transactions" with {"transaction_type": "DEPOSIT"|"WITHDRAWAL"|"BUY"|"SELL"|"DIVIDEND", "days_back": 30 (for last month, 7 for week, 90 for quarter, 365 for year), "limit": 250} (add "advisor_name" only if filtered to one advisor).
-   - Clients holding a specific ticker/asset class/sector across the firm -> call "screen_firm_positions".
-   - Compare all advisors -> call "get_advisor_book" with {"advisor_name": "ALL"}. Single advisor book -> {"advisor_name": "<name>"}.
-3. PARTIAL / FIRST NAME ONLY (e.g. a single first name): call BOTH "list_clients" ({"search":"<name>","limit":50}) AND "get_client_portfolios" ({"client_id":"<name>"}) so all homonym clients and any matching advisor are returned.
-4. SPECIFIC CLIENT (full name with surname OR STG... account code):
-   - Portfolio/holdings/allocation query -> call "get_client_portfolios", "get_portfolio_positions", "get_asset_allocation", "get_portfolio_metrics" with {"client_id":"<full_name_or_STG>"}.
-   - Accounts/registration only -> call "get_client_portfolios" and "get_client_details" with {"client_id":"<full_name_or_STG>"}.
-5. INSTITUTIONAL REPORTS (Posição / Extrato de Conta ou Proposta de Rebalanceamento):
-   - Generate official positions & holdings report -> call "generate_portfolio_position_report" with {"client_id":"<full_name_or_STG>"}.
-   - Generate rebalance & target structure proposal report -> call "generate_portfolio_rebalance_report" with {"client_id":"<full_name_or_STG>"}.
-   - Explicit email dispatch requested -> call "send_portfolio_position_report_email" or "send_portfolio_rebalance_proposal_email".`;
+UNIVERSAL CALLING RULES:
+1. MATCH TOOL SCHEMAS: Strictly consult the tool parameters and descriptions provided in the TOOLS list below. Only supply parameters that the tool explicitly defines.
+2. CLEAN IDENTIFIERS: Never pass conversational filler words or questions in identifier fields (e.g. "client_id", "ticker", "symbol", "query", "search"). Pass only clean identifiers (such as ticker codes, account codes, names, or search terms).
+3. MULTI-TOOL COMPOSITION: When a comprehensive answer requires data from multiple tools or MCP servers, plan and return all relevant tool calls in the array so all required context is fetched in parallel.
+4. MUTATION & ACTION TOOLS: Only plan write/send/export tools (e.g. sending emails, registering decisions) when the user explicitly requests an action to be dispatched. For read queries, select read/query/list/get tools.`;
 
     const plannerPrompt = `${recentTurnsText ? `HISTORY:\n${recentTurnsText}\n\n` : ""}TOOLS:\n${compactCatalogLines.join("\n")}\n\nUSER: ${cleanPrompt}\nJSON:`;
 
@@ -555,25 +542,22 @@ ROUTING RULES:
 6. AUDITORIA E CITAÇÃO DE FONTES:
    - Se dados de ferramentas ou servidores MCP locais foram retornados acima ([DADOS AUDITADOS RETORNADOS DO MCP LOCAL: <NomeDoMcp> • FERRAMENTA: <NomeDaTool>]):
      Você DEVE citar EXATAMENTE o servidor MCP e a ferramenta consultada no rodapé da resposta: "Fonte Auditada: <NomeDoMcp> • <NomeDaTool>".
-     Exemplo real: se consultou o MCP "staggi-portfolio" com a ferramenta "list_clients", finalize estritamente com: "Fonte Auditada: staggi-portfolio • list_clients".
-     É ESTRITAMENTE PROIBIDO inventar fontes como "B3", "SEC EDGAR", "Market Consensus" ou "Consenso Sell-Side" quando os dados vieram de um MCP local do usuário ou ferramenta específica.
+     É ESTRITAMENTE PROIBIDO inventar fontes externas genéricas quando os dados vieram de ferramentas de MCPs conectados.
    - Se nenhuma ferramenta/MCP foi consultada, NÃO inclua nenhum rodapé de "Fonte Auditada".
  
-7. CONSULTAS DE CONTA vs. DISTRIBUIÇÃO DE CARTEIRA:
-   - Se o usuário pedir para buscar, consultar ou identificar uma conta específica (ex: "essa conta que estou procurando STG...", "quem é a conta STG...", "localizar conta"):
-     Apresente as informações cadastrais e detalhes da conta (Nome do Titular, Assessor Responsável, AUM Total, Data de Abertura e Status) de forma direta e concisa em Markdown limpo.
-     NÃO invente percentuais ou estruturas de rebalanceamento que forcem a renderização de gráficos desnecessários quando o usuário estiver apenas consultando os dados da conta.
-   - Quando o usuário pedir explicitamente para ver o portfólio, distribuição, alocação ou rebalanceamento de um cliente, estruture os dados em formato claro com Ativo/Classe, Categoria, Valor e Percentual (%) da carteira.
-     Isso permite ao Staggi renderizar automaticamente o gráfico visual interativo de distribuição de portfólio (Donut Chart & Alocações) em conjunto com a tabela analítica completa.
+7. DISTRIBUIÇÃO E DADOS ANALÍTICOS (GRÁFICOS vs. CONSULTAS PONTUAIS):
+   - Consultas de identificação cadastral, listagens gerais ou buscas de entidades: apresente os detalhes de forma direta, concisa e estruturada em Markdown puro.
+   - Apresentação de Alocação de Ativos / Distribuição Patrimonial: ao fornecer composições de carteira ou propostas de rebalanceamento onde haja distribuição percentual por classes de ativos, estruture uma tabela clara com as colunas (Ativo/Classe, Percentual, Valor), permitindo que o usuário visualize os dados de forma visual e analítica.
+   - NUNCA invente percentuais ou tabelas de distribuição em respostas onde o usuário não solicitou composição/alocação.
 
 8. ADERÊNCIA AO SECOND BRAIN & PREFERÊNCIAS MEMORIZADAS:
    - Se diretrizes ou fatos do [SECOND BRAIN & MEMÓRIA DE LONGO PRAZO DO ASSESSOR] estiverem presentes no contexto, aplique-os com rigor fiduciário (ex: respeitar restrições de clientes, diretrizes de governança, teses de alocação e regras fiscais).
 
-9. DESAMBIGUAÇÃO FIDUCIÁRIA OBRIGATÓRIA (ASSESSOR vs. CLIENTE & HOMÔNIMOS):
-   - Quando os dados auditados do MCP retornarem "ambiguity_detected": true ou múltiplos clientes correspondentes ("total_matching_in_database" > 1 em list_clients):
-     1) NUNCA escolha arbitrariamente uma conta nem diga que existem menos clientes do que "total_matching_in_database".
-     2) Informe com precisão executiva o total exato encontrado na base: tanto o(s) Assessor(es) correspondente(s) (com total de clientes e AUM do book, se houver) quanto o total real de Clientes Investidores encontrados (listando os clientes retornados com código da conta STG..., AUM e assessor responsável).
-     3) Ao final, pergunte objetivamente ao usuário se deseja aprofundar no Book consolidado do Assessor ou na carteira detalhada de qual Cliente Investidor específico.`;
+9. DESAMBIGUAÇÃO OBRIGATÓRIA (MÚLTIPLOS RESULTADOS / HOMÔNIMOS):
+   - Quando as ferramentas do MCP retornarem múltiplos resultados correspondentes para uma busca ou ambiguidade de entidade:
+     1) NUNCA escolha arbitrariamente um resultado nem omita opções encontradas.
+     2) Liste com clareza as entidades encontradas (identificadores, nomes e atributos relevantes).
+     3) Ao final, pergunte objetivamente ao usuário com qual entidade ele deseja prosseguir o detalhamento.`;
 
   let enforcementDirective = "";
   if (aiStore.enforcementLevel === "low") {
