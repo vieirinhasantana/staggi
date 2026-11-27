@@ -141,6 +141,8 @@
         ? buildPromptWithAttachments(trimmed, attachments)
         : trimmed;
 
+      const isPdfExplicitlyRequested = /(?:\b(?:pdf|download\s+pdf|baixar\s+pdf|gerar\s+pdf|exportar\s+pdf|export\s+pdf|salvar\s+pdf|save\s+pdf)\b)|(?:(?:\b(?:download|baixar|gerar|exportar|export|salvar|save)\b).{0,20}\b(?:pdf|relat[oó]rio|report)\b)/i.test(trimmed);
+
       const geminiResult = await queryGemini(finalPromptToAi, historyTurns, onProgress);
       const fullText = geminiResult.text || "";
 
@@ -152,7 +154,10 @@
         type: "text",
         isLoading: false,
         isStreaming: false,
-        metadata: geminiResult.source ? { source: geminiResult.source } : undefined
+        metadata: {
+          ...(geminiResult.source ? { source: geminiResult.source } : {}),
+          isPdfRequested: isPdfExplicitlyRequested
+        }
       };
 
       messages = messages.map(m => m.id === pendingBotId ? finalBotMessage : m);

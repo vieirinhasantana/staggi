@@ -153,7 +153,9 @@
   );
 
   const isReportRequested = $derived(
-    /(?:download|generate|export|pdf|report|statement|proposal|baixar|gerar|exportar)\s+(?:pdf|report|statement|document|proposal|relat[oó]rio)|(?:pdf|report|statement|proposal|relat[oó]rio)\s+(?:of|for|from|in\s+pdf|de|em\s+pdf)/i.test(message.text)
+    message.metadata?.isPdfRequested === true ||
+    /\[(?:download_pdf|export_pdf|pdf_ready)\]/i.test(message.text) ||
+    /(?:click\s+below\s+to\s+download\s+pdf|clique\s+abaixo\s+para\s+baixar\s+o\s+pdf|pdf\s+report\s+ready\s+for\s+download)/i.test(message.text)
   );
 
   function handleExportPdf() {
