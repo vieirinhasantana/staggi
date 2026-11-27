@@ -103,6 +103,87 @@ Quando o usuário utilizar expressões temporais como "desse ano", "deste ano", 
   }
   const executedTools: ExecutedToolInfo[] = [];
 
+  /**
+   * Dynamically resolves any arbitrary MCP tool into a clean, human-readable continuous action in English.
+   * Completely dynamic for any MCP server, tool, and parameter structure.
+   */
+  function humanizeMcpToolAction(mcpName: string, toolName: string, skillName?: string | null): string {
+    if (!toolName) {
+      return skillName ? `Reviewing ${skillName} guidelines...` : "Consulting data sources...";
+    }
+
+    const cleanName = toolName
+      .replace(/([a-z])([A-Z])/g, "$1 $2")
+      .replace(/[-_]+/g, " ")
+      .trim()
+      .toLowerCase();
+
+    const words = cleanName.split(/\s+/).filter(Boolean);
+    if (words.length === 0) return "Consulting data sources...";
+
+    const verbMap: Record<string, string> = {
+      get: "Reading",
+      fetch: "Fetching",
+      read: "Reading",
+      load: "Loading",
+      query: "Querying",
+      search: "Searching",
+      find: "Finding",
+      lookup: "Looking up",
+      scan: "Scanning",
+      check: "Checking",
+      calculate: "Calculating",
+      compute: "Computing",
+      estimate: "Estimating",
+      evaluate: "Evaluating",
+      analyze: "Analyzing",
+      audit: "Auditing",
+      generate: "Structuring",
+      build: "Building",
+      create: "Creating",
+      structure: "Structuring",
+      format: "Formatting",
+      rebalance: "Balancing",
+      balance: "Balancing",
+      optimize: "Optimizing",
+      send: "Preparing",
+      export: "Exporting",
+      list: "Listing",
+      sync: "Syncing"
+    };
+
+    const firstWord = words[0];
+    let verb = verbMap[firstWord];
+    let nounWords = words.slice(1);
+
+    if (!verb) {
+      if (firstWord.endsWith("ing")) {
+        verb = firstWord.charAt(0).toUpperCase() + firstWord.slice(1);
+      } else {
+        verb = "Processing";
+        nounWords = words;
+      }
+    }
+
+    let rest = nounWords.join(" ")
+      .replace(/\bportfolio positions\b/g, "portfolio positions")
+      .replace(/\bpositions\b/g, "portfolio positions")
+      .replace(/\brebalance report\b/g, "rebalance proposal")
+      .replace(/\bposition report\b/g, "position report")
+      .replace(/\bsec\b/g, "SEC filings")
+      .replace(/\bquote\b/g, "market quotes")
+      .replace(/\bdy\b/g, "dividend yield")
+      .replace(/\bmcp\b/g, "")
+      .trim();
+
+    if (!rest) {
+      rest = mcpName ? `${mcpName.replace(/[-_]/g, " ")} data` : "data";
+    }
+
+    const result = `${verb} ${rest}...`;
+    return result.charAt(0).toUpperCase() + result.slice(1);
+  }
+
   function formatToolsSummary(tools: ExecutedToolInfo[]): string {
     if (tools.length === 0) return "";
     const grouped = new Map<string, string[]>();
@@ -177,7 +258,7 @@ Atenção: Trate essas diretrizes como preferências e estilo de trabalho do ass
 
     if (targetSkill) {
       activeSkillName = targetSkill.name;
-      onProgress?.(`Thinking... [Skill: ${targetSkill.name}]`);
+      onProgress?.(`Reviewing ${targetSkill.name} guidelines...`);
       explicitSkillDirective = `\n\n[DIRETIVA EXPLÍCITA /${requestedSlug} - EXECUÇÃO PRIORITÁRIA DA SKILL: ${targetSkill.name.toUpperCase()}]:
 O usuário acionou especificamente a Skill "${targetSkill.name}" via comando de barra (/${requestedSlug}).
 Você DEVE adotar com máxima prioridade e rigor metodológico todas as seguintes regras analíticas, fórmulas e modelo de resposta desta skill:
@@ -345,7 +426,7 @@ ROUTING RULES:
     const preferredRouterModel = fastRouterModelByProvider[provider] || model.trim();
 
     let plannedCalls: PlannedMcpCall[] = [];
-    onProgress?.(activeSkillName ? `Thinking... [Skill: ${activeSkillName}]` : "Thinking...");
+    onProgress?.(activeSkillName ? `Reviewing ${activeSkillName} guidelines...` : "Consulting data sources...");
     try {
       const rawPlan = await invoke<string>("ask_ai", {
         provider,
@@ -409,16 +490,13 @@ ROUTING RULES:
       for (const c of validCalls) {
         executedTools.push({ mcpName: c.mcpName, toolName: c.toolName });
       }
-      const toolsLabel = formatToolsSummary(executedTools);
-      const statusText = activeSkillName
-        ? `Thinking... [${toolsLabel} • Skill: ${activeSkillName}]`
-        : `Thinking... [${toolsLabel}]`;
-      onProgress?.(statusText);
+      onProgress?.(humanizeMcpToolAction(validCalls[0].mcpName, validCalls[0].toolName, activeSkillName));
 
       // Sequential execution avoids concurrent StreamableHTTP initialize session collisions (20s stall)
       const results: string[] = [];
       for (const c of validCalls) {
         try {
+          onProgress?.(humanizeMcpToolAction(c.mcpName, c.toolName, activeSkillName));
           const res = await pluginsStore.callTool(c.mcpId, c.toolName, c.args);
           if (!res) continue;
           let contentStr = "";
@@ -518,14 +596,7 @@ Equilibre profundidade técnica, dados reais auditados e contextualização exec
 
   try {
     const allToolsLabel = formatToolsSummary(executedTools);
-    const statusBracket = allToolsLabel && activeSkillName
-      ? ` [${allToolsLabel} • Skill: ${activeSkillName}]`
-      : allToolsLabel
-        ? ` [${allToolsLabel}]`
-        : activeSkillName
-          ? ` [Skill: ${activeSkillName}]`
-          : "";
-    onProgress?.(`Thinking...${statusBracket}`);
+    onProgress?.("Synthesizing response...");
     const responseText = await invoke<string>("ask_ai", {
       provider,
       apiKey: apiKey.trim(),

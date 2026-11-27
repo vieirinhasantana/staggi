@@ -108,7 +108,7 @@
 
     const pendingBotId = String(Date.now() + 1);
     const slashMatch = trimmed.match(/^\/([a-zA-Z0-9_-]+)/);
-    const initialStatus = slashMatch ? `Thinking... [/${slashMatch[1]}]` : "Thinking...";
+    const initialStatus = slashMatch ? `Running /${slashMatch[1]}...` : "Thinking...";
 
     const pendingBotMessage: ChatMessage = {
       id: pendingBotId,

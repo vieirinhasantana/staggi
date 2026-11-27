@@ -42,6 +42,83 @@
 
   let isCopied = $state(false);
 
+  // Dynamic status cycling (like ChatGPT / Claude)
+  let displayStatus = $state("Thinking...");
+  let isFading = $state(false);
+
+  function getAlternatingPhrases(currentText: string): string[] {
+    const lower = currentText.toLowerCase();
+    if (lower.includes("portfolio") || lower.includes("position")) {
+      return [
+        currentText,
+        "Reading portfolio positions...",
+        "Evaluating asset distribution...",
+        "Consolidating position balances...",
+        "Analyzing allocations..."
+      ];
+    }
+    if (lower.includes("rebalance") || lower.includes("balance") || lower.includes("structur")) {
+      return [
+        currentText,
+        "Balancing portfolio structure...",
+        "Calculating target weights...",
+        "Evaluating delta adjustments...",
+        "Formulating allocation strategy..."
+      ];
+    }
+    if (lower.includes("quote") || lower.includes("price") || lower.includes("market") || lower.includes("telemetry")) {
+      return [
+        currentText,
+        "Fetching market telemetry...",
+        "Querying latest price quotes...",
+        "Verifying financial multiples...",
+        "Auditing market data..."
+      ];
+    }
+    if (lower.includes("filing") || lower.includes("sec") || lower.includes("report") || lower.includes("dividend")) {
+      return [
+        currentText,
+        "Searching regulatory disclosures...",
+        "Auditing dividend history...",
+        "Extracting financial facts..."
+      ];
+    }
+    if (lower.includes("synthesiz") || lower.includes("finaliz") || lower.includes("respons")) {
+      return [
+        currentText,
+        "Synthesizing response...",
+        "Formatting executive insights...",
+        "Structuring fiduciary reply..."
+      ];
+    }
+    return [
+      currentText,
+      "Consulting data sources...",
+      "Analyzing parameters...",
+      "Formulating insights...",
+      "Thinking..."
+    ];
+  }
+
+  $effect(() => {
+    if (!message.isLoading) return;
+
+    displayStatus = message.text || "Thinking...";
+    const phrases = getAlternatingPhrases(displayStatus);
+    let index = 0;
+
+    const timer = setInterval(() => {
+      index = (index + 1) % phrases.length;
+      isFading = true;
+      setTimeout(() => {
+        displayStatus = phrases[index];
+        isFading = false;
+      }, 160);
+    }, 2200);
+
+    return () => clearInterval(timer);
+  });
+
   // High-performance lazy derivation: execute expensive regex parsers only when needed
   let isParsable = $derived(message.sender === "staggi" && !message.isLoading && !message.isStreaming);
 
@@ -135,10 +212,17 @@
     </div>
   {:else}
     {#if message.isLoading}
-      <div class="w-full rounded-2xl border border-white/[0.08] bg-[#212121]/90 shadow-sm p-3.5">
-        <div class="flex items-center gap-2.5 py-1 text-xs text-amber-300/90">
-          <Brain class="w-4 h-4 animate-pulse text-amber-400 shrink-0" />
-          <span class="animate-pulse">{message.text}</span>
+      <div class="w-full rounded-2xl border border-white/[0.08] bg-[#212121]/90 shadow-sm p-3.5 backdrop-blur-xl">
+        <div class="flex items-center gap-2.5 py-0.5 text-xs text-amber-300/90 whitespace-nowrap overflow-hidden">
+          <div class="relative flex items-center justify-center shrink-0 w-4 h-4">
+            <span class="absolute inline-flex h-full w-full rounded-full bg-amber-400/30 animate-ping"></span>
+            <Sparkles class="w-3.5 h-3.5 text-amber-400 relative z-10 animate-pulse" />
+          </div>
+          <span
+            class="font-medium tracking-wide text-zinc-200 transition-opacity duration-200 truncate {isFading ? 'opacity-20' : 'opacity-100'}"
+          >
+            {displayStatus}
+          </span>
         </div>
       </div>
 
