@@ -6,6 +6,30 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ---
 
+## [0.1.26] - 2026-11-27
+
+### Added
+- **Native PDF Document Layer Extraction**:
+  - Implemented backend PDF stream decompressor (`flate2`/ZlibDecoder) and parser for text objects (`BT...ET`, `Tj`, `TJ` arrays, octal escape decoding).
+  - Wired into `readFileAsAttachment` and prompt builder to feed full extracted financial tables and text into AI context.
+- **Multinational Institutional PDF Factsheet Export**:
+  - Redesigned PDF exports to match top-tier global wealth managers (BlackRock, Morgan Stanley factsheets).
+  - Two-page vector report featuring SVG Donut chart, allocation ribbon, dual-bar comparative analysis (Current vs. Target), master portfolio audit table, and Investment Committee execution blocks.
+- **Dynamic Continuous AI Thinking Ticker**:
+  - Replaced static bracketed tool dumps with smooth, ChatGPT-like continuous action tickers that dynamically adapt to any running MCP tool in clean English.
+
+### Changed & Improved
+- **Generalized MCP Function-Calling Architecture**:
+  - Decoupled function calling router and system instructions from specific MCP servers or hardcoded tool names, ensuring agnostic, plug-and-play support for any arbitrary MCP server.
+- **Strict Conditional Chart Rendering**:
+  - Refined portfolio distribution parsing rules so that pure account lookups, client searches, or transaction listings output clean Markdown tables rather than triggering unwanted allocation charts.
+- **On-Demand PDF Report Actions**:
+  - PDF export buttons appear strictly when requested by the user, formatted on a single line alongside copy action.
+- **Full English Standardization**:
+  - All report templates, toasts, actions, and UI labels standardized in professional English.
+
+---
+
 ## [0.1.25] - 2026-11-26
 
 ### Added
