@@ -559,9 +559,12 @@ ROUTING RULES:
      É ESTRITAMENTE PROIBIDO inventar fontes como "B3", "SEC EDGAR", "Market Consensus" ou "Consenso Sell-Side" quando os dados vieram de um MCP local do usuário ou ferramenta específica.
    - Se nenhuma ferramenta/MCP foi consultada, NÃO inclua nenhum rodapé de "Fonte Auditada".
  
-7. APRESENTAÇÃO DE PORTFÓLIO E DISTRIBUIÇÃO DE CARTEIRA:
-   - Ao apresentar o portfólio, posições ou carteira de um cliente, estruture os dados em formato claro com Ativo/Classe, Categoria, Valor e Percentual (%) da carteira.
-   - Isso permite ao Staggi renderizar automaticamente o gráfico visual interativo de distribuição de portfólio (Donut Chart & Alocações) em conjunto com a tabela analítica completa.
+7. CONSULTAS DE CONTA vs. DISTRIBUIÇÃO DE CARTEIRA:
+   - Se o usuário pedir para buscar, consultar ou identificar uma conta específica (ex: "essa conta que estou procurando STG...", "quem é a conta STG...", "localizar conta"):
+     Apresente as informações cadastrais e detalhes da conta (Nome do Titular, Assessor Responsável, AUM Total, Data de Abertura e Status) de forma direta e concisa em Markdown limpo.
+     NÃO invente percentuais ou estruturas de rebalanceamento que forcem a renderização de gráficos desnecessários quando o usuário estiver apenas consultando os dados da conta.
+   - Quando o usuário pedir explicitamente para ver o portfólio, distribuição, alocação ou rebalanceamento de um cliente, estruture os dados em formato claro com Ativo/Classe, Categoria, Valor e Percentual (%) da carteira.
+     Isso permite ao Staggi renderizar automaticamente o gráfico visual interativo de distribuição de portfólio (Donut Chart & Alocações) em conjunto com a tabela analítica completa.
 
 8. ADERÊNCIA AO SECOND BRAIN & PREFERÊNCIAS MEMORIZADAS:
    - Se diretrizes ou fatos do [SECOND BRAIN & MEMÓRIA DE LONGO PRAZO DO ASSESSOR] estiverem presentes no contexto, aplique-os com rigor fiduciário (ex: respeitar restrições de clientes, diretrizes de governança, teses de alocação e regras fiscais).

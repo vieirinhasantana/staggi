@@ -1,11 +1,19 @@
 import type { ParsedPortfolioDistribution, PortfolioAllocationItem } from '$lib/types';
 
 export function parsePortfolioDistribution(rawText: string): ParsedPortfolioDistribution | null {
-  if (!rawText || rawText.length < 35) return null;
+  if (!rawText || rawText.length < 50) return null;
 
-  // Broad keyword matching including portfolio rebalancing and target allocations
-  const hasKeywords = /\b(portf[oó]lio|carteira|aloca[çc][aã]o|distribui[çc][aã]o|classes?\s+de\s+ativos|patrim[oô]nio|rebalanceamento|estrutura\s+alvo|alvo|p[oó]s-rebalanceamento|composi[çc][aã]o\s+alvo|pesos?\s+alvo|estrat[eé]gia\s+alvo)\b/i.test(rawText);
+  // Strict keyword matching: must explicitly discuss asset allocation, portfolio breakdown or rebalancing
+  const hasKeywords = /\b(aloca[çc][aã]o\s+de\s+ativos|distribui[çc][aã]o\s+da\s+carteira|distribui[çc][aã]o\s+de\s+ativos|classes?\s+de\s+ativos|rebalanceamento|estrutura\s+alvo|p[oó]s-rebalanceamento|composi[çc][aã]o\s+alvo|pesos?\s+alvo|estrat[eé]gia\s+alvo|asset\s+allocation|portfolio\s+distribution|target\s+allocation|target\s+structure)\b/i.test(rawText);
   if (!hasKeywords) return null;
+
+  // Exclude pure account searches, client details lookup, transaction listings or stock quotes
+  if (
+    /informações\s+da\s+conta|dados\s+cadastrais|detalhes\s+do\s+cliente|extrato\s+de\s+transações|histórico\s+de\s+aportes/i.test(rawText) &&
+    !/estrutura\s+alvo|alocação\s+alvo|rebalanceamento/i.test(rawText)
+  ) {
+    return null;
+  }
 
   // Exclude pure dividend payout histories or single stock analysis if not an asset allocation
   if (/proventos?\s+declarados|dividend\s*yield\s*\(dy\)\s*hist[óo]rico/i.test(rawText)) {
