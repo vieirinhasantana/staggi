@@ -30,6 +30,7 @@ tokio = { version = "1", features = ["sync", "time", "process", "io-util", "net"
 sha2 = "0.10"
 hmac = "0.12"
 hex = "0.4.3"
+flate2 = "1"
 
 # Read the optimization guideline for more details: https://tauri.app/concept/size/#cargo-configuration
 [profile.release]

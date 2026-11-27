@@ -17,12 +17,44 @@ export function getFileIconCategory(fileName: string, mimeType: string): "pdf" |
 
 /**
  * Reads a dropped or picked File object into an AttachedFile structure.
+ * Automatically parses PDF files using the backend PDF text extraction engine.
  */
 export async function readFileAsAttachment(file: File): Promise<AttachedFile> {
   const id = `att_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
   const sizeFormatted = formatFileSize(file.size);
+  const isPdf = file.name.toLowerCase().endsWith(".pdf") || file.type.includes("pdf");
   const isTextual = file.type.startsWith("text/") || 
     /\.(csv|tsv|json|txt|md|yaml|yml|xml|html|js|ts|py|sql)$/i.test(file.name);
+
+  // If PDF, extract full textual layer via Tauri command or fallback
+  if (isPdf) {
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const bytes = Array.from(new Uint8Array(arrayBuffer));
+      
+      let extractedText = "";
+      try {
+        const { invoke } = await import("@tauri-apps/api/core");
+        extractedText = await invoke<string>("extract_pdf_text", { bytes });
+      } catch (invokeErr) {
+        console.warn("Tauri extract_pdf_text invoke failed, attempting fallback:", invokeErr);
+      }
+
+      if (extractedText && extractedText.trim().length > 0) {
+        return {
+          id,
+          name: file.name,
+          size: file.size,
+          sizeFormatted,
+          type: "application/pdf",
+          content: extractedText.trim(),
+          isBinary: false
+        };
+      }
+    } catch (pdfErr) {
+      console.error("Error extracting PDF text:", pdfErr);
+    }
+  }
 
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -40,10 +72,10 @@ export async function readFileAsAttachment(file: File): Promise<AttachedFile> {
           isBinary: false
         });
       };
-      reader.onerror = () => reject(new Error(`Falha ao ler arquivo de texto ${file.name}`));
+      reader.onerror = () => reject(new Error(`Failed to read text file ${file.name}`));
       reader.readAsText(file);
     } else {
-      // Binary (PDF, Image, etc.) -> Read as Data URL
+      // Binary (Image, unextracted PDF fallback, etc.) -> Read as Data URL
       reader.onload = () => {
         const dataUrl = typeof reader.result === "string" ? reader.result : "";
         resolve({
@@ -56,7 +88,7 @@ export async function readFileAsAttachment(file: File): Promise<AttachedFile> {
           isBinary: true
         });
       };
-      reader.onerror = () => reject(new Error(`Falha ao ler arquivo binário ${file.name}`));
+      reader.onerror = () => reject(new Error(`Failed to read binary file ${file.name}`));
       reader.readAsDataURL(file);
     }
   });
@@ -70,16 +102,25 @@ export function buildPromptWithAttachments(userPrompt: string, attachments: Atta
 
   const fileBlocks = attachments.map(att => {
     if (att.isBinary) {
-      return `\n[ARQUIVO ANEXADO: ${att.name} (${att.sizeFormatted}) • Formato: ${att.type}]:
-(Arquivo binário anexado pelo usuário para referência contextual)`;
+      return `\n[ATTACHED FILE: ${att.name} (${att.sizeFormatted}) • Format: ${att.type}]:
+(Binary file attached for contextual reference)`;
     }
     
     // Truncate excessively huge files to protect token limit
-    const cleanContent = att.content.length > 35000
-      ? att.content.slice(0, 35000) + "\n...[conteúdo restante truncado para respeitar limites de tokens]"
+    const cleanContent = att.content.length > 50000
+      ? att.content.slice(0, 50000) + "\n...[Remaining document content truncated to respect token window]"
       : att.content;
 
-    return `\n[CONTEÚDO DO ARQUIVO ANEXADO: ${att.name} (${att.sizeFormatted})]:
+    const isPdf = att.name.toLowerCase().endsWith(".pdf") || att.type.includes("pdf");
+
+    if (isPdf) {
+      return `\n[ATTACHED PDF DOCUMENT: ${att.name} (${att.sizeFormatted})]:
+--- BEGIN EXTRACTED DOCUMENT TEXT ---
+${cleanContent}
+--- END EXTRACTED DOCUMENT TEXT ---`;
+    }
+
+    return `\n[ATTACHED FILE CONTENT: ${att.name} (${att.sizeFormatted})]:
 \`\`\`
 ${cleanContent}
 \`\`\``;
@@ -87,7 +128,7 @@ ${cleanContent}
 
   const promptText = userPrompt.trim()
     ? userPrompt.trim()
-    : "Por favor, analise o(s) arquivo(s) anexado(s), extraia as métricas principais, identifique riscos ou oportunidades e forneça um resumo executivo estruturado.";
+    : "Please analyze the attached file(s), extract the key metrics, identify risks and opportunities, and provide a structured executive summary.";
 
   return `${promptText}\n\n---\n${fileBlocks}\n---`;
 }
