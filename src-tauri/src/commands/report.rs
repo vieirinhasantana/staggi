@@ -38,7 +38,7 @@ pub async fn save_and_open_pdf_report(
     }
 
     let safe_filename = if filename.trim().is_empty() {
-        format!("Staggi_Relatorio_{}.pdf", get_timestamp())
+        format!("Staggi_Report_{}.pdf", get_timestamp())
     } else {
         let mut clean = filename.trim().to_string();
         if !clean.to_lowercase().ends_with(".pdf") {
@@ -50,14 +50,14 @@ pub async fn save_and_open_pdf_report(
     let target_path = download_dir.join(&safe_filename);
 
     std::fs::write(&target_path, &bytes)
-        .map_err(|e| format!("Falha ao salvar relatório PDF em {}: {}", target_path.display(), e))?;
+        .map_err(|e| format!("Failed to save PDF report to {}: {}", target_path.display(), e))?;
 
     let path_str = target_path.to_string_lossy().to_string();
 
-    // Tenta abrir o arquivo PDF com o visualizador padrão do sistema (Preview no macOS, Edge/Adobe no Windows)
+    // Opens PDF file with system default viewer (Preview on macOS, Edge/Adobe on Windows)
     let _ = tauri_plugin_opener::open_path(&path_str, None::<&str>);
 
-    // Também revela o arquivo no Finder / Explorer para facilidade de acesso
+    // Reveals item in Finder / File Explorer
     let _ = tauri_plugin_opener::reveal_item_in_dir(&path_str);
 
     Ok(path_str)
@@ -76,7 +76,7 @@ pub async fn save_and_open_html_report(
     }
 
     let safe_filename = if filename.trim().is_empty() {
-        format!("Staggi_Relatorio_{}.html", get_timestamp())
+        format!("Staggi_Report_{}.html", get_timestamp())
     } else {
         let mut clean = filename.trim().to_string();
         if !clean.to_lowercase().ends_with(".html") {
@@ -88,7 +88,7 @@ pub async fn save_and_open_html_report(
     let target_path = download_dir.join(&safe_filename);
 
     std::fs::write(&target_path, html_content.as_bytes())
-        .map_err(|e| format!("Falha ao salvar relatório HTML: {}", e))?;
+        .map_err(|e| format!("Failed to save HTML report: {}", e))?;
 
     let path_str = target_path.to_string_lossy().to_string();
 

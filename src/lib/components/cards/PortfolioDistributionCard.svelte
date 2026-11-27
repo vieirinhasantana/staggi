@@ -94,25 +94,25 @@
     `;
 
     const metrics = [
-      { label: "Patrimônio Total", value: data.totalValue || "100%" },
-      { label: "Classes Alocadas", value: `${data.items.length} Categorias` },
-      { label: "Status", value: data.isRebalancing ? "Estrutura Alvo Consolidada" : "Alocação Estratégica" },
-      { label: "Estratégia", value: data.isRebalancing ? "Rebalanceamento Fiduciário" : "Multimercado Fiduciário" }
+      { label: "Total AUM", value: data.totalValue || "100%" },
+      { label: "Allocated Classes", value: `${data.items.length} Categories` },
+      { label: "Status", value: data.isRebalancing ? "Target Structure" : "Strategic Allocation" },
+      { label: "Strategy", value: data.isRebalancing ? "Fiduciary Rebalance" : "Multi-Asset Fiduciary" }
     ];
 
     exportReportAsPdf({
       title: data.title,
       subtitle: data.isRebalancing 
-        ? "Relatório Executivo de Rebalanceamento e Estrutura Alvo Otimizada"
-        : "Relatório de Alocação Patrimonial e Distribuição de Classes de Ativos",
+        ? "Executive Report: Portfolio Rebalancing & Optimized Target Allocation"
+        : "Portfolio Asset Allocation & Class Distribution Report",
       clientName: data.clientName,
       auditedSource: source || "Staggi Wealth Management",
       metrics,
       chartSvg: donutSvg,
       rawMarkdown: rawText,
       verdict: data.isRebalancing
-        ? "Rebalanceamento formulado para readequar a carteira aos parâmetros da Política de Investimentos e otimização de risco-retorno."
-        : "Carteira estruturada em conformidade com as diretrizes de diversificação patrimonial e alocação estratégica."
+        ? "Rebalance formulated to realign the portfolio with Investment Policy Statement (IPS) guidelines and risk-return optimization."
+        : "Portfolio structured in full compliance with strategic asset diversification guidelines."
     });
   }
 
@@ -120,18 +120,18 @@
     sendClientEmail({
       clientName: data.clientName,
       subject: data.isRebalancing 
-        ? `Estrutura Alvo Consolidada (Pós-Rebalanceamento) • ${data.clientName || 'Gestão de Patrimônio'}`
-        : `Alocação de Carteira • ${data.clientName || 'Gestão de Patrimônio'}`,
+        ? `Consolidated Target Structure (Post-Rebalance) • ${data.clientName || 'Wealth Advisory'}`
+        : `Portfolio Allocation • ${data.clientName || 'Wealth Advisory'}`,
       metrics: [
-        { label: "Patrimônio Total", value: data.totalValue || "100%" },
-        { label: "Alocações Alvo", value: data.items.map(i => `${i.label} (${i.percentageFormatted})`).join(", ") }
+        { label: "Total AUM", value: data.totalValue || "100%" },
+        { label: "Target Allocations", value: data.items.map(i => `${i.label} (${i.percentageFormatted})`).join(", ") }
       ],
-      summary: `Prezado(a), segue a ${data.isRebalancing ? 'estrutura alvo proposta pós-rebalanceamento' : 'distribuição atualizada da carteira'} (${data.totalValue || '100%'}):\n\n` +
+      summary: `Dear Client, please find below the ${data.isRebalancing ? 'proposed post-rebalance target structure' : 'updated portfolio distribution'} (${data.totalValue || '100%'}):\n\n` +
         data.items.map(i => {
           let line = `• ${i.label}: ${i.percentageFormatted}`;
           if (i.currentPercentageFormatted) {
-            line += ` (Atual: ${i.currentPercentageFormatted} ➔ Alvo: ${i.targetPercentageFormatted || i.percentageFormatted}`;
-            if (i.deltaFormatted) line += `, Ajuste: ${i.deltaFormatted}`;
+            line += ` (Current: ${i.currentPercentageFormatted} ➔ Target: ${i.targetPercentageFormatted || i.percentageFormatted}`;
+            if (i.deltaFormatted) line += `, Adjustment: ${i.deltaFormatted}`;
             if (i.action) line += ` - ${i.action}`;
             line += `)`;
           }
@@ -146,8 +146,8 @@
       data.items.map(i => {
         let line = `• ${i.label}: ${i.percentageFormatted}`;
         if (i.currentPercentageFormatted) {
-          line += ` (Atual: ${i.currentPercentageFormatted} ➔ Alvo: ${i.targetPercentageFormatted || i.percentageFormatted}`;
-          if (i.deltaFormatted) line += `, Ajuste: ${i.deltaFormatted}`;
+          line += ` (Current: ${i.currentPercentageFormatted} ➔ Target: ${i.targetPercentageFormatted || i.percentageFormatted}`;
+          if (i.deltaFormatted) line += `, Adjustment: ${i.deltaFormatted}`;
           line += `)`;
         }
         if (i.value) line += ` [${i.value}]`;
@@ -157,7 +157,7 @@
     if (navigator.clipboard) {
       navigator.clipboard.writeText(summary);
       isCopied = true;
-      toastStore.showToast("Resumo da carteira copiado!", "success");
+      toastStore.showToast("Portfolio summary copied!", "success");
       setTimeout(() => (isCopied = false), 2000);
     }
   }
@@ -180,7 +180,7 @@
           {#if data.isRebalancing}
             <span class="flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-300 text-[11px] font-bold border border-amber-500/30">
               <Scale class="w-3 h-3" />
-              Pós-Rebalanceamento
+              Post-Rebalance
             </span>
           {/if}
           {#if data.clientName}
@@ -190,11 +190,11 @@
             </span>
           {/if}
           <span class="px-2 py-0.5 rounded-md bg-white/[0.06] text-zinc-300 text-[11px] font-medium border border-white/[0.08]">
-            {data.items.length} Posições
+            {data.items.length} Positions
           </span>
         </div>
         <div class="text-[11px] text-zinc-400 mt-0.5 flex items-center gap-1.5">
-          <span>{data.intro || "Distribuição percentual e classes de ativos"}</span>
+          <span>{data.intro || "Asset class and percentage distribution"}</span>
           {#if data.totalValue}
             <span>•</span>
             <span class="text-zinc-200 font-medium flex items-center gap-1">
@@ -216,7 +216,7 @@
           : 'text-zinc-400 hover:text-zinc-200'}"
       >
         <Layers class="w-3.5 h-3.5" />
-        <span>Visão Geral</span>
+        <span>Overview</span>
       </button>
 
       {#if hasCompareData}
@@ -228,7 +228,7 @@
             : 'text-zinc-400 hover:text-zinc-200'}"
         >
           <BarChart2 class="w-3.5 h-3.5" />
-          <span>Atual vs Alvo</span>
+          <span>Current vs Target</span>
         </button>
       {/if}
 
@@ -240,7 +240,7 @@
           : 'text-zinc-400 hover:text-zinc-200'}"
       >
         <PieChart class="w-3.5 h-3.5" />
-        <span>Donut Alvo</span>
+        <span>Target Donut</span>
       </button>
 
       <button
@@ -251,7 +251,7 @@
           : 'text-zinc-400 hover:text-zinc-200'}"
       >
         <Table class="w-3.5 h-3.5" />
-        <span>Tabela</span>
+        <span>Table</span>
       </button>
     </div>
   </div>
@@ -312,18 +312,18 @@
                 {/if}
                 {#if activeItem.deltaFormatted}
                   <span class="text-[10px] font-semibold {activeItem.deltaPercentage && activeItem.deltaPercentage > 0 ? 'text-emerald-400' : activeItem.deltaPercentage && activeItem.deltaPercentage < 0 ? 'text-rose-400' : 'text-zinc-400'}">
-                    Ajuste: {activeItem.deltaFormatted}
+                    Adjustment: {activeItem.deltaFormatted}
                   </span>
                 {/if}
               {:else}
                 <span class="text-[10px] text-zinc-400 uppercase tracking-wider font-medium">
-                  {data.isRebalancing ? "Estrutura Alvo" : "Patrimônio"}
+                  {data.isRebalancing ? "Target Structure" : "Total AUM"}
                 </span>
                 <span class="text-sm font-bold text-zinc-100">
                   {data.totalValue || "100%"}
                 </span>
                 <span class="text-[10px] text-zinc-400">
-                  {data.items.length} Posições
+                  {data.items.length} Positions
                 </span>
               {/if}
             </div>
@@ -439,16 +439,16 @@
       <div class="flex items-center justify-between border-b border-white/[0.06] pb-2 text-xs">
         <span class="font-semibold text-zinc-200 flex items-center gap-1.5">
           <Scale class="w-4 h-4 text-amber-400" />
-          Auditoria de Movimentação: Alocação Atual vs Estrutura Alvo
+          Movement Audit: Current Allocation vs Target Structure
         </span>
         <div class="flex items-center gap-3 text-[11px]">
           <div class="flex items-center gap-1.5 text-zinc-400">
             <span class="h-2 w-4 rounded-sm bg-zinc-600 inline-block"></span>
-            <span>Atual</span>
+            <span>Current</span>
           </div>
           <div class="flex items-center gap-1.5 text-zinc-200">
             <span class="h-2 w-4 rounded-sm bg-emerald-500 inline-block"></span>
-            <span>Alvo Proposto</span>
+            <span>Proposed Target</span>
           </div>
         </div>
       </div>
@@ -500,7 +500,7 @@
             <div class="space-y-1.5 pt-0.5">
               <!-- Current Bar -->
               <div class="flex items-center gap-2 text-[11px]">
-                <span class="w-10 text-zinc-500 text-right shrink-0">Atual:</span>
+                <span class="w-12 text-zinc-500 text-right shrink-0">Current:</span>
                 <div class="flex-1 h-2 rounded-full bg-white/[0.04] overflow-hidden">
                   <div
                     class="h-full rounded-full bg-zinc-500 transition-all duration-300"
@@ -514,7 +514,7 @@
 
               <!-- Target Bar -->
               <div class="flex items-center gap-2 text-[11px]">
-                <span class="w-10 text-emerald-400 font-medium text-right shrink-0">Alvo:</span>
+                <span class="w-12 text-emerald-400 font-medium text-right shrink-0">Target:</span>
                 <div class="flex-1 h-2 rounded-full bg-white/[0.04] overflow-hidden">
                   <div
                     class="h-full rounded-full transition-all duration-300"
@@ -538,7 +538,7 @@
       {#if activeTab === "overview"}
         <div class="flex items-center gap-2 text-xs font-semibold text-zinc-300 px-1 pt-2">
           <Table class="w-3.5 h-3.5 text-emerald-400" />
-          <span>Detalhamento Analítico & Posições</span>
+          <span>Analytical Breakdown & Positions</span>
         </div>
       {/if}
 
@@ -553,23 +553,23 @@
     <div class="flex items-center gap-1.5">
       <ShieldCheck class="w-3.5 h-3.5 text-emerald-400 shrink-0" />
       <span class="text-zinc-400">Audited Source:</span>
-      <span class="text-zinc-200 font-medium">{source || (data.isRebalancing ? "staggi-rebalance • Otimização Fiduciária" : "staggi-portfolio • Alocação Fiduciária")}</span>
+      <span class="text-zinc-200 font-medium">{source || (data.isRebalancing ? "staggi-rebalance • Fiduciary Optimization" : "staggi-portfolio • Fiduciary Allocation")}</span>
     </div>
 
     <div class="flex items-center gap-2">
-      <span class="text-zinc-500">{data.isRebalancing ? "Estrutura Alvo Consolidada" : "Distribuição Dinâmica de Ativos"}</span>
+      <span class="text-zinc-500">{data.isRebalancing ? "Consolidated Target Structure" : "Dynamic Asset Allocation"}</span>
       <button
         type="button"
         onclick={handleCopySummary}
-        title="Copiar resumo textual da carteira"
+        title="Copy portfolio text summary"
         class="flex items-center gap-1 px-1.5 py-0.5 rounded bg-white/[0.04] hover:bg-white/[0.08] text-zinc-400 hover:text-zinc-200 text-[10px] transition-colors cursor-pointer"
       >
         {#if isCopied}
           <Check class="w-3 h-3 text-emerald-400" />
-          <span class="text-emerald-300">Copiado</span>
+          <span class="text-emerald-300">Copied</span>
         {:else}
           <Copy class="w-3 h-3" />
-          <span>Copiar</span>
+          <span>Copy</span>
         {/if}
       </button>
     </div>

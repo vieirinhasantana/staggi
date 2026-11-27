@@ -62,8 +62,7 @@ function encodePdfString(str: string): string {
 }
 
 /**
- * A clean, self-contained Vector PDF Document Builder (PDF-1.4 standard).
- * Generates pristine A4 documents compatible with Apple Preview, Adobe Acrobat, Edge, and Chrome.
+ * Self-contained Vector PDF Document Builder (PDF-1.4 standard).
  */
 class VectorPdfBuilder {
   private pages: string[][] = [[]];
@@ -198,19 +197,18 @@ class VectorPdfBuilder {
     for (let p = 0; p < totalPages; p++) {
       const footerY = 22;
       const separatorY = 32;
-      // Line
       const lineCmd = `q\n0.5 w\n0.8 0.85 0.9 RG\n${this.marginLeft} ${separatorY} m ${(this.width - this.marginRight)} ${separatorY} l S\nQ`;
       this.pages[p].push(lineCmd);
 
       // Disclaimer
-      const disc = "STAGGI WEALTH INTELLIGENCE • RELATÓRIO EXECUTIVO FIDUCIÁRIO • DOCUMENTO CONFIDENCIAL";
+      const disc = "STAGGI WEALTH INTELLIGENCE • FIDUCIARY EXECUTIVE REPORT • CONFIDENTIAL";
       const discEncoded = encodePdfString(disc);
       this.pages[p].push(`BT\n/F1 6.5 Tf\n0.5 0.55 0.65 rg\n${this.marginLeft} ${footerY} Td\n(${discEncoded}) Tj\nET`);
 
       // Page numbering
-      const pageText = `Página ${p + 1} de ${totalPages}`;
+      const pageText = `Page ${p + 1} of ${totalPages}`;
       const pageEncoded = encodePdfString(pageText);
-      const pageX = this.width - this.marginRight - 70;
+      const pageX = this.width - this.marginRight - 65;
       this.pages[p].push(`BT\n/F2 7 Tf\n0.4 0.45 0.55 rg\n${pageX} ${footerY} Td\n(${pageEncoded}) Tj\nET`);
     }
 
@@ -278,7 +276,7 @@ class VectorPdfBuilder {
 }
 
 /**
- * Extracts rows and columns from markdown or plain text tables.
+ * Extracts rows and columns from markdown tables.
  */
 function parseTableRows(text: string): string[][] {
   const lines = text.split("\n");
@@ -287,7 +285,6 @@ function parseTableRows(text: string): string[][] {
   for (const line of lines) {
     const trimmed = line.trim();
     if (!trimmed.startsWith("|") || !trimmed.endsWith("|")) continue;
-    // Check if separator line (|---|---|)
     if (/^\|[\s:-|-]+\|$/.test(trimmed)) continue;
 
     const cells = trimmed
@@ -303,16 +300,16 @@ function parseTableRows(text: string): string[][] {
 }
 
 /**
- * Generates a high-quality fiduciary vector PDF from executive report options.
+ * Generates an executive fiduciary vector PDF report in English.
  */
 export function generateVectorPdf(options: ExecutiveReportOptions): Uint8Array {
   const pdf = new VectorPdfBuilder();
-  const dateStr = new Date().toLocaleDateString("pt-BR", {
+  const dateStr = new Date().toLocaleDateString("en-US", {
+    month: "short",
     day: "2-digit",
-    month: "2-digit",
     year: "numeric",
   });
-  const timeStr = new Date().toLocaleTimeString("pt-BR", {
+  const timeStr = new Date().toLocaleTimeString("en-US", {
     hour: "2-digit",
     minute: "2-digit",
   });
@@ -323,7 +320,7 @@ export function generateVectorPdf(options: ExecutiveReportOptions): Uint8Array {
   // 1. Header Banner (Dark Fiduciary Slate: #0f172a)
   const headerHeight = 75;
   const headerY = 841.89 - headerHeight;
-  pdf.drawRect(0, headerY, 595.28, headerHeight, [0.059, 0.090, 0.165]); // #0f172a
+  pdf.drawRect(0, headerY, 595.28, headerHeight, [0.059, 0.090, 0.165]);
 
   // Brand Logo & Subtitle
   pdf.drawText("STAGGI", startX, headerY + 44, {
@@ -334,10 +331,10 @@ export function generateVectorPdf(options: ExecutiveReportOptions): Uint8Array {
   pdf.drawText(".", startX + 78, headerY + 44, {
     font: "/F2",
     size: 20,
-    colorRgb: [0.020, 0.750, 0.500], // Emerald dot
+    colorRgb: [0.020, 0.750, 0.500],
   });
   pdf.drawText(
-    "FIDUCIARY WEALTH INTELLIGENCE • RELATÓRIO EXECUTIVO",
+    "FIDUCIARY WEALTH INTELLIGENCE • EXECUTIVE REPORT",
     startX,
     headerY + 24,
     {
@@ -348,20 +345,20 @@ export function generateVectorPdf(options: ExecutiveReportOptions): Uint8Array {
   );
 
   // Meta info on the right
-  const metaRightX = 410;
-  pdf.drawText(`Data: ${dateStr} às ${timeStr}`, metaRightX, headerY + 48, {
+  const metaRightX = 405;
+  pdf.drawText(`Date: ${dateStr} at ${timeStr}`, metaRightX, headerY + 48, {
     font: "/F1",
     size: 8,
     colorRgb: [0.85, 0.9, 0.95],
   });
   if (options.clientName) {
-    pdf.drawText(`Cliente: ${options.clientName}`, metaRightX, headerY + 34, {
+    pdf.drawText(`Client: ${options.clientName}`, metaRightX, headerY + 34, {
       font: "/F2",
       size: 8,
       colorRgb: [1, 1, 1],
     });
   }
-  const sourceText = options.auditedSource || "Auditoria MCP Staggi";
+  const sourceText = options.auditedSource || "Staggi MCP Audit";
   pdf.drawText(sourceText, metaRightX, headerY + 20, {
     font: "/F1",
     size: 7.5,
@@ -394,10 +391,9 @@ export function generateVectorPdf(options: ExecutiveReportOptions): Uint8Array {
 
   // 3. Verdict Banner (if present)
   if (options.verdict) {
-    const verdictLines = pdf.wrapText(`Veredito Fiduciário: ${options.verdict}`, contentWidth - 24, 9);
+    const verdictLines = pdf.wrapText(`Fiduciary Verdict: ${options.verdict}`, contentWidth - 24, 9);
     const boxHeight = verdictLines.length * 12 + 16;
     pdf.drawRect(startX, y - boxHeight + 12, contentWidth, boxHeight, [0.93, 0.98, 0.96], [0.8, 0.92, 0.85], 0.5);
-    // Green accent stripe
     pdf.drawRect(startX, y - boxHeight + 12, 4, boxHeight, [0.02, 0.59, 0.41]);
 
     let vy = y - 4;
@@ -430,17 +426,14 @@ export function generateVectorPdf(options: ExecutiveReportOptions): Uint8Array {
         const cx = startX + c * (cardWidth + gap);
         const cy = y - cardHeight;
 
-        // Card background & border
         pdf.drawRect(cx, cy, cardWidth, cardHeight, [0.97, 0.98, 0.99], [0.85, 0.89, 0.94], 0.5);
 
-        // Metric label
         pdf.drawText(m.label, cx + 8, cy + cardHeight - 16, {
           font: "/F2",
           size: 7.5,
           colorRgb: [0.4, 0.48, 0.58],
         });
 
-        // Metric value
         const valColor: [number, number, number] =
           m.isPositive === true
             ? [0.02, 0.59, 0.41]
@@ -466,10 +459,10 @@ export function generateVectorPdf(options: ExecutiveReportOptions): Uint8Array {
     }
   }
 
-  // Helper for continuation headers on new page
+  // Continuation Header Callback
   const handleNewPage = () => {
     pdf.drawRect(0, 841.89 - 30, 595.28, 30, [0.059, 0.090, 0.165]);
-    pdf.drawText("STAGGI WEALTH INTELLIGENCE • " + options.title + " (Continuação)", startX, 841.89 - 20, {
+    pdf.drawText("STAGGI WEALTH INTELLIGENCE • " + options.title + " (Continued)", startX, 841.89 - 20, {
       font: "/F2",
       size: 8,
       colorRgb: [0.9, 0.95, 1],
@@ -481,12 +474,11 @@ export function generateVectorPdf(options: ExecutiveReportOptions): Uint8Array {
   const rawText = options.rawMarkdown || options.summary || "";
   const tableRows = parseTableRows(rawText);
 
-  // If table exists, render structured table
   if (tableRows.length > 1) {
     pdf.ensureSpace(60, handleNewPage);
     y = pdf.getY();
 
-    pdf.drawText("ALOCAÇÃO DETALHADA & POSICIONAMENTO", startX, y, {
+    pdf.drawText("DETAILED ALLOCATION & POSITIONING", startX, y, {
       font: "/F2",
       size: 9.5,
       colorRgb: [0.06, 0.09, 0.16],
@@ -497,7 +489,7 @@ export function generateVectorPdf(options: ExecutiveReportOptions): Uint8Array {
     const colWidth = contentWidth / numCols;
     const rowHeight = 18;
 
-    // Table Header
+    // Header
     pdf.drawRect(startX, y - rowHeight + 4, contentWidth, rowHeight, [0.92, 0.94, 0.97], [0.75, 0.8, 0.88], 0.5);
     for (let c = 0; c < numCols; c++) {
       const cellText = tableRows[0][c] || "";
@@ -509,7 +501,7 @@ export function generateVectorPdf(options: ExecutiveReportOptions): Uint8Array {
     }
     y -= rowHeight;
 
-    // Table Rows
+    // Rows
     for (let r = 1; r < tableRows.length; r++) {
       pdf.ensureSpace(rowHeight + 10, handleNewPage);
       y = pdf.getY();
@@ -532,7 +524,7 @@ export function generateVectorPdf(options: ExecutiveReportOptions): Uint8Array {
     pdf.setY(y);
   }
 
-  // 6. Text Body Analysis (Markdown paragraphs, lists, headers)
+  // 6. Text Body Analysis
   const textLines = rawText.split("\n");
   for (const line of textLines) {
     const trimmed = line.trim();
@@ -542,7 +534,6 @@ export function generateVectorPdf(options: ExecutiveReportOptions): Uint8Array {
       continue;
     }
 
-    // Skip table lines already rendered
     if (trimmed.startsWith("|") && trimmed.endsWith("|")) continue;
 
     // Section Header (## or #)
@@ -624,7 +615,7 @@ export function generateVectorPdf(options: ExecutiveReportOptions): Uint8Array {
     pdf.setY(y);
   }
 
-  // 7. Signature & Final Fiduciary Disclaimer
+  // 7. Signature & Final Disclaimer
   pdf.ensureSpace(60, handleNewPage);
   y = pdf.getY();
   y -= 12;
@@ -636,7 +627,7 @@ export function generateVectorPdf(options: ExecutiveReportOptions): Uint8Array {
     size: 9,
     colorRgb: [0.06, 0.09, 0.16],
   });
-  pdf.drawText("Alocação & Estruturação Patrimonial Fiduciária", startX, y - 11, {
+  pdf.drawText("Fiduciary Wealth Structuring & Allocation", startX, y - 11, {
     font: "/F1",
     size: 7.5,
     colorRgb: [0.45, 0.52, 0.62],
@@ -646,15 +637,15 @@ export function generateVectorPdf(options: ExecutiveReportOptions): Uint8Array {
 }
 
 /**
- * Generates an executive A4-optimized fiduciary report in HTML for browser view/export.
+ * Generates an executive A4-optimized fiduciary report in HTML.
  */
 export function generateExecutiveReportHtml(options: ExecutiveReportOptions): string {
-  const dateStr = new Date().toLocaleDateString("pt-BR", {
+  const dateStr = new Date().toLocaleDateString("en-US", {
+    month: "short",
     day: "2-digit",
-    month: "2-digit",
     year: "numeric",
   });
-  const timeStr = new Date().toLocaleTimeString("pt-BR", {
+  const timeStr = new Date().toLocaleTimeString("en-US", {
     hour: "2-digit",
     minute: "2-digit",
   });
@@ -684,7 +675,7 @@ export function generateExecutiveReportHtml(options: ExecutiveReportOptions): st
   const chartSection = options.chartSvg
     ? `
       <div class="section-card chart-section">
-        <div class="section-header">Telemetria & Gráfico Executivo</div>
+        <div class="section-header">Telemetry & Executive Chart</div>
         <div class="chart-wrapper">
           ${options.chartSvg}
         </div>
@@ -695,13 +686,13 @@ export function generateExecutiveReportHtml(options: ExecutiveReportOptions): st
   const verdictSection = options.verdict
     ? `
       <div class="verdict-banner">
-        <strong>Veredito Fiduciário:</strong> ${options.verdict}
+        <strong>Fiduciary Verdict:</strong> ${options.verdict}
       </div>
     `
     : "";
 
   return `<!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <title>${options.title} • Staggi Wealth Intelligence</title>
@@ -840,12 +831,12 @@ export function generateExecutiveReportHtml(options: ExecutiveReportOptions): st
     <div class="top-header">
       <div>
         <div class="brand-title">STAGGI<span>.</span></div>
-        <div class="brand-subtitle">Fiduciary Wealth Intelligence • Relatório Executivo</div>
+        <div class="brand-subtitle">Fiduciary Wealth Intelligence • Executive Report</div>
       </div>
       <div class="header-meta">
-        <div><strong>Data:</strong> ${dateStr} às ${timeStr}</div>
-        ${options.clientName ? `<div><strong>Cliente:</strong> ${options.clientName}</div>` : ''}
-        ${options.auditedSource ? `<div>${options.auditedSource}</div>` : '<div>Auditoria Fiduciária</div>'}
+        <div><strong>Date:</strong> ${dateStr} at ${timeStr}</div>
+        ${options.clientName ? `<div><strong>Client:</strong> ${options.clientName}</div>` : ''}
+        ${options.auditedSource ? `<div>${options.auditedSource}</div>` : '<div>Fiduciary Audit</div>'}
       </div>
     </div>
 
@@ -863,7 +854,7 @@ export function generateExecutiveReportHtml(options: ExecutiveReportOptions): st
 
     <div class="footer-disclaimer">
       <div style="max-width: 550px;">
-        <strong>Nota:</strong> Documento gerado pelo terminal Staggi Wealth Intelligence. As rentabilidades passadas não garantem resultados futuros.
+        <strong>Notice:</strong> Document generated by Staggi Wealth Intelligence. Past performance does not guarantee future results.
       </div>
       <div>
         <strong>Staggi Wealth Advisory</strong>
@@ -876,21 +867,21 @@ export function generateExecutiveReportHtml(options: ExecutiveReportOptions): st
 
 /**
  * Exports the executive report as a vector PDF.
- * Saves natively to ~/Downloads and immediately opens in macOS Preview / system default viewer.
+ * Saves natively to ~/Downloads and opens automatically in the system default viewer.
  */
 export async function exportReportAsPdf(options: ExecutiveReportOptions): Promise<void> {
   try {
-    toastStore.showToast("Gerando relatório fiduciário em PDF...", "info");
+    toastStore.showToast("Generating fiduciary PDF report...", "info");
 
     const pdfBytes = generateVectorPdf(options);
-    const cleanTitle = (options.ticker || options.title || "Relatorio")
+    const cleanTitle = (options.ticker || options.title || "Report")
       .replace(/[^a-zA-Z0-9_-]/g, "_");
     const dateStr = new Date().toISOString().slice(0, 10);
     const filename = `Staggi_${cleanTitle}_${dateStr}.pdf`;
 
     let saved = false;
 
-    // 1. Try Native Tauri Save & Open (macOS Preview / Windows Viewer)
+    // 1. Native Tauri Save & Open (macOS Preview / Windows Viewer)
     try {
       const { invoke } = await import("@tauri-apps/api/core");
       const savedPath = await invoke<string>("save_and_open_pdf_report", {
@@ -900,14 +891,14 @@ export async function exportReportAsPdf(options: ExecutiveReportOptions): Promis
 
       if (savedPath) {
         saved = true;
-        toastStore.showToast("Relatório PDF salvo em Downloads e aberto no Visualizador!", "success");
+        toastStore.showToast("PDF report saved to Downloads and opened in viewer!", "success");
         return;
       }
     } catch (tauriErr) {
       console.warn("[PDFExport] Native Tauri invoke unavailable, falling back to browser download:", tauriErr);
     }
 
-    // 2. Fallback for Web Browser environment
+    // 2. Fallback for Web Browser
     if (!saved) {
       const blob = new Blob([pdfBytes.buffer as ArrayBuffer], { type: "application/pdf" });
       const url = URL.createObjectURL(blob);
@@ -919,11 +910,11 @@ export async function exportReportAsPdf(options: ExecutiveReportOptions): Promis
       document.body.removeChild(a);
       setTimeout(() => URL.revokeObjectURL(url), 10000);
 
-      toastStore.showToast("Relatório PDF baixado com sucesso!", "success");
+      toastStore.showToast("PDF report downloaded successfully!", "success");
     }
   } catch (err) {
     console.error("[PDFExport] Error:", err);
-    toastStore.showToast("Erro ao exportar PDF", "error");
+    toastStore.showToast("Error generating PDF", "error");
   }
 }
 
@@ -933,14 +924,14 @@ export async function exportReportAsPdf(options: ExecutiveReportOptions): Promis
 export async function downloadExecutiveReportHtml(options: ExecutiveReportOptions): Promise<void> {
   try {
     const html = generateExecutiveReportHtml(options);
-    const cleanTitle = (options.ticker || options.title || "Relatorio")
+    const cleanTitle = (options.ticker || options.title || "Report")
       .replace(/[^a-zA-Z0-9_-]/g, "_");
     const dateStr = new Date().toISOString().slice(0, 10);
     const filename = `Staggi_${cleanTitle}_${dateStr}.html`;
 
     let saved = false;
 
-    // 1. Try Native Tauri Save & Open
+    // 1. Native Tauri Save & Open
     try {
       const { invoke } = await import("@tauri-apps/api/core");
       const savedPath = await invoke<string>("save_and_open_html_report", {
@@ -950,7 +941,7 @@ export async function downloadExecutiveReportHtml(options: ExecutiveReportOption
 
       if (savedPath) {
         saved = true;
-        toastStore.showToast("Relatório HTML salvo em Downloads e aberto!", "success");
+        toastStore.showToast("HTML report saved to Downloads and opened!", "success");
         return;
       }
     } catch (tauriErr) {
@@ -968,25 +959,25 @@ export async function downloadExecutiveReportHtml(options: ExecutiveReportOption
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      toastStore.showToast("Relatório executivo baixado com sucesso!", "success");
+      toastStore.showToast("Executive report downloaded successfully!", "success");
     }
   } catch (err) {
     console.error("[DownloadReport] Error:", err);
-    toastStore.showToast("Erro ao baixar relatório", "error");
+    toastStore.showToast("Error downloading report", "error");
   }
 }
 
 /**
- * Prepares and opens client email via native mailto / opener.
+ * Prepares and opens client email via native mailto / opener in English.
  */
 export async function sendClientEmail(options: ClientEmailOptions): Promise<void> {
-  const clientName = options.clientName || "Cliente";
-  const title = options.ticker ? `Análise Executiva • ${options.ticker}` : options.subject || "Relatório Patrimonial Fiduciário";
-  const dateStr = new Date().toLocaleDateString("pt-BR");
+  const clientName = options.clientName || "Client";
+  const title = options.ticker ? `Executive Analysis • ${options.ticker}` : options.subject || "Fiduciary Wealth Advisory Report";
+  const dateStr = new Date().toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" });
 
   let metricsText = "";
   if (options.metrics && options.metrics.length > 0) {
-    metricsText = "\nINDICADORES CHAVE:\n" + options.metrics.map(m => `• ${m.label}: ${m.value}`).join("\n") + "\n";
+    metricsText = "\nKEY INDICATORS:\n" + options.metrics.map(m => `• ${m.label}: ${m.value}`).join("\n") + "\n";
   }
 
   const plainSummary = options.summary
@@ -996,19 +987,19 @@ export async function sendClientEmail(options: ClientEmailOptions): Promise<void
         .slice(0, 1400)
     : "";
 
-  const emailBody = `Prezado(a) ${clientName},
+  const emailBody = `Dear ${clientName},
 
-Segue o resumo executivo e a telemetria financeira atualizada referente a ${options.ticker || 'sua carteira'}:
+Please find below the executive summary and updated financial telemetry regarding ${options.ticker || 'your portfolio'}:
 ${metricsText}
-RESUMO ANALÍTICO:
+ANALYTICAL SUMMARY:
 ${plainSummary}
 
-Este relatório foi gerado através do terminal Staggi Wealth Intelligence em ${dateStr}.
-Ficamos à disposição para esclarecimentos ou eventuais ajustes de alocação.
+This report was generated via the Staggi Wealth Intelligence terminal on ${dateStr}.
+We remain at your disposal for any clarifications or portfolio allocation adjustments.
 
-Atenciosamente,
+Sincerely,
 Staggi Wealth Advisory
-advisory@staggi.com.br`;
+advisory@staggi.com`;
 
   const subject = `[Staggi Wealth] ${title}`;
   const recipient = options.clientEmail || "";
@@ -1021,9 +1012,9 @@ advisory@staggi.com.br`;
   try {
     const { openUrl } = await import("@tauri-apps/plugin-opener");
     await openUrl(mailtoUrl);
-    toastStore.showToast("Abrindo cliente de e-mail (resumo copiado!)", "success");
+    toastStore.showToast("Opening email client (summary copied!)", "success");
   } catch {
     window.open(mailtoUrl, "_blank");
-    toastStore.showToast("Resumo executivo copiado para a área de transferência!", "success");
+    toastStore.showToast("Executive summary copied to clipboard!", "success");
   }
 }

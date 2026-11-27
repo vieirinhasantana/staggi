@@ -84,41 +84,41 @@
   function handleExportPdf() {
     exportReportAsPdf({
       title: `${data.companyName} (${data.ticker})`,
-      subtitle: "Relatório Histórico de Proventos, Dividend Yield e Fluxo de Caixa",
+      subtitle: "Historical Dividend Yield, Payout & Cash Flow Report",
       ticker: data.ticker,
-      auditedSource: "MCP Proventos & CVM",
+      auditedSource: "MCP Dividends & SEC/CVM",
       metrics: [
-        { label: "Média DY Histórico", value: avgDyText || "—" },
-        { label: "DY Pico Histórico", value: peakItem ? `${peakItem.dy} (${peakItem.year})` : "—" },
-        { label: "Total Proventos Recentes", value: totalRecentSum || "—" },
-        { label: "Anos Auditados", value: `${data.annualHistory.length} anos` }
+        { label: "Historical Avg DY", value: avgDyText || "—" },
+        { label: "Peak Historical DY", value: peakItem ? `${peakItem.dy} (${peakItem.year})` : "—" },
+        { label: "Recent Distributions", value: totalRecentSum || "—" },
+        { label: "Audited Years", value: `${data.annualHistory.length} years` }
       ],
-      verdict: "Histórico consistente de remuneração aos acionistas através de proventos e JCP.",
-      summary: data.intro ? `### Introdução e Contexto\n${data.intro}` : undefined
+      verdict: "Consistent track record of shareholder remuneration via dividends and capital payouts.",
+      summary: data.intro ? `### Introduction & Context\n${data.intro}` : undefined
     });
   }
 
   function handleSendEmail() {
     sendClientEmail({
       ticker: data.ticker,
-      subject: `Histórico de Dividendos • ${data.ticker} (${data.companyName})`,
+      subject: `Dividend History • ${data.ticker} (${data.companyName})`,
       metrics: [
-        { label: "DY Médio", value: avgDyText || "—" },
-        { label: "DY Máximo", value: peakItem ? `${peakItem.dy} (${peakItem.year})` : "—" }
+        { label: "Avg DY", value: avgDyText || "—" },
+        { label: "Peak DY", value: peakItem ? `${peakItem.dy} (${peakItem.year})` : "—" }
       ],
-      summary: `Prezado(a), segue o levantamento histórico de dividendos e proventos de ${data.ticker}:\n\n` +
-        `• Média Histórica de Yield: ${avgDyText || 'N/A'}\n` +
-        `• Total recente distribuído: ${totalRecentSum || 'N/A'}\n` +
-        `• Maior Yield anual: ${peakItem ? `${peakItem.dy} em ${peakItem.year}` : 'N/A'}`
+      summary: `Dear Client, please find below the historical dividend and payout audit for ${data.ticker}:\n\n` +
+        `• Historical Yield Average: ${avgDyText || 'N/A'}\n` +
+        `• Recent Distributed Total: ${totalRecentSum || 'N/A'}\n` +
+        `• Highest Annual Yield: ${peakItem ? `${peakItem.dy} in ${peakItem.year}` : 'N/A'}`
     });
   }
 
   function handleCopySummary() {
-    const summary = `${data.companyName} (${data.ticker}) - Proventos\nDY Médio: ${avgDyText || '—'} | Pico: ${peakItem ? `${peakItem.dy} (${peakItem.year})` : '—'}\nTotal Recente: ${totalRecentSum || '—'}`;
+    const summary = `${data.companyName} (${data.ticker}) - Dividends\nAvg DY: ${avgDyText || '—'} | Peak: ${peakItem ? `${peakItem.dy} (${peakItem.year})` : '—'}\nRecent Total: ${totalRecentSum || '—'}`;
     if (navigator.clipboard) {
       navigator.clipboard.writeText(summary);
       isCopied = true;
-      toastStore.showToast("Resumo de dividendos copiado!", "success");
+      toastStore.showToast("Dividend summary copied!", "success");
       setTimeout(() => (isCopied = false), 2000);
     }
   }
@@ -347,15 +347,15 @@
     <button
       type="button"
       onclick={handleCopySummary}
-      title="Copiar resumo textual de proventos"
+      title="Copy dividend text summary"
       class="flex items-center gap-1 px-1.5 py-0.5 rounded bg-white/[0.04] hover:bg-white/[0.08] text-zinc-400 hover:text-zinc-200 text-[10px] transition-colors cursor-pointer"
     >
       {#if isCopied}
         <Check class="w-3 h-3 text-emerald-400" />
-        <span class="text-emerald-300">Copiado</span>
+        <span class="text-emerald-300">Copied</span>
       {:else}
         <Copy class="w-3 h-3" />
-        <span>Copiar</span>
+        <span>Copy</span>
       {/if}
     </button>
   </div>

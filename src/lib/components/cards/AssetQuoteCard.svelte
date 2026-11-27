@@ -81,45 +81,45 @@
   function handleExportPdf() {
     exportReportAsPdf({
       title: `${quote.companyName} (${quote.ticker})`,
-      subtitle: "Relatório de Cotação, Múltiplos e Telemetria de Mercado",
+      subtitle: "Market Telemetry, Multiples & Price Quote Report",
       ticker: quote.ticker,
       auditedSource: "B3 / NYSE (Yahoo Finance)",
       metrics: [
-        { label: "Cotação Atual", value: quote.price },
-        { label: "Variação Diária", value: quote.change, isPositive: quote.isPositive },
+        { label: "Current Price", value: quote.price },
+        { label: "Daily Change", value: quote.change, isPositive: quote.isPositive },
         { label: "Div. Yield (LTM)", value: quote.dividendYield || "—" },
-        { label: "P/L (TTM)", value: quote.pl || "—" },
-        { label: "P/VP", value: quote.pvp || "—" },
-        { label: "Máxima / Mínima", value: `${quote.dayHigh || '—'} / ${quote.dayLow || '—'}` }
+        { label: "P/E (TTM)", value: quote.pl || "—" },
+        { label: "P/B", value: quote.pvp || "—" },
+        { label: "52W High / Low", value: `${quote.dayHigh || '—'} / ${quote.dayLow || '—'}` }
       ],
-      summary: quote.relevantFact ? `### Comunicado Relevante Recente\n${quote.relevantFact}` : undefined,
+      summary: quote.relevantFact ? `### Recent Material Fact\n${quote.relevantFact}` : undefined,
       verdict: quote.isPositive
-        ? "Tendência intradiária de alta com suporte técnico e fluxo comprador ativo."
-        : "Oscilação em terreno negativo no pregão de referência sob monitoramento fiduciário."
+        ? "Intraday uptrend with positive market momentum and active buying volume."
+        : "Trading in negative territory during current session under fiduciary monitoring."
     });
   }
 
   function handleSendEmail() {
     sendClientEmail({
       ticker: quote.ticker,
-      subject: `Análise Executiva • ${quote.ticker} (${quote.companyName})`,
+      subject: `Executive Analysis • ${quote.ticker} (${quote.companyName})`,
       metrics: [
-        { label: "Cotação Atual", value: quote.price },
-        { label: "Variação Diária", value: quote.change },
+        { label: "Current Price", value: quote.price },
+        { label: "Daily Change", value: quote.change },
         { label: "Dividend Yield", value: quote.dividendYield || "—" },
-        { label: "P/L", value: quote.pl || "—" },
-        { label: "P/VP", value: quote.pvp || "—" }
+        { label: "P/E", value: quote.pl || "—" },
+        { label: "P/B", value: quote.pvp || "—" }
       ],
-      summary: quote.relevantFact || `Ativo ${quote.ticker} cotado a ${quote.price} (${quote.change}). Dados auditados via terminal Staggi.`
+      summary: quote.relevantFact || `Asset ${quote.ticker} trading at ${quote.price} (${quote.change}). Audited telemetry via Staggi terminal.`
     });
   }
 
   function handleCopySummary() {
-    const summary = `${quote.companyName} (${quote.ticker})\nCotação: ${quote.price} (${quote.change})\nDY: ${quote.dividendYield || '—'} | P/L: ${quote.pl || '—'} | P/VP: ${quote.pvp || '—'}`;
+    const summary = `${quote.companyName} (${quote.ticker})\nPrice: ${quote.price} (${quote.change})\nDY: ${quote.dividendYield || '—'} | P/E: ${quote.pl || '—'} | P/B: ${quote.pvp || '—'}`;
     if (navigator.clipboard) {
       navigator.clipboard.writeText(summary);
       isCopied = true;
-      toastStore.showToast("Resumo copiado com sucesso!", "success");
+      toastStore.showToast("Summary copied to clipboard!", "success");
       setTimeout(() => (isCopied = false), 2000);
     }
   }
@@ -291,15 +291,15 @@
     <button
       type="button"
       onclick={handleCopySummary}
-      title="Copiar resumo textual para WhatsApp / E-mail"
+      title="Copy text summary to clipboard"
       class="flex items-center gap-1 px-1.5 py-0.5 rounded bg-white/[0.04] hover:bg-white/[0.08] text-zinc-400 hover:text-zinc-200 text-[10px] transition-colors cursor-pointer"
     >
       {#if isCopied}
         <Check class="w-3 h-3 text-emerald-400" />
-        <span class="text-emerald-300">Copiado</span>
+        <span class="text-emerald-300">Copied</span>
       {:else}
         <Copy class="w-3 h-3" />
-        <span>Copiar</span>
+        <span>Copy</span>
       {/if}
     </button>
   </div>

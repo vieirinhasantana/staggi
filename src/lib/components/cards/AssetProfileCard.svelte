@@ -140,7 +140,7 @@
     >
       <div class="space-y-0.5">
         <span class="text-[10px] text-zinc-400 uppercase tracking-wider block">
-          Cotação Atual / NAV (Valor Oficial da Cota)
+          Current Price / NAV (Net Asset Value)
         </span>
         <div class="flex items-baseline gap-2">
           <span class="text-lg sm:text-xl font-bold text-emerald-300">
@@ -156,7 +156,7 @@
 
       {#if data.change}
         <div class="text-right">
-          <span class="text-[10px] text-zinc-400 uppercase block">Variação Recente</span>
+          <span class="text-[10px] text-zinc-400 uppercase block">Recent Change</span>
           <span
             class="text-xs sm:text-sm font-bold  px-2 py-0.5 rounded-md {data.change.startsWith('-')
               ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'

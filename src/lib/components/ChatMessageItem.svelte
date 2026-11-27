@@ -76,22 +76,22 @@
   );
 
   const isReportRequested = $derived(
-    /(?:baixar|download|gerar|exportar)\s+(?:pdf|relat[oó]rio|extrato|documento|proposta)|(?:pdf|relat[oó]rio|extrato|proposta)\s+(?:da|do|de|em\s+pdf)/i.test(message.text)
+    /(?:download|generate|export|pdf|report|statement|proposal|baixar|gerar|exportar)\s+(?:pdf|report|statement|document|proposal|relat[oó]rio)|(?:pdf|report|statement|proposal|relat[oó]rio)\s+(?:of|for|from|in\s+pdf|de|em\s+pdf)/i.test(message.text)
   );
 
   function handleExportPdf() {
     exportReportAsPdf({
-      title: "Relatório de Análise e Inteligência Fiduciária",
-      subtitle: "Telemetria de Mercado, Multi-Asset Intelligence e Pesquisa Executiva",
+      title: "Fiduciary Wealth & Analysis Report",
+      subtitle: "Market Telemetry, Multi-Asset Intelligence & Executive Research",
       auditedSource: auditedSource || "Staggi AI Fiduciary Advisory",
       rawMarkdown: message.text,
-      verdict: "Análise fiduciária gerada conforme parâmetros de risco e telemetria solicitados."
+      verdict: "Fiduciary analysis compiled according to requested risk and telemetry parameters."
     });
   }
 
   function handleSendEmail() {
     sendClientEmail({
-      subject: "Relatório de Análise Executiva • Staggi Wealth",
+      subject: "Executive Advisory Report • Staggi Wealth",
       summary: message.text
     });
   }
@@ -100,7 +100,7 @@
     if (navigator.clipboard) {
       navigator.clipboard.writeText(message.text);
       isCopied = true;
-      toastStore.showToast("Texto copiado para a área de transferência!", "success");
+      toastStore.showToast("Copied to clipboard!", "success");
       setTimeout(() => (isCopied = false), 2000);
     }
   }
@@ -174,42 +174,42 @@
         </div>
 
         {#if auditedSource || (!message.isLoading && !message.isStreaming && message.text.length > 20)}
-          <div class="flex items-center justify-between pt-2 mt-1 border-t border-white/[0.04] text-[10px] text-zinc-400">
+          <div class="flex items-center justify-between pt-2 mt-1 border-t border-white/[0.04] text-[10px] text-zinc-400 gap-2 flex-nowrap">
             {#if auditedSource}
-              <div class="flex items-center gap-1.5">
+              <div class="flex items-center gap-1.5 min-w-0 truncate">
                 <ShieldCheck class="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                <span class="text-zinc-400">{t("common.auditedSource")}:</span>
-                <span class="text-zinc-200 font-medium">{auditedSource}</span>
+                <span class="text-zinc-400 shrink-0">{t("common.auditedSource")}:</span>
+                <span class="text-zinc-200 font-medium truncate">{auditedSource}</span>
               </div>
             {:else}
               <div></div>
             {/if}
 
-            <div class="flex items-center gap-1.5">
+            <div class="flex items-center gap-1.5 shrink-0 whitespace-nowrap">
               {#if isReportRequested}
                 <button
                   type="button"
                   onclick={handleExportPdf}
-                  title="Baixar Relatório em PDF"
-                  class="flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 text-[10px] font-medium border border-emerald-500/30 cursor-pointer transition-all active:scale-95 shadow-sm"
+                  title="Download PDF Report"
+                  class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 text-[10px] font-medium border border-emerald-500/30 cursor-pointer transition-all active:scale-95 shadow-sm whitespace-nowrap shrink-0"
                 >
-                  <FileDown class="w-3 h-3" />
-                  <span>Baixar PDF</span>
+                  <FileDown class="w-3 h-3 shrink-0" />
+                  <span class="whitespace-nowrap">Download PDF</span>
                 </button>
               {/if}
 
               <button
                 type="button"
                 onclick={handleCopyText}
-                title="Copiar texto da resposta"
-                class="flex items-center gap-1 px-1.5 py-0.5 rounded bg-white/[0.03] hover:bg-white/[0.08] text-zinc-400 hover:text-zinc-200 transition-colors cursor-pointer text-[10px]"
+                title="Copy message response"
+                class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-white/[0.03] hover:bg-white/[0.08] text-zinc-400 hover:text-zinc-200 transition-colors cursor-pointer text-[10px] whitespace-nowrap shrink-0"
               >
                 {#if isCopied}
-                  <Check class="w-3 h-3 text-emerald-400" />
-                  <span class="text-emerald-300 text-[10px]">Copiado</span>
+                  <Check class="w-3 h-3 text-emerald-400 shrink-0" />
+                  <span class="text-emerald-300 text-[10px] whitespace-nowrap">Copied</span>
                 {:else}
-                  <Copy class="w-3 h-3" />
-                  <span class="text-[10px]">Copiar</span>
+                  <Copy class="w-3 h-3 shrink-0" />
+                  <span class="text-[10px] whitespace-nowrap">Copy</span>
                 {/if}
               </button>
             </div>
