@@ -16,6 +16,7 @@ use commands::mcp::{
     mcp_refresh_oauth_token, mcp_register_oauth_client, mcp_start_oauth_loopback,
     test_mcp_connection,
 };
+use commands::report::{save_and_open_html_report, save_and_open_pdf_report};
 use commands::window::{hide_window, restart_app, set_content_protected, toggle_window};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -40,7 +41,9 @@ pub fn run() {
             mcp_exchange_oauth_code,
             mcp_refresh_oauth_token,
             mcp_discover_oauth_endpoints,
-            mcp_register_oauth_client
+            mcp_register_oauth_client,
+            save_and_open_pdf_report,
+            save_and_open_html_report
         ])
         .setup(|app| {
             let show_i = MenuItem::with_id(app, "toggle", "Exibir / Ocultar Staggi", true, None::<&str>)?;

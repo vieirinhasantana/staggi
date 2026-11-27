@@ -39,6 +39,10 @@ export class ToastStore {
     this.show("info", title, message, durationMs);
   }
 
+  showToast(title: string, type: ToastType = "info", message: string = "", durationMs: number = 3500) {
+    this.show(type, title, message, durationMs);
+  }
+
   dismiss(id: string) {
     this.toasts = this.toasts.filter((t) => t.id !== id);
   }
