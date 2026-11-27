@@ -108,6 +108,22 @@
       clientName: data.clientName,
       auditedSource: source || "Staggi Wealth Management",
       metrics,
+      allocations: data.items.map(it => ({
+        label: it.label,
+        percentage: it.percentage,
+        percentageFormatted: it.percentageFormatted,
+        currentPercentage: it.currentPercentage,
+        currentPercentageFormatted: it.currentPercentageFormatted,
+        targetPercentage: it.targetPercentage,
+        targetPercentageFormatted: it.targetPercentageFormatted,
+        deltaPercentage: it.deltaPercentage,
+        deltaFormatted: it.deltaFormatted,
+        action: it.action,
+        value: it.value,
+        color: it.color
+      })),
+      totalValue: data.totalValue,
+      isRebalancing: data.isRebalancing,
       chartSvg: donutSvg,
       rawMarkdown: rawText,
       verdict: data.isRebalancing

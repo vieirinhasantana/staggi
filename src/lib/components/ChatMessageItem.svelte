@@ -158,8 +158,29 @@
 
   function handleExportPdf() {
     exportReportAsPdf({
-      title: "Fiduciary Wealth & Analysis Report",
-      subtitle: "Market Telemetry, Multi-Asset Intelligence & Executive Research",
+      title: portfolioDistribution ? portfolioDistribution.title : "Fiduciary Wealth & Analysis Report",
+      subtitle: portfolioDistribution
+        ? (portfolioDistribution.isRebalancing
+          ? "Executive Rebalancing Factsheet: Target Weights & Strategic Asset Allocation"
+          : "Portfolio Asset Allocation & Class Distribution Report")
+        : "Market Telemetry, Multi-Asset Intelligence & Executive Research",
+      clientName: portfolioDistribution?.clientName,
+      totalValue: portfolioDistribution?.totalValue,
+      isRebalancing: portfolioDistribution?.isRebalancing,
+      allocations: portfolioDistribution ? portfolioDistribution.items.map(it => ({
+        label: it.label,
+        percentage: it.percentage,
+        percentageFormatted: it.percentageFormatted,
+        currentPercentage: it.currentPercentage,
+        currentPercentageFormatted: it.currentPercentageFormatted,
+        targetPercentage: it.targetPercentage,
+        targetPercentageFormatted: it.targetPercentageFormatted,
+        deltaPercentage: it.deltaPercentage,
+        deltaFormatted: it.deltaFormatted,
+        action: it.action,
+        value: it.value,
+        color: it.color
+      })) : undefined,
       auditedSource: auditedSource || "Staggi AI Fiduciary Advisory",
       rawMarkdown: message.text,
       verdict: "Fiduciary analysis compiled according to requested risk and telemetry parameters."
