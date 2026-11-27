@@ -1,5 +1,7 @@
 <script lang="ts">
   import type { ParsedAssetDividends } from "$lib/services/formatMessage";
+  import { exportReportAsPdf, sendClientEmail } from "$lib/services/pdfExportService";
+  import { toastStore } from "$lib/services/toastService.svelte";
   import { 
     Coins, 
     Calendar, 
@@ -11,7 +13,11 @@
     BarChart3,
     ArrowUpRight,
     Info,
-    CheckCircle2
+    CheckCircle2,
+    FileDown,
+    Mail,
+    Copy,
+    Check
   } from "@lucide/svelte";
 
   interface Props {
@@ -21,6 +27,7 @@
   let { data }: Props = $props();
 
   let activeView = $state<"history" | "payouts">("history");
+  let isCopied = $state(false);
 
   let sortedHistory = $derived.by(() => {
     const list = [...data.annualHistory];
@@ -73,6 +80,48 @@
     }
     return sum > 0 ? `R$ ${sum.toFixed(4).replace(".", ",")}` : null;
   });
+
+  function handleExportPdf() {
+    exportReportAsPdf({
+      title: `${data.companyName} (${data.ticker})`,
+      subtitle: "Relatório Histórico de Proventos, Dividend Yield e Fluxo de Caixa",
+      ticker: data.ticker,
+      auditedSource: "MCP Proventos & CVM",
+      metrics: [
+        { label: "Média DY Histórico", value: avgDyText || "—" },
+        { label: "DY Pico Histórico", value: peakItem ? `${peakItem.dy} (${peakItem.year})` : "—" },
+        { label: "Total Proventos Recentes", value: totalRecentSum || "—" },
+        { label: "Anos Auditados", value: `${data.annualHistory.length} anos` }
+      ],
+      verdict: "Histórico consistente de remuneração aos acionistas através de proventos e JCP.",
+      summary: data.intro ? `### Introdução e Contexto\n${data.intro}` : undefined
+    });
+  }
+
+  function handleSendEmail() {
+    sendClientEmail({
+      ticker: data.ticker,
+      subject: `Histórico de Dividendos • ${data.ticker} (${data.companyName})`,
+      metrics: [
+        { label: "DY Médio", value: avgDyText || "—" },
+        { label: "DY Máximo", value: peakItem ? `${peakItem.dy} (${peakItem.year})` : "—" }
+      ],
+      summary: `Prezado(a), segue o levantamento histórico de dividendos e proventos de ${data.ticker}:\n\n` +
+        `• Média Histórica de Yield: ${avgDyText || 'N/A'}\n` +
+        `• Total recente distribuído: ${totalRecentSum || 'N/A'}\n` +
+        `• Maior Yield anual: ${peakItem ? `${peakItem.dy} em ${peakItem.year}` : 'N/A'}`
+    });
+  }
+
+  function handleCopySummary() {
+    const summary = `${data.companyName} (${data.ticker}) - Proventos\nDY Médio: ${avgDyText || '—'} | Pico: ${peakItem ? `${peakItem.dy} (${peakItem.year})` : '—'}\nTotal Recente: ${totalRecentSum || '—'}`;
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(summary);
+      isCopied = true;
+      toastStore.showToast("Resumo de dividendos copiado!", "success");
+      setTimeout(() => (isCopied = false), 2000);
+    }
+  }
 </script>
 
 <div class="w-full rounded-2xl border border-white/[0.12] bg-[#212121]/95 backdrop-blur-2xl shadow-xl p-4.5 space-y-4 select-text animate-fade-in">
@@ -294,5 +343,20 @@
       <span class="text-zinc-400">Audited Source:</span>
       <span class="text-zinc-200 font-medium">MCP Verified Data</span>
     </div>
+
+    <button
+      type="button"
+      onclick={handleCopySummary}
+      title="Copiar resumo textual de proventos"
+      class="flex items-center gap-1 px-1.5 py-0.5 rounded bg-white/[0.04] hover:bg-white/[0.08] text-zinc-400 hover:text-zinc-200 text-[10px] transition-colors cursor-pointer"
+    >
+      {#if isCopied}
+        <Check class="w-3 h-3 text-emerald-400" />
+        <span class="text-emerald-300">Copiado</span>
+      {:else}
+        <Copy class="w-3 h-3" />
+        <span>Copiar</span>
+      {/if}
+    </button>
   </div>
 </div>

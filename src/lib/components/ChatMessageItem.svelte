@@ -6,7 +6,7 @@
     ValuationProjectionCard,
     AssetDividendsCard,
     AssetProfileCard,
-    PortfolioDistributionCard,
+    PortfolioDistributionCard
   } from "./cards";
   import { 
     parseAssetQuote, 
@@ -19,7 +19,19 @@
     detectAuditedSource,
     renderMarkdown 
   } from "$lib/services/formatMessage";
-  import { Bot, Sparkles, ShieldCheck, Brain } from "@lucide/svelte";
+  import { exportReportAsPdf, sendClientEmail } from "$lib/services/pdfExportService";
+  import { toastStore } from "$lib/services/toastService.svelte";
+  import { 
+    Bot, 
+    Sparkles, 
+    ShieldCheck, 
+    Brain, 
+    FileDown, 
+    Mail, 
+    Copy, 
+    Check, 
+    Paperclip 
+  } from "@lucide/svelte";
   import { t } from "$lib/i18n";
 
   interface Props {
@@ -28,35 +40,70 @@
 
   let { message }: Props = $props();
 
+  let isCopied = $state(false);
+
+  // High-performance lazy derivation: execute expensive regex parsers only when needed
+  let isParsable = $derived(message.sender === "staggi" && !message.isLoading && !message.isStreaming);
+
   let auditedSource = $derived(
-    message.sender === "staggi" && !message.isLoading && !message.isStreaming
+    isParsable
       ? ((message.metadata?.source as string) || detectAuditedSource(message.text))
       : null
   );
 
   let assetProfiles = $derived(
-    message.sender === "staggi" && !message.isLoading && !message.isStreaming ? parseAssetProfiles(message.text) : []
+    isParsable ? parseAssetProfiles(message.text) : []
   );
 
   let assetDividends = $derived(
-    message.sender === "staggi" && !message.isLoading && !message.isStreaming ? parseAssetDividends(message.text) : null
+    isParsable ? parseAssetDividends(message.text) : null
   );
 
   let valuationProjection = $derived(
-    message.sender === "staggi" && !message.isLoading && !message.isStreaming ? parseValuationProjection(message.text) : null
+    isParsable ? parseValuationProjection(message.text) : null
   );
 
   let assetQuote = $derived(
-    message.sender === "staggi" && !message.isLoading && !message.isStreaming ? parseAssetQuote(message.text) : null
+    isParsable ? parseAssetQuote(message.text) : null
   );
 
   let corporateEvents = $derived(
-    message.sender === "staggi" && !message.isLoading && !message.isStreaming ? parseCorporateEvents(message.text) : null
+    isParsable ? parseCorporateEvents(message.text) : null
   );
 
   let portfolioDistribution = $derived(
-    message.sender === "staggi" && !message.isLoading && !message.isStreaming ? parsePortfolioDistribution(message.text) : null
+    isParsable ? parsePortfolioDistribution(message.text) : null
   );
+
+  const isReportRequested = $derived(
+    /(?:baixar|download|gerar|exportar)\s+(?:pdf|relat[oó]rio|extrato|documento|proposta)|(?:pdf|relat[oó]rio|extrato|proposta)\s+(?:da|do|de|em\s+pdf)/i.test(message.text)
+  );
+
+  function handleExportPdf() {
+    exportReportAsPdf({
+      title: "Relatório de Análise e Inteligência Fiduciária",
+      subtitle: "Telemetria de Mercado, Multi-Asset Intelligence e Pesquisa Executiva",
+      auditedSource: auditedSource || "Staggi AI Fiduciary Advisory",
+      rawMarkdown: message.text,
+      verdict: "Análise fiduciária gerada conforme parâmetros de risco e telemetria solicitados."
+    });
+  }
+
+  function handleSendEmail() {
+    sendClientEmail({
+      subject: "Relatório de Análise Executiva • Staggi Wealth",
+      summary: message.text
+    });
+  }
+
+  function handleCopyText() {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(message.text);
+      isCopied = true;
+      toastStore.showToast("Texto copiado para a área de transferência!", "success");
+      setTimeout(() => (isCopied = false), 2000);
+    }
+  }
 </script>
 
 <div class="flex flex-col gap-1.5 {message.sender === 'user' ? 'items-end' : 'items-start'} animate-fade-in">
@@ -72,8 +119,19 @@
   </div>
 
   {#if message.sender === 'user'}
-    <div class="max-w-[85%] rounded-2xl rounded-tr-sm bg-white/[0.08] border border-white/[0.12] shadow-[0_2px_10px_rgba(0,0,0,0.25),inset_0_1px_0_0_rgba(255,255,255,0.08)] text-zinc-100 px-4 py-2.5 text-sm backdrop-blur-xl leading-relaxed select-text">
-      {message.text}
+    <div class="max-w-[85%] rounded-2xl rounded-tr-sm bg-white/[0.08] border border-white/[0.12] shadow-[0_2px_10px_rgba(0,0,0,0.25),inset_0_1px_0_0_rgba(255,255,255,0.08)] text-zinc-100 px-4 py-2.5 text-sm backdrop-blur-xl leading-relaxed select-text space-y-2">
+      <div>{message.text}</div>
+      {#if message.attachments && message.attachments.length > 0}
+        <div class="flex items-center gap-1.5 flex-wrap pt-1.5 border-t border-white/[0.08]">
+          {#each message.attachments as att (att.id)}
+            <div class="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-white/[0.08] border border-white/[0.1] text-[11px] text-zinc-300">
+              <Paperclip class="w-3 h-3 text-emerald-400 shrink-0" />
+              <span class="font-medium truncate max-w-[140px]">{att.name}</span>
+              <span class="text-[9px] text-zinc-400 font-sans">({att.sizeFormatted})</span>
+            </div>
+          {/each}
+        </div>
+      {/if}
     </div>
   {:else}
     {#if message.isLoading}
@@ -107,22 +165,54 @@
       <AssetQuoteCard quote={assetQuote} />
 
     {:else}
-      <div class="w-full rounded-2xl border border-white/[0.08] bg-[#212121]/90 shadow-sm p-4 space-y-3 select-text">
-        <div class="text-sm text-zinc-200 leading-relaxed font-normal space-y-2.5 [&_p]:my-1.5 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-1.5 [&_ul]:my-2 [&_li]:my-0.5 [&_li]:text-zinc-200 [&_strong]:text-zinc-100 [&_strong]:font-semibold [&_h1]:text-base [&_h2]:text-sm [&_h3]:text-xs [&_h1]:font-bold [&_h2]:font-bold [&_code]:bg-white/[0.08] [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:font-mono [&_code]:text-xs [&_pre]:bg-[#181818] [&_pre]:p-3 [&_pre]:rounded-xl [&_pre]:overflow-x-auto [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:space-y-1.5 [&_ol]:my-2 [&_ol>li]:my-0.5 [&_ol>li]:text-zinc-200 [&_ol>li]:leading-relaxed [&_table]:w-full [&_table]:my-3.5 [&_table]:border-collapse [&_table]:rounded-xl [&_table]:overflow-hidden [&_th]:bg-white/[0.08] [&_th]:p-2.5 [&_th]:text-left [&_th]:text-xs [&_th]:font-semibold [&_th]:text-zinc-200 [&_th]:border-b [&_th]:border-white/[0.1] [&_td]:p-2.5 [&_td]:text-xs [&_td]:text-zinc-300 [&_td]:border-b [&_td]:border-white/[0.04] [&_tr:hover]:bg-white/[0.03]">
+      <div class="w-full max-w-full min-w-0 rounded-2xl border border-white/[0.08] bg-[#212121]/90 shadow-sm p-4 space-y-3 select-text overflow-hidden">
+        <div class="text-sm text-zinc-200 leading-relaxed font-normal space-y-2.5 break-words min-w-0 [&_p]:my-1.5 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-1.5 [&_ul]:my-2 [&_li]:my-0.5 [&_li]:text-zinc-200 [&_strong]:text-zinc-100 [&_strong]:font-semibold [&_h1]:text-base [&_h2]:text-sm [&_h3]:text-xs [&_h1]:font-bold [&_h2]:font-bold [&_code]:bg-white/[0.08] [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:font-mono [&_code]:text-xs [&_pre]:bg-[#181818] [&_pre]:p-3 [&_pre]:rounded-xl [&_pre]:overflow-x-auto [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:space-y-1.5 [&_ol]:my-2 [&_ol>li]:my-0.5 [&_ol>li]:text-zinc-200 [&_ol>li]:leading-relaxed [&_table]:w-full [&_table]:my-3.5 [&_table]:border-collapse [&_th]:bg-white/[0.08] [&_th]:p-2.5 [&_th]:text-left [&_th]:text-xs [&_th]:font-semibold [&_th]:text-zinc-200 [&_th]:border-b [&_th]:border-white/[0.1] [&_td]:p-2.5 [&_td]:text-xs [&_td]:text-zinc-300 [&_td]:border-b [&_td]:border-white/[0.04] [&_tr:hover]:bg-white/[0.03]">
           {@html renderMarkdown(message.text)}
           {#if message.isStreaming}
             <span class="inline-block w-1.5 h-3.5 bg-amber-400 ml-1 animate-pulse align-middle rounded-sm"></span>
           {/if}
         </div>
 
-        {#if auditedSource}
-          <div class="flex items-center justify-between pt-2.5 mt-1 border-t border-white/[0.06] text-[10px] text-zinc-400">
+        {#if auditedSource || (!message.isLoading && !message.isStreaming && message.text.length > 20)}
+          <div class="flex items-center justify-between pt-2 mt-1 border-t border-white/[0.04] text-[10px] text-zinc-400">
+            {#if auditedSource}
+              <div class="flex items-center gap-1.5">
+                <ShieldCheck class="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                <span class="text-zinc-400">{t("common.auditedSource")}:</span>
+                <span class="text-zinc-200 font-medium">{auditedSource}</span>
+              </div>
+            {:else}
+              <div></div>
+            {/if}
+
             <div class="flex items-center gap-1.5">
-              <ShieldCheck class="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-              <span class="text-zinc-400">{t("common.auditedSource")}:</span>
-              <span class="text-zinc-200 font-medium">{auditedSource}</span>
+              {#if isReportRequested}
+                <button
+                  type="button"
+                  onclick={handleExportPdf}
+                  title="Baixar Relatório em PDF"
+                  class="flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 text-[10px] font-medium border border-emerald-500/30 cursor-pointer transition-all active:scale-95 shadow-sm"
+                >
+                  <FileDown class="w-3 h-3" />
+                  <span>Baixar PDF</span>
+                </button>
+              {/if}
+
+              <button
+                type="button"
+                onclick={handleCopyText}
+                title="Copiar texto da resposta"
+                class="flex items-center gap-1 px-1.5 py-0.5 rounded bg-white/[0.03] hover:bg-white/[0.08] text-zinc-400 hover:text-zinc-200 transition-colors cursor-pointer text-[10px]"
+              >
+                {#if isCopied}
+                  <Check class="w-3 h-3 text-emerald-400" />
+                  <span class="text-emerald-300 text-[10px]">Copiado</span>
+                {:else}
+                  <Copy class="w-3 h-3" />
+                  <span class="text-[10px]">Copiar</span>
+                {/if}
+              </button>
             </div>
-            <span class="text-zinc-500 hidden sm:inline">MCP Verified</span>
           </div>
         {/if}
       </div>

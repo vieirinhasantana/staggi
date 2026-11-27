@@ -11,6 +11,16 @@ export type MessageType =
   | "statement"
   | "report";
 
+export interface AttachedFile {
+  id: string;
+  name: string;
+  size: number;
+  sizeFormatted: string;
+  type: string;
+  content: string;
+  isBinary?: boolean;
+}
+
 export interface ChatMessage {
   id: string;
   sender: MessageSender;
@@ -18,6 +28,7 @@ export interface ChatMessage {
   time: string;
   type?: MessageType;
   metadata?: Record<string, unknown>;
+  attachments?: AttachedFile[];
   isLoading?: boolean;
   isStreaming?: boolean;
 }

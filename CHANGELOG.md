@@ -6,6 +6,30 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ---
 
+## [0.1.25] - 2026-11-26
+
+### Added
+- **File Attachment & Drag & Drop in Spotlight**:
+  - Drag-and-drop dropzone and paperclip file selector directly inside Spotlight bar supporting PDFs, CSVs, Excel spreadsheets, TXT, JSON, and financial documents.
+  - Interactive file chips with file sizes, custom category icons, and contextual prompt injection.
+- **Portfolio Rebalancing & Target Structure Visual Card**:
+  - Dynamic parsing and rendering of *Estrutura Alvo Consolidada (Pós-Rebalanceamento)*.
+  - Interactive fiduciary card featuring side-by-side comparison (Atual vs. Alvo), allocation deltas (+/- %), action chips (*Aportar*, *Reduzir*, *Manter*), and Donut chart.
+- **Institutional Reporting Standards in Core MCP**:
+  - Backend reporting suite in `staggi-mcp` for Account Positions (`generate_portfolio_position_report`, `send_portfolio_position_report_email`) and Portfolio Rebalancing Proposals (`generate_portfolio_rebalance_report`, `send_portfolio_rebalance_proposal_email`).
+  - Standardized institutional email template with gradient header, metrics grid, and compliance disclaimers.
+
+### Changed & Fixed
+- **Clean Chat Interface & On-Demand Report Download**:
+  - Removed permanent action button bars from messages and cards to keep a clean, minimalist fiduciary UI.
+  - PDF download action only appears on-demand when explicitly requested by the user.
+- **Spotlight Tasks Indicator**:
+  - Tasks counter badge now strictly hides when there are no active background tasks.
+- **Send Flow & Generation Guard**:
+  - Replaced message queueing with responsive button state disabling while generating.
+
+---
+
 ## [0.1.22] - 2026-11-25
 
 ### Fixed

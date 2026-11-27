@@ -50,9 +50,9 @@
 **Staggi** is an ultra-fast, native desktop application (crafted in **Rust** and **Svelte 5 Runes**) designed specifically for the analytical workflow of wealth advisors, capital allocators, and fiduciary portfolio managers.
 
 It unifies:
-1. **Multi-LLM Flagship Engine**: Seamless native integration with Google Gemini (2.0 Flash, Flash Thinking), OpenAI (GPT-4o, o1, o3-mini), and Anthropic Claude 3.7 Sonnet with Extended Thinking.
-2. **Real-Time Official Market Data**: Direct integration with B3, NYSE, Nasdaq, and global exchanges via a native Rust backend (zero fragile scraping, zero mock data).
-3. **Model Context Protocol (MCP)**: Native orchestration of local and remote MCP servers for balance sheet breakdowns, ETF holdings, fixed income debt schedules, and insider transaction tracking.
+1. **Multi-LLM Flagship Engine**: Seamless native integration with Google Gemini (2.0 Flash, Flash Thinking), OpenAI (GPT-4o, o1, o3-mini), Anthropic Claude 3.7 Sonnet with Extended Thinking, and Amazon Bedrock (Claude 3.5 Sonnet v2, Nova, Llama 3.3).
+2. **Real-Time Official Market Data**: Direct integration with B3, NYSE, Nasdaq, and global exchanges via a modular native Rust backend (zero fragile scraping, zero mock data).
+3. **Model Context Protocol (MCP)**: Native orchestration of local and remote MCP servers (SSE and stdio) with built-in OAuth discovery/loopback and robust Anti-SSRF guardrails.
 4. **Specialized Analytical Skills (`SKILL.md`)**: Instant invocation of institutional financial frameworks such as `/valuation` (Graham, Bazin, Multiples), `/dividends`, `/screening`, and `/fixed-income` directly from the Spotlight bar (`Ctrl+Space` / `Cmd+Space`).
 5. **Background Automations**: Scheduled routines that quietly monitor portfolios, corporate disclosures, and dividend announcements, delivering proactive executive briefs.
 
@@ -84,13 +84,20 @@ It unifies:
 > **Complete Privacy and Direct Connection (Zero-Telemetry):**
 > Staggi is engineered strictly under fiduciary security standards:
 
-1. **100% Local Sandboxed Storage**:
-   - Your API keys (`Google AI Studio`, `OpenAI Platform`, `Anthropic Console`) and chat history remain **exclusively on your local machine** within Tauri's isolated OS sandbox.
-   - **Zero intermediary proxy servers**: All AI and market requests originate from your local desktop binary directly to official provider endpoints (`api.openai.com`, `generativelanguage.googleapis.com`, `api.anthropic.com`).
-2. **Clean Git Repository Policy**:
+1. **Content Security Policy (CSP) & Defense-in-Depth**:
+   - The desktop webview enforces a strict CSP restricting script execution, style injection, and network connections strictly to authorized endpoints and loopback APIs.
+   - All chat responses, tool outputs, and LLM text undergo strict HTML sanitization (`sanitizeHtml`) before rendering to eliminate Cross-Site Scripting (XSS).
+2. **Anti-SSRF Guardrails on MCP Client**:
+   - Outbound connections to external Model Context Protocol (MCP) servers are validated against cloud metadata services (`169.254.169.254`, `metadata.google.internal`) and restricted to HTTP/HTTPS schemes.
+3. **Screen Protection & OS Content Shielding**:
+   - The window is configured with OS-level content protection (`contentProtected: true`), preventing unauthorized screen recording or window capture of sensitive wealth allocations.
+4. **100% Local Sandboxed Storage**:
+   - Your API keys (`Google AI Studio`, `OpenAI Platform`, `Anthropic Console`, `AWS Bedrock`) and chat history remain **exclusively on your local machine** within Tauri's isolated OS sandbox.
+   - **Zero intermediary proxy servers**: All AI and market requests originate from your local desktop binary directly to official provider endpoints.
+5. **Clean Git Repository Policy**:
    - No API keys, tokens, or private secrets are ever committed into the codebase.
    - The `.gitignore` file strictly blocks environment configs (`.env`, `.env.*`), cryptographic keys (`*.pem`, `*.key`), and build artifacts.
-3. **Secure Native Bridge**:
+6. **Secure Native Bridge**:
    - External HTTPS requests are handled by the native Rust backend ([src-tauri/src/lib.rs](src-tauri/src/lib.rs)), bypassing webview CORS limitations and preventing token exposure in browser script runtimes.
 
 ---

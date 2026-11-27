@@ -53,14 +53,23 @@ staggi/
 │       │       └── tasks.ts        # ScheduledTask, TaskExecutionLog, TaskAlert
 │       │
 │       ├── services/               # [APPLICATION LAYER - STORES & USE CASES]
-│       │   ├── aiProviderState.svelte.ts # Global reactive store for AI (Gemini, OpenAI, Anthropic, Models)
+│       │   ├── aiProviderState.svelte.ts # Global reactive store for AI (Gemini, OpenAI, Anthropic, Bedrock)
 │       │   ├── pluginsState.svelte.ts    # Global reactive store for MCP Servers & Analytical Skills
 │       │   ├── tasksState.svelte.ts      # Background Task Scheduler and execution runner
 │       │   ├── toastService.svelte.ts    # Floating Toast notifications store
 │       │   ├── chatSessionService.ts     # LocalStorage persistence for multi-turn chat sessions
 │       │   ├── geminiService.ts          # Orchestrator for prompts, skills, MCP tools, and Rust IPC
 │       │   ├── advisorService.ts         # Initial prompt generator with fiduciary guidelines
-│       │   ├── formatMessage.ts          # Markdown parser, card regex extractors, and visual adapters
+│       │   ├── formatMessage.ts          # Central parser façade & visual card extractor
+│       │   ├── markdownRenderer.ts       # Secure Markdown rendering with XSS sanitization
+│       │   ├── parsers/                  # Modular financial data parsers (Clean Architecture)
+│       │   │   ├── profileParser.ts      # Asset profile and audited source detection
+│       │   │   ├── quoteParser.ts        # Real-time quote and ticker variations
+│       │   │   ├── corporateEventsParser.ts # CVM/SEC material events & categorizations
+│       │   │   ├── valuationParser.ts    # Graham, Bazin, and fair value models
+│       │   │   ├── dividendsParser.ts    # Payouts, ex-dates, and yield history
+│       │   │   ├── comparisonTableParser.ts # Sector peer comparisons
+│       │   │   └── portfolioDistributionParser.ts # Asset class allocation & exposure
 │       │   ├── yahooFinanceService.ts    # Real-time market data client bound to Rust IPC
 │       │   └── updaterService.svelte.ts  # Desktop app update checker
 │       │
@@ -174,6 +183,6 @@ staggi/
 
 ### C. Creating a New Financial Response Card
 1. Create the data contract in `src/lib/types/domain/financial.ts`.
-2. Add the extraction regex and parser in `src/lib/services/formatMessage.ts`.
+2. Add the specialized parser in `src/lib/services/parsers/` and export it through `formatMessage.ts`.
 3. Create the Svelte 5 component under `src/lib/components/cards/` (e.g., `NewMetricCard.svelte`).
 4. Wire conditional rendering into `src/lib/components/ChatMessageItem.svelte`.

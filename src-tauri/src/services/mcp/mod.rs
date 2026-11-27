@@ -1,5 +1,6 @@
 pub mod client;
 pub mod oauth;
+pub mod yahoo;
 
 pub use client::{call_mcp_tool, test_mcp_connection};
 pub use oauth::{
@@ -7,3 +8,4 @@ pub use oauth::{
     start_oauth_loopback, DynamicClientRegistrationResult, OAuthCallbackResult,
     OAuthDiscoveryResult, OAuthTokenResponse,
 };
+pub use yahoo::{call_yahoo_finance_tool, test_yahoo_finance_mcp};

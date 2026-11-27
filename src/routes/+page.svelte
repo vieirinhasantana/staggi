@@ -14,7 +14,8 @@
     deleteChatSession,
     clearAllSessions
   } from "$lib/services/chatSessionService";
-  import type { ChatMessage, ChatSession } from "$lib/types";
+  import type { ChatMessage, ChatSession, AttachedFile } from "$lib/types";
+  import { buildPromptWithAttachments } from "$lib/services/fileAttachmentService";
   import { tasksStore, type ScheduledTask } from "$lib/services/tasksState.svelte";
   import { updaterStore } from "$lib/services/updaterService.svelte";
   import { renderMarkdown } from "$lib/services/formatMessage";
@@ -50,6 +51,7 @@
   let chatScrollArea = $state<HTMLDivElement | null>(null);
   let isSettingsOpen = $state(false);
   let settingsInitialTab = $state<"ai" | "gemini" | "mcps" | "skills" | "tasks">("ai");
+  let isGenerating = $state(false);
 
   async function handleWindowDrag(e: MouseEvent) {
     if (e.button !== 0) return;
@@ -83,29 +85,25 @@
     }, 60);
   }
 
-  async function handleSend(userPrompt: string) {
+  async function handleSend(userPrompt: string, attachments?: AttachedFile[]) {
     const trimmed = userPrompt.trim();
-    if (!trimmed) return;
+    if ((!trimmed && (!attachments || attachments.length === 0)) || isGenerating) return;
 
     if (!currentSessionId) {
       const newSession = createNewSession();
       currentSessionId = newSession.id;
     }
 
-    const historyTurns: ChatHistoryTurn[] = messages
-      .filter(m => !m.isLoading && m.text.trim().length > 0)
-      .slice(0, 10)
-      .reverse()
-      .map(m => ({
-        role: m.sender === "user" ? ("user" as const) : ("model" as const),
-        text: m.text
-      }));
+    const displayText = trimmed || (attachments && attachments.length > 0
+      ? `Análise de ${attachments.map(a => a.name).join(", ")}`
+      : "");
 
     const userMessage: ChatMessage = {
       id: String(Date.now()),
       sender: "user",
-      text: trimmed,
+      text: displayText,
       time: new Date().toLocaleTimeString().slice(0, 5),
+      attachments: attachments && attachments.length > 0 ? attachments : undefined
     };
 
     const pendingBotId = String(Date.now() + 1);
@@ -121,30 +119,59 @@
     };
 
     messages = [pendingBotMessage, userMessage, ...messages];
-    sessions = persistSessionMessages(currentSessionId, messages, trimmed);
+    sessions = persistSessionMessages(currentSessionId, messages, displayText);
     scrollToTop();
 
-    const onProgress = (statusText: string) => {
-      messages = messages.map(m => m.id === pendingBotId ? { ...m, text: statusText } : m);
-    };
+    isGenerating = true;
+    try {
+      const historyTurns: ChatHistoryTurn[] = messages
+        .filter(m => !m.isLoading && m.id !== pendingBotId && m.text.trim().length > 0)
+        .slice(0, 10)
+        .reverse()
+        .map(m => ({
+          role: m.sender === "user" ? ("user" as const) : ("model" as const),
+          text: m.text
+        }));
 
-    const geminiResult = await queryGemini(trimmed, historyTurns, onProgress);
-    const fullText = geminiResult.text || "";
+      const onProgress = (statusText: string) => {
+        messages = messages.map(m => m.id === pendingBotId ? { ...m, text: statusText } : m);
+      };
 
-    const finalBotMessage: ChatMessage = {
-      id: pendingBotId,
-      sender: "staggi",
-      text: fullText,
-      time: new Date().toLocaleTimeString().slice(0, 5),
-      type: "text",
-      isLoading: false,
-      isStreaming: false,
-      metadata: geminiResult.source ? { source: geminiResult.source } : undefined
-    };
+      const finalPromptToAi = attachments && attachments.length > 0
+        ? buildPromptWithAttachments(trimmed, attachments)
+        : trimmed;
 
-    messages = messages.map(m => m.id === pendingBotId ? finalBotMessage : m);
-    sessions = persistSessionMessages(currentSessionId, messages);
-    scrollToTop();
+      const geminiResult = await queryGemini(finalPromptToAi, historyTurns, onProgress);
+      const fullText = geminiResult.text || "";
+
+      const finalBotMessage: ChatMessage = {
+        id: pendingBotId,
+        sender: "staggi",
+        text: fullText,
+        time: new Date().toLocaleTimeString().slice(0, 5),
+        type: "text",
+        isLoading: false,
+        isStreaming: false,
+        metadata: geminiResult.source ? { source: geminiResult.source } : undefined
+      };
+
+      messages = messages.map(m => m.id === pendingBotId ? finalBotMessage : m);
+      sessions = persistSessionMessages(currentSessionId, messages);
+      scrollToTop();
+    } catch (err: any) {
+      const errorMsg: ChatMessage = {
+        id: pendingBotId,
+        sender: "staggi",
+        text: `Erro ao processar mensagem: ${err?.message || err}`,
+        time: new Date().toLocaleTimeString().slice(0, 5),
+        type: "text",
+        isLoading: false
+      };
+      messages = messages.map(m => m.id === pendingBotId ? errorMsg : m);
+      sessions = persistSessionMessages(currentSessionId, messages);
+    } finally {
+      isGenerating = false;
+    }
   }
 
   function handleNewChat() {
@@ -286,7 +313,7 @@
     <SettingsModal open={isSettingsOpen} initialTab={settingsInitialTab} onClose={() => isSettingsOpen = false} />
   {:else}
     <div class="w-full shrink-0 relative z-30">
-      <SpotlightBar onSend={handleSend} onOpenSettings={handleOpenSettings} />
+      <SpotlightBar onSend={handleSend} onOpenSettings={handleOpenSettings} disabled={isGenerating} />
     </div>
 
     {#if messages.length > 0 || showHistoryDrawer}

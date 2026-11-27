@@ -1,5 +1,7 @@
 <script lang="ts">
   import type { ParsedValuationProjection } from "$lib/services/formatMessage";
+  import { exportReportAsPdf, sendClientEmail } from "$lib/services/pdfExportService";
+  import { toastStore } from "$lib/services/toastService.svelte";
   import { 
     Calculator, 
     TrendingUp, 
@@ -10,7 +12,11 @@
     BarChart2, 
     Scale,
     Sparkles,
-    CheckCircle2
+    CheckCircle2,
+    FileDown,
+    Mail,
+    Copy,
+    Check
   } from "@lucide/svelte";
 
   interface Props {
@@ -18,6 +24,56 @@
   }
 
   let { data }: Props = $props();
+  let isCopied = $state(false);
+
+  function handleExportPdf() {
+    exportReportAsPdf({
+      title: `${data.companyName} (${data.ticker}) • Modelo de Valuation`,
+      subtitle: "Projeção de Preço Teto, Margem de Segurança e Múltiplos",
+      ticker: data.ticker,
+      auditedSource: "MCP Valuation Model",
+      metrics: [
+        { label: "Preço Atual", value: data.currentPrice || "—" },
+        { label: "Preço Teto (Bazin)", value: data.bazinCeilingPrice || "—" },
+        { label: "Valor Justo (Graham)", value: data.grahamPrice || "—" },
+        { label: "Margem / Upside", value: data.safetyMargin || data.targetPrice || "—" },
+        { label: "P/L", value: data.pl || "—" },
+        { label: "P/VP", value: data.pvp || "—" },
+        { label: "ROE", value: data.roe || "—" },
+        { label: "DY Projetado", value: data.projectedDy || "—" }
+      ],
+      verdict: data.recommendation ? `Recomendação: ${data.recommendation}` : "Análise fundamentalista e métricas de valuation calculadas.",
+      summary: data.summary
+    });
+  }
+
+  function handleSendEmail() {
+    sendClientEmail({
+      ticker: data.ticker,
+      subject: `Relatório de Valuation • ${data.ticker} (${data.companyName})`,
+      metrics: [
+        { label: "Preço Atual", value: data.currentPrice || "—" },
+        { label: "Preço Teto Bazin", value: data.bazinCeilingPrice || "—" },
+        { label: "Preço Graham", value: data.grahamPrice || "—" },
+        { label: "Recomendação", value: data.recommendation || "—" }
+      ],
+      summary: `Prezado(a), segue o modelo de valuation fiduciário de ${data.ticker}:\n\n` +
+        `• Preço Atual: ${data.currentPrice || 'N/A'}\n` +
+        `• Preço Teto Bazin (DY 6%): ${data.bazinCeilingPrice || 'N/A'}\n` +
+        `• Valor Justo Graham: ${data.grahamPrice || 'N/A'}\n` +
+        `• Resumo: ${data.summary || 'N/A'}`
+    });
+  }
+
+  function handleCopySummary() {
+    const summary = `${data.companyName} (${data.ticker}) - Valuation\nPreço Atual: ${data.currentPrice || '—'}\nBazin: ${data.bazinCeilingPrice || '—'} | Graham: ${data.grahamPrice || '—'}\nRecomendação: ${data.recommendation || '—'}`;
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(summary);
+      isCopied = true;
+      toastStore.showToast("Resumo de valuation copiado!", "success");
+      setTimeout(() => (isCopied = false), 2000);
+    }
+  }
 </script>
 
 <div class="w-full rounded-2xl border border-white/[0.12] bg-[#212121]/95 backdrop-blur-2xl shadow-xl p-4.5 space-y-4 select-text animate-fade-in">
@@ -125,5 +181,20 @@
       <span class="text-zinc-400">Audited Source:</span>
       <span class="text-zinc-200 font-medium">MCP Verified Data</span>
     </div>
+
+    <button
+      type="button"
+      onclick={handleCopySummary}
+      title="Copiar resumo textual de valuation"
+      class="flex items-center gap-1 px-1.5 py-0.5 rounded bg-white/[0.04] hover:bg-white/[0.08] text-zinc-400 hover:text-zinc-200 text-[10px] transition-colors cursor-pointer"
+    >
+      {#if isCopied}
+        <Check class="w-3 h-3 text-emerald-400" />
+        <span class="text-emerald-300">Copiado</span>
+      {:else}
+        <Copy class="w-3 h-3" />
+        <span>Copiar</span>
+      {/if}
+    </button>
   </div>
 </div>

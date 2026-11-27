@@ -73,6 +73,10 @@ export interface ParsedAssetQuote {
   pl?: string;
   pvp?: string;
   relevantFact?: string;
+  dayHigh?: string;
+  dayLow?: string;
+  volume?: string;
+  historyPrices?: number[];
 }
 
 export interface EventDetailItem {
@@ -192,6 +196,13 @@ export interface PortfolioAllocationItem {
   value?: string;
   percentage: number;
   percentageFormatted: string;
+  currentPercentage?: number;
+  currentPercentageFormatted?: string;
+  targetPercentage?: number;
+  targetPercentageFormatted?: string;
+  deltaPercentage?: number;
+  deltaFormatted?: string;
+  action?: string;
   color: string;
 }
 
@@ -201,4 +212,5 @@ export interface ParsedPortfolioDistribution {
   totalValue?: string;
   items: PortfolioAllocationItem[];
   intro?: string;
+  isRebalancing?: boolean;
 }

@@ -154,6 +154,54 @@ html, body {
 }
 
 /* ==========================================================================
+   Markdown Tables & Code Blocks Horizontal Overflow Control
+   ========================================================================== */
+.table-wrapper {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin: 0.875rem 0;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background-color: rgba(255, 255, 255, 0.02);
+}
+
+.table-wrapper table {
+  width: 100%;
+  min-width: 100%;
+  border-collapse: collapse;
+  white-space: nowrap;
+}
+
+.table-wrapper th,
+.table-wrapper td {
+  padding: 0.625rem 0.875rem;
+  text-align: left;
+  font-size: 0.75rem;
+}
+
+.table-wrapper th {
+  background-color: rgba(255, 255, 255, 0.06);
+  font-weight: 600;
+  color: rgb(228 228 231);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.table-wrapper td {
+  color: rgb(212 212 216);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.table-wrapper tr:last-child td {
+  border-bottom: none;
+}
+
+.table-wrapper tr:hover {
+  background-color: rgba(255, 255, 255, 0.03);
+}
+
+/* ==========================================================================
    Windows Zero-Lag Optimization (Chromium / WebView2 transparent window fix)
    ========================================================================== */
 

@@ -210,12 +210,26 @@ ${matchedSkill.systemPrompt}`;
       activeSkills.map(s => `[Skill: ${s.name}]\nDescription: ${s.description}\nAnalytical Directives:\n${s.systemPrompt}`).join("\n\n");
   }
 
-  const cleanHistory = (history || [])
-    .filter(h => h.text && !(h.text.trim().startsWith("{") && h.text.includes('"candidates"')))
-    .map(h => ({
+  // Intelligent Token Optimization: Sliding Window + Semantic Trimming
+  // 1. Filter out malformed/raw JSON dumps from history
+  // 2. Keep the most recent 12 conversation turns (enough for multi-turn reasoning without context bloat)
+  // 3. Compact older assistant turns exceeding 1,200 characters to keep token usage lean
+  const rawHistory = (history || [])
+    .filter(h => h.text && !(h.text.trim().startsWith("{") && h.text.includes('"candidates"')));
+
+  const windowedHistory = rawHistory.slice(-12);
+  const cleanHistory = windowedHistory.map((h, idx) => {
+    let text = h.text.trim();
+    // Compact earlier assistant responses (except the last 2 turns) to prevent token accumulation
+    const isRecent = idx >= windowedHistory.length - 2;
+    if (h.role !== "user" && !isRecent && text.length > 1200) {
+      text = text.slice(0, 1200) + "\n...[síntese histórica truncada para economia de tokens]";
+    }
+    return {
       role: h.role === "user" ? ("user" as const) : ("model" as const),
-      text: h.text
-    }));
+      text
+    };
+  });
 
   // Refresh MCP tool schemas only if tools are missing or newly added server tools aren't cached yet
   for (const m of pluginsStore.activeMcps) {
@@ -265,12 +279,12 @@ ${matchedSkill.systemPrompt}`;
   );
 
   if (!isPureGreeting && availableToolCatalog.length > 0) {
-    const explicitOutboundIntent = /\b(envi(?:ar|e)|dispar(?:ar|e)|mand(?:ar|e)|lig(?:ar|ue)|telefon(?:ar|e)|vapi|registr(?:ar|e)\s+decis[aã]o|propo(?:r|nha)\s+trade|index(?:ar|e))\b/i.test(cleanPrompt);
+    const explicitOutboundIntent = /\b(envi(?:ar|e)|dispar(?:ar|e)|mand(?:ar|e)|registr(?:ar|e)\s+decis[aã]o|propo(?:r|nha)\s+trade|index(?:ar|e))\b/i.test(cleanPrompt);
     const mutationToolNames = new Set([
       "send_portfolio_proposal_email",
+      "send_portfolio_position_report_email",
+      "send_portfolio_rebalance_proposal_email",
       "send_automation_report_email",
-      "trigger_vapi_outbound_call",
-      "prepare_vapi_client_context",
       "propose_trade_idea_to_client",
       "register_client_trade_decision",
       "index_pdf_document"
@@ -315,7 +329,11 @@ ROUTING RULES:
 3. PARTIAL / FIRST NAME ONLY (e.g. a single first name): call BOTH "list_clients" ({"search":"<name>","limit":50}) AND "get_client_portfolios" ({"client_id":"<name>"}) so all homonym clients and any matching advisor are returned.
 4. SPECIFIC CLIENT (full name with surname OR STG... account code):
    - Portfolio/holdings/allocation query -> call "get_client_portfolios", "get_portfolio_positions", "get_asset_allocation", "get_portfolio_metrics" with {"client_id":"<full_name_or_STG>"}.
-   - Accounts/registration only -> call "get_client_portfolios" and "get_client_details" with {"client_id":"<full_name_or_STG>"}.`;
+   - Accounts/registration only -> call "get_client_portfolios" and "get_client_details" with {"client_id":"<full_name_or_STG>"}.
+5. INSTITUTIONAL REPORTS (Posição / Extrato de Conta ou Proposta de Rebalanceamento):
+   - Generate official positions & holdings report -> call "generate_portfolio_position_report" with {"client_id":"<full_name_or_STG>"}.
+   - Generate rebalance & target structure proposal report -> call "generate_portfolio_rebalance_report" with {"client_id":"<full_name_or_STG>"}.
+   - Explicit email dispatch requested -> call "send_portfolio_position_report_email" or "send_portfolio_rebalance_proposal_email".`;
 
     const plannerPrompt = `${recentTurnsText ? `HISTORY:\n${recentTurnsText}\n\n` : ""}TOOLS:\n${compactCatalogLines.join("\n")}\n\nUSER: ${cleanPrompt}\nJSON:`;
 
@@ -417,7 +435,9 @@ ROUTING RULES:
           } else {
             contentStr = typeof res === "string" ? res : JSON.stringify(res, null, 2);
           }
-          const trimmed = contentStr.length > 32000 ? contentStr.slice(0, 32000) + "\n...[truncated]" : contentStr;
+          // Intelligent payload compacting: trim large outputs, strip redundant whitespace
+          let cleanContent = contentStr.replace(/[ \t]+/g, " ").replace(/\n{3,}/g, "\n\n").trim();
+          const trimmed = cleanContent.length > 16000 ? cleanContent.slice(0, 16000) + "\n...[dados extensos truncados para economia de tokens]" : cleanContent;
           results.push(`\n\n[DADOS AUDITADOS RETORNADOS DO MCP LOCAL: ${c.mcpName} • FERRAMENTA: ${c.toolName} • ARGS: ${JSON.stringify(c.args)}]:\n${trimmed}\nATENÇÃO: Utilize com rigor fiduciário esses dados factuais reais retornados pelo servidor MCP para responder à consulta do usuário.`);
         } catch (e: any) {
           console.warn(`[MCP] Failed to call ${c.toolName}:`, e);
@@ -449,21 +469,26 @@ ROUTING RULES:
    - Em saudações ("Olá", "Bom dia", "Tudo bem?"), agradecimentos ou perguntas conceituais simples, responda de forma direta, educada e ágil em 1 a 3 frases.
    - NUNCA inclua rodapé de auditoria, tabelas vazias ou cotações não solicitadas em conversas gerais.
 
-5. AUDITORIA E CITAÇÃO DE FONTES:
+5. FORMATAÇÃO ELEGANTE DE TABELAS & DADOS DE MCP:
+   - Ao formatar tabelas Markdown a partir de dados de servidores MCP ou bancos de dados, garanta cabeçalhos concisos e dados limpos.
+   - Evite colunas excessivamente largas ou descrições extensas em células de tabelas; prefira números, percentuais, datas ou códigos curtos nas colunas e reserve análises textuais descritivas para parágrafos antes ou depois da tabela.
+   - Nunca cuspa blocos brutos de JSON soltos no meio do texto quando responder ao usuário: processe, sintetize e converta os dados em tabelas ou listas executivas limpas.
+
+6. AUDITORIA E CITAÇÃO DE FONTES:
    - Se dados de ferramentas ou servidores MCP locais foram retornados acima ([DADOS AUDITADOS RETORNADOS DO MCP LOCAL: <NomeDoMcp> • FERRAMENTA: <NomeDaTool>]):
      Você DEVE citar EXATAMENTE o servidor MCP e a ferramenta consultada no rodapé da resposta: "Fonte Auditada: <NomeDoMcp> • <NomeDaTool>".
      Exemplo real: se consultou o MCP "staggi-portfolio" com a ferramenta "list_clients", finalize estritamente com: "Fonte Auditada: staggi-portfolio • list_clients".
      É ESTRITAMENTE PROIBIDO inventar fontes como "B3", "SEC EDGAR", "Market Consensus" ou "Consenso Sell-Side" quando os dados vieram de um MCP local do usuário ou ferramenta específica.
    - Se nenhuma ferramenta/MCP foi consultada, NÃO inclua nenhum rodapé de "Fonte Auditada".
  
-6. APRESENTAÇÃO DE PORTFÓLIO E DISTRIBUIÇÃO DE CARTEIRA:
+7. APRESENTAÇÃO DE PORTFÓLIO E DISTRIBUIÇÃO DE CARTEIRA:
    - Ao apresentar o portfólio, posições ou carteira de um cliente, estruture os dados em formato claro com Ativo/Classe, Categoria, Valor e Percentual (%) da carteira.
    - Isso permite ao Staggi renderizar automaticamente o gráfico visual interativo de distribuição de portfólio (Donut Chart & Alocações) em conjunto com a tabela analítica completa.
 
-7. ADERÊNCIA AO SECOND BRAIN & PREFERÊNCIAS MEMORIZADAS:
+8. ADERÊNCIA AO SECOND BRAIN & PREFERÊNCIAS MEMORIZADAS:
    - Se diretrizes ou fatos do [SECOND BRAIN & MEMÓRIA DE LONGO PRAZO DO ASSESSOR] estiverem presentes no contexto, aplique-os com rigor fiduciário (ex: respeitar restrições de clientes, diretrizes de governança, teses de alocação e regras fiscais).
 
-8. DESAMBIGUAÇÃO FIDUCIÁRIA OBRIGATÓRIA (ASSESSOR vs. CLIENTE & HOMÔNIMOS):
+9. DESAMBIGUAÇÃO FIDUCIÁRIA OBRIGATÓRIA (ASSESSOR vs. CLIENTE & HOMÔNIMOS):
    - Quando os dados auditados do MCP retornarem "ambiguity_detected": true ou múltiplos clientes correspondentes ("total_matching_in_database" > 1 em list_clients):
      1) NUNCA escolha arbitrariamente uma conta nem diga que existem menos clientes do que "total_matching_in_database".
      2) Informe com precisão executiva o total exato encontrado na base: tanto o(s) Assessor(es) correspondente(s) (com total de clientes e AUM do book, se houver) quanto o total real de Clientes Investidores encontrados (listando os clientes retornados com código da conta STG..., AUM e assessor responsável).
@@ -485,7 +510,11 @@ O usuário configurou o nível de enforcement para HIGH. Você DEVE operar com r
 Equilibre profundidade técnica, dados reais auditados e contextualização executiva com tabelas claras e conclusões numéricas.`;
   }
 
-  const systemInstruction = `Você é o Staggi, o motor de inteligência e copiloto executivo para assessores de investimento e wealth managers no Brasil. Suas respostas devem ser de alto padrão, numéricas, concisas, sem rodeios desnecessários, com foco em alocação patrimonial, governança offshore, tributação (Lei 14.754/23) e fluxo de proventos.${dateContext}${secondBrainContext}${enforcementDirective}${explicitSkillDirective}${skillsInstructions}${mcpsContext}${liveMcpData}${memoryAndFormattingInstruction}${portfolioContext ? `\n\nContexto do Portfólio: ${JSON.stringify(portfolioContext)}` : ""}`;
+  // Prefix-Stable System Instruction (enables automatic Prompt Caching on Claude, OpenAI & Gemini):
+  // Put static, invariant instructions at the start of systemInstruction so token caches hit across turns.
+  const staticHeader = `Você é o Staggi, o motor de inteligência e copiloto executivo para assessores de investimento e wealth managers no Brasil. Suas respostas devem ser de alto padrão, numéricas, concisas, sem rodeios desnecessários, com foco em alocação patrimonial, governança offshore, tributação (Lei 14.754/23) e fluxo de proventos.`;
+  
+  const systemInstruction = `${staticHeader}${memoryAndFormattingInstruction}${enforcementDirective}${skillsInstructions}${mcpsContext}${dateContext}${secondBrainContext}${explicitSkillDirective}${liveMcpData}${portfolioContext ? `\n\nContexto do Portfólio: ${JSON.stringify(portfolioContext)}` : ""}`;
 
   try {
     const allToolsLabel = formatToolsSummary(executedTools);

@@ -84,6 +84,30 @@ const SKILLS_STORAGE_KEY = "staggi_skills_config_v1";
 
 const DEFAULT_MCPS: McpServerItem[] = [
   { 
+    id: "mcp-staggi-core", 
+    name: "staggi-portfolio", 
+    type: "Wealth Management & Advisory Core MCP", 
+    transport: "sse (Server-Sent)", 
+    endpoint: "http://localhost:8000/sse", 
+    active: true, 
+    apiKey: "staggi-secret-api-key-2026",
+    desc: "Staggi Wealth Core: Clients CRM, Portfolio Analytics, Trade Ideas & Client Communications (Institutional Position Reports & Proposal Dispatch)",
+    tools: [
+      { name: "generate_portfolio_position_report", description: "Generates the standardized institutional report for client account positions and asset holdings" },
+      { name: "send_portfolio_position_report_email", description: "Dispatches the formal account holdings report email to the client in Staggi's institutional standard" },
+      { name: "generate_portfolio_rebalance_report", description: "Generates the standardized institutional report for portfolio rebalancing proposals" },
+      { name: "send_portfolio_rebalance_proposal_email", description: "Dispatches the formal portfolio rebalancing proposal email to the client in Staggi's institutional standard" },
+      { name: "send_portfolio_proposal_email", description: "Generates and dispatches a formal wealth management investment proposal email to a client" },
+      { name: "send_automation_report_email", description: "Dispatches a formal wealth management automation report email with the exact institutional styling of trade ideas" },
+      { name: "list_trade_ideas", description: "Lists curated wealth management investment recommendations" },
+      { name: "list_clients", description: "Queries and filters wealth management client accounts" },
+      { name: "get_client_portfolios", description: "Lists all investment portfolios and accounts associated with a client" },
+      { name: "get_portfolio_positions", description: "Retrieves active positions and metrics for a portfolio" },
+      { name: "get_asset_allocation", description: "Calculates current allocation percentages across asset classes" },
+      { name: "get_portfolio_metrics", description: "Calculates Sharpe ratio, volatility, and maximum drawdown" }
+    ]
+  },
+  { 
     id: "mcp-yahoo", 
     name: "mcp-yahoo-finance", 
     type: "Market Data MCP", 
@@ -99,7 +123,26 @@ const DEFAULT_MCPS: McpServerItem[] = [
   }
 ];
 
-const DEFAULT_SKILLS: SkillDefinition[] = [];
+const DEFAULT_SKILLS: SkillDefinition[] = [
+  {
+    id: "skill-pitchbook",
+    name: "One-Pager & Pitchbook Institucional",
+    slug: "pitchbook",
+    mcpDependency: "Yahoo Finance / MCP",
+    active: true,
+    description: "Estrutura um relatório executivo One-Pager de tese de investimento (Tese Central, Catalisadores, Riscos e Múltiplos) pronto para apresentação ao cliente.",
+    systemPrompt: `DIRETIVA DA SKILL /pitchbook — ONE-PAGER INSTITUCIONAL:
+Quando o usuário acionar /pitchbook ou solicitar um pitchbook/one-pager para um ativo ou carteira:
+1. Estruture a resposta estritamente no padrão executivo de One-Pager de Investment Banking / Wealth Management:
+   - **Tese Central de Investimento**: Resumo conciso de 2 a 3 frases explicando por que alocar capital neste ativo.
+   - **Vantagens Competitivas & Moat**: Posicionamento de mercado, barreiras de entrada e diferencial do emissor.
+   - **Catalisadores de Curto/Médio Prazo**: Gatilhos concretos de valorização (ex: novos projetos, redução de capex, desinvestimentos, proventos extraordinários).
+   - **Principais Riscos & Sensibilidade**: Riscos regulatórios, cambiais, de commodities ou de execução operacional.
+   - **Métricas de Valuation & Múltiplos**: Tabela concisa com P/L, EV/EBITDA, P/VP, ROE e Dividend Yield atual vs. histórico.
+   - **Veredito Fiduciário**: Alocação recomendada (Sobreponderar / Neutro / Subponderar) e perfil de investidor indicado (Conservador, Moderado ou Agressivo).
+2. Mantenha linguagem matemática, formal e concisa sem prolixidade.`
+  }
+];
 
 function loadStoredMcps(): McpServerItem[] {
   if (typeof window === "undefined") return DEFAULT_MCPS;
@@ -112,7 +155,6 @@ function loadStoredMcps(): McpServerItem[] {
     const parsed: McpServerItem[] = JSON.parse(raw);
     if (Array.isArray(parsed)) {
       const obsoleteIds = new Set([
-        "mcp-staggi-core",
         "mcp-tax",
         "mcp-financedatabase",
         "mcp-equibles-etf",
@@ -124,7 +166,6 @@ function loadStoredMcps(): McpServerItem[] {
         "mcp-custodia",
       ]);
       const obsoleteNames = new Set([
-        "staggi-portfolio",
         "mcp-tax-engine",
         "mcp-financedatabase",
         "mcp-equibles-etf-holdings",
@@ -141,7 +182,15 @@ function loadStoredMcps(): McpServerItem[] {
       );
 
       const hasYahoo = filtered.some((m) => m.id === "mcp-yahoo" || m.name === "mcp-yahoo-finance");
-      const result = hasYahoo ? filtered : [DEFAULT_MCPS[0], ...filtered];
+      const hasStaggiCore = filtered.some((m) => m.id === "mcp-staggi-core" || m.name === "staggi-portfolio");
+
+      let result = [...filtered];
+      if (!hasStaggiCore) {
+        result.unshift(DEFAULT_MCPS[0]);
+      }
+      if (!hasYahoo) {
+        result.push(DEFAULT_MCPS[1]);
+      }
 
       const updated = result.map((m) => {
         if (m.id === "mcp-yahoo" || m.name === "mcp-yahoo-finance") {
@@ -151,6 +200,14 @@ function loadStoredMcps(): McpServerItem[] {
             name: "mcp-yahoo-finance",
             transport: "builtin (Native MCP)",
             endpoint: "builtin://yahoo-finance",
+            tools: DEFAULT_MCPS[1].tools || [],
+          };
+        }
+        if (m.id === "mcp-staggi-core" || m.name === "staggi-portfolio") {
+          return {
+            ...m,
+            id: "mcp-staggi-core",
+            name: "staggi-portfolio",
             tools: DEFAULT_MCPS[0].tools || [],
           };
         }
@@ -184,6 +241,7 @@ function loadStoredSkills(): SkillDefinition[] {
     const parsed: SkillDefinition[] = JSON.parse(raw);
     if (Array.isArray(parsed)) {
       const obsoleteSkillIds = new Set([
+        "skill-vapi-voice",
         "skill-etf-screening",
         "skill-renda-fixa-yield-curve",
         "skill-insider-smart-money",
@@ -196,8 +254,16 @@ function loadStoredSkills(): SkillDefinition[] {
       ]);
 
       const filtered = parsed.filter((s) => s && !obsoleteSkillIds.has(s.id));
-      localStorage.setItem(SKILLS_STORAGE_KEY, JSON.stringify(filtered));
-      return filtered;
+      // Ensure default skills (like pitchbook) are present if user doesn't already have them
+      const existingIds = new Set(filtered.map(s => s.id));
+      const merged = [...filtered];
+      for (const def of DEFAULT_SKILLS) {
+        if (!existingIds.has(def.id)) {
+          merged.push(def);
+        }
+      }
+      localStorage.setItem(SKILLS_STORAGE_KEY, JSON.stringify(merged));
+      return merged;
     }
     return DEFAULT_SKILLS;
   } catch {
